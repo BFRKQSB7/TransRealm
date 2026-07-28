@@ -85,36 +85,19 @@ last_updated: 2026-07-28
 
 ### 当前小目标
 
-- **Milestone：** P0-T02-M02 — Parser 接口抽象与 TXT 异常测试
-- **状态：** in_progress
-- **目标：** 定义通用 Parser 接口，将 TXT parser 接入该接口，并补充异常与边缘场景测试（空行、重复行、大文件边界、文件不存在、编码错误）。
-- **非目标：** 不实现 JSON/SRT/ASS/VTT 解析器、GUI 或翻译流程。
+- **Milestone：** P0-T02-M03 — Segment 稳定 key 碰撞与重复导入策略
+- **状态：** ready
+- **目标：** 实现当源文件内容变化时稳定 key 的映射更新策略：相同 hash 的文件幂等、不同 hash 的文件重新生成 Segment、已锁定的 Segment 不被删除。
+- **非目标：** 不实现锁定 UI、翻译流程或输出导出。
 
-### P0-T02-M02 必读文档
+### P0-T02-M03 必读文档
 
 按顺序读取：
 
 1. `07_Developer_Task_List.md` — P0-T02 完整任务；
-2. `03_Technical_Design.md` 第 4 节 — Import/Parser -> Segment Repository 分层；
-3. `04_Database_Schema.md` 第 3 节 — SourceDocument、Segment；
-4. `06_AI_Development_Guide.md` — 异常测试要求。
-
-### P0-T02-M02 预期交付物
-
-- `infrastructure/parsers/parser.py` 通用 Parser 协议/接口；
-- `infrastructure/parsers/txt_parser.py` 实现该接口；
-- `application/import_service.py` 按接口调度 parser；
-- 异常/边缘测试：空行、仅空白字符文件、重复行产生不同 stable key、文件不存在、编码错误；
-- 不引入新 migration 或业务表。
-
-### P0-T02-M02 验收
-
-- 通用 Parser 接口可注册、可按格式解析；
-- TXT parser 实现该接口；
-- 异常测试全部通过；
-- 既有 49 个测试不因修改而失败；
-- ruff、mypy 无问题；
-- 本文件已更新为下一个小目标。
+2. `04_Database_Schema.md` 第 3/5 节 — Segment 约束与稳定 key；
+3. `03_Technical_Design.md` 第 6 节 — Segment 状态与恢复；
+4. `06_AI_Development_Guide.md` — 测试与异常规则。
 
 ## 5. P0-T01 建议小目标队列
 
@@ -129,7 +112,8 @@ last_updated: 2026-07-28
 | P0-T01-M05 | migration 失败、checksum、只读/Unicode/长路径异常测试 | completed |
 | P0-T01-M06 | P0-T01 Code Review、文档同步与完成验收 | completed |
 | P0-T02-M01 | TXT 解析器与最小 Segment 模型 | completed |
-| P0-T02-M02 | Parser 接口抽象与 TXT 异常测试 | in_progress |
+| P0-T02-M02 | Parser 接口抽象与 TXT 异常测试 | completed |
+| P0-T02-M03 | Segment 稳定 key 碰撞与重复导入策略 | ready |
 
 Agent 可以在实现中细化这些小目标，但不得扩大 P0-T01 的范围。
 
@@ -141,13 +125,13 @@ Agent 可以在实现中细化这些小目标，但不得扩大 P0-T01 的范围
 
 - **时间：** 2026-07-28
 - **Agent：** Claude Code (Haiku 4.5)
-- **完成内容：** P0-T02-M01 已完成并提交；frontmatter 与队列表已推进到 P0-T02-M02 in_progress
-- **修改文件：** `src/transrealm/domain/segment.py`、`src/transrealm/infrastructure/parsers/txt_parser.py`、`src/transrealm/infrastructure/repositories/segment_repository.py`、`src/transrealm/application/import_service.py`、`src/transrealm/migrations/002_add_source_document_and_segment.sql`、`tests/test_txt_parser.py`、`DEVELOPMENT_STATE.md`
+- **完成内容：** P0-T02-M02 已完成并提交；frontmatter 与队列表已推进到 P0-T02-M03 ready
+- **修改文件：** `src/transrealm/infrastructure/parsers/parser.py`、`src/transrealm/infrastructure/parsers/txt_parser.py`、`src/transrealm/infrastructure/parsers/__init__.py`、`src/transrealm/application/import_service.py`、`tests/test_txt_parser.py`、`DEVELOPMENT_STATE.md`
 - **测试命令：** `py -3.12 -m pytest -v && py -3.12 -m ruff check src tests && py -3.12 -m mypy src tests`
-- **测试结果：** pytest 49 passed；Ruff All checks passed；mypy Success: no issues found in 28 source files
-- **未完成：** P0-T02-M02 及后续 milestones
+- **测试结果：** pytest 56 passed；Ruff All checks passed；mypy Success: no issues found in 29 source files
+- **未完成：** P0-T02-M03 及后续 milestones
 - **风险/阻塞：** 无
-- **恢复动作：** 读取 `07_Developer_Task_List.md` P0-T02 章节，开始 M02 Parser 接口抽象与异常测试
+- **恢复动作：** 读取 `07_Developer_Task_List.md` P0-T02 章节，开始 M03 Segment 稳定 key 碰撞与重复导入策略
 
 ### Completed milestones
 
@@ -172,6 +156,9 @@ Agent 可以在实现中细化这些小目标，但不得扩大 P0-T01 的范围
 - **P0-T02-M01** — TXT 解析器与最小 Segment 模型（completed）
   - 交付物：`domain/segment.py`、TXT parser、Import Service、Segment Repository、`002` migration、`tests/test_txt_parser.py`
   - 验收证据：pytest 8 passed（合计 49）；Ruff/mypy 无问题；TXT 分段/stable key/重复导入/空文件/编码错误已覆盖
+- **P0-T02-M02** — Parser 接口抽象与 TXT 异常测试（completed）
+  - 交付物：`infrastructure/parsers/parser.py`、Parser Protocol、ParserRegistry、TxtParser 类、扩展测试
+  - 验收证据：pytest 7 passed（合计 56）；Ruff/mypy 无问题；协议/注册表/空行/重复行/不支持格式已覆盖
 
 ### Decisions made during implementation
 
