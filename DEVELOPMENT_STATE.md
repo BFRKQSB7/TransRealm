@@ -5,7 +5,7 @@ protocol_version: 1
 current_phase: Phase 0
 current_release: V0.x
 current_task: P0-T01
-current_milestone: P0-T01-M04
+current_milestone: P0-T01-M05
 state: in_progress
 last_updated: 2026-07-28
 ---
@@ -85,37 +85,36 @@ last_updated: 2026-07-28
 
 ### 当前小目标
 
-- **Milestone：** P0-T01-M04 — `001_init` 与 Project create/open/save API
+- **Milestone：** P0-T01-M05 — migration 失败、checksum、只读/Unicode/长路径异常测试
 - **状态：** in_progress
-- **目标：** 创建 `001_init` migration（projects 表）、Project 领域模型、Repository 与 Application Service，实现 Project 的创建、打开、保存与关闭 API。
-- **非目标：** 不实现 GUI、文件 Parser、Model Adapter、Glossary 或 `.aiproject` 打包。
+- **目标：** 为 P0-T01 已实现的 SQLite、migration 和 Project API 补充异常路径测试，确保失败可恢复、错误可操作、特殊路径可处理。
+- **非目标：** 不新增功能或业务表。
 
-### M04 必读文档
+### M05 必读文档
 
 按顺序读取：
 
 1. `07_Developer_Task_List.md` — P0-T01 完整任务；
-2. `04_Database_Schema.md` 第 3 节 — `projects` 表与 Project 实体；
-3. `03_Technical_Design.md` 第 3/6 节 — Project 生命周期、路径与持久化分层；
-4. `06_AI_Development_Guide.md` — 测试和异常覆盖规则。
+2. `04_Database_Schema.md` 第 6 节 — 事务与恢复；
+3. `06_AI_Development_Guide.md` — 异常测试要求；
+4. 已实现的 `src/transrealm/infrastructure/database.py`、`migrations/`、`application/project_service.py`。
 
-### M04 预期交付物
+### M05 预期交付物
 
-- `src/transrealm/migrations/001_init.sql` 创建 `projects` 表；
-- `domain/project.py` 最小 Project 实体（id、name、语言对、schema_version 等）；
-- `infrastructure/repositories/project_repository.py` 持久化 CRUD；
-- `application/project_service.py` create/open/save/close 用例；
-- pytest 测试覆盖 Project 生命周期、重复打开、保存后读取；
-- 不引入 GUI 或业务无关依赖。
+- 异常测试覆盖：
+  - migration 失败时事务回滚且不污染 schema_migrations；
+  - migration checksum 不匹配拒绝；
+  - 只读/无权限数据库路径给出可操作错误；
+  - Unicode/长路径 Project 创建与打开；
+  - Project save 失败不破坏已有数据；
+- 记录 N/A 及原因（如部分异常场景已在前序 milestones 覆盖）；
+- 必要时对现有实现进行最小修复。
 
-### M04 验收
+### M05 验收
 
-- `001_init` migration 自动创建 `projects` 表；
-- Project 创建后数据库可读取回 name、语言对、schema_version；
-- 重复打开同一数据库不会重复创建或破坏数据；
-- save 更新 `updated_at`；
-- 关闭释放连接；
-- pytest 测试显式断言，记录通过/失败数；
+- pytest 新增异常测试全部通过；
+- 既有功能测试不因新增异常测试而失败；
+- ruff、mypy 无问题；
 - 本文件已更新为下一个小目标。
 
 ## 5. P0-T01 建议小目标队列
@@ -127,8 +126,8 @@ last_updated: 2026-07-28
 | P0-T01-M01 | Python 3.12 `src/` 工程与 pytest 骨架 | completed |
 | P0-T01-M02 | SQLite 连接、PRAGMA 与事务基础 | completed |
 | P0-T01-M03 | migration discovery、顺序和 history/checksum | completed |
-| P0-T01-M04 | `001_init` 与 Project create/open/save API | in_progress |
-| P0-T01-M05 | migration 失败、checksum、只读/Unicode/长路径异常测试 | pending |
+| P0-T01-M04 | `001_init` 与 Project create/open/save API | completed |
+| P0-T01-M05 | migration 失败、checksum、只读/Unicode/长路径异常测试 | in_progress |
 | P0-T01-M06 | P0-T01 Code Review、文档同步与完成验收 | pending |
 
 Agent 可以在实现中细化这些小目标，但不得扩大 P0-T01 的范围。
@@ -141,13 +140,13 @@ Agent 可以在实现中细化这些小目标，但不得扩大 P0-T01 的范围
 
 - **时间：** 2026-07-28
 - **Agent：** Claude Code (Haiku 4.5)
-- **完成内容：** P0-T01-M03 已完成并提交；frontmatter 与队列表已推进到 P0-T01-M04 in_progress
-- **修改文件：** `src/transrealm/infrastructure/migrations/`、`src/transrealm/migrations/`、`tests/test_migrations.py`、`DEVELOPMENT_STATE.md`
+- **完成内容：** P0-T01-M04 已完成并提交；frontmatter 与队列表已推进到 P0-T01-M05 in_progress
+- **修改文件：** `src/transrealm/migrations/001_init.sql`、`src/transrealm/domain/project.py`、`src/transrealm/infrastructure/repositories/project_repository.py`、`src/transrealm/application/project_service.py`、`tests/test_project.py`、`DEVELOPMENT_STATE.md`
 - **测试命令：** `py -3.12 -m pytest -v && py -3.12 -m ruff check src tests && py -3.12 -m mypy src tests`
-- **测试结果：** pytest 26 passed；Ruff All checks passed；mypy Success: no issues found in 16 source files
-- **未完成：** P0-T01-M04 及后续 milestones
+- **测试结果：** pytest 34 passed；Ruff All checks passed；mypy Success: no issues found in 21 source files
+- **未完成：** P0-T01-M05 及后续 milestones
 - **风险/阻塞：** 无
-- **恢复动作：** 直接读取 `07_Developer_Task_List.md` P0-T01 章节与 `04_Database_Schema.md` 第 3 节，开始 M04 `001_init` 与 Project API
+- **恢复动作：** 直接读取 `07_Developer_Task_List.md` P0-T01 章节与 `04_Database_Schema.md` 第 6 节，开始 M05 异常测试
 
 ### Completed milestones
 
@@ -160,6 +159,9 @@ Agent 可以在实现中细化这些小目标，但不得扩大 P0-T01 的范围
 - **P0-T01-M03** — migration discovery、顺序和 history/checksum（completed）
   - 交付物：`infrastructure/migrations/` 包、`schema_migrations` 表与 runner、`tests/test_migrations.py`
   - 验收证据：pytest 10 passed（合计 26）；Ruff/mypy 无问题；发现/顺序/幂等/checksum/回滚已覆盖
+- **P0-T01-M04** — `001_init` 与 Project create/open/save API（completed）
+  - 交付物：`001_init.sql`、Project 实体、Repository、Application Service、`tests/test_project.py`
+  - 验收证据：pytest 8 passed（合计 34）；Ruff/mypy 无问题；创建/打开/保存/幂等已覆盖
 
 ### Decisions made during implementation
 
