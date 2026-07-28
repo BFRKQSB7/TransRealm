@@ -81,14 +81,14 @@ last_updated: 2026-07-28
 - **Task：** P0-T01 — Project / SQLite / Migration 基础
 - **状态：** in_progress
 - **完整定义：** `07_Developer_Task_List.md` 的“P0-T01”章节
-- **前置依赖：**文档与技术决策已满足；Python 3.12 已可用
+- **前置依赖：**文档与技术决策已满足；Python 3.12 已可用；M01 已完成
 
 ### 当前小目标
 
-- **Milestone：** P0-T01-M01 — 建立可测试的 Python 工程骨架
-- **状态：** in_progress
-- **目标：** 创建符合 Technical Design 分层要求的最小 Python 3.12 `src/` 工程和 pytest 测试环境，为后续 migration 与 Project Repository 提供基础。
-- **非目标：** 不实现 PySide6 页面、不调用模型、不实现 Parser、Prompt、`.aiproject` 或完整数据库业务表。
+- **Milestone：** P0-T01-M02 — SQLite 连接、PRAGMA 与事务基础
+- **状态：** ready
+- **目标：** 建立 SQLite 连接管理、外键启用、事务包装和基础错误处理，为 migration runner 和 Repository 提供可复用的数据库访问层。
+- **非目标：** 不实现 migration 脚本、Project Repository 业务表或 GUI。
 
 ### M01 必读文档
 
@@ -125,8 +125,8 @@ last_updated: 2026-07-28
 
 | Milestone | 目标 | 状态 |
 |---|---|---|
-| P0-T01-M01 | Python 3.12 `src/` 工程与 pytest 骨架 | in_progress |
-| P0-T01-M02 | SQLite 连接、PRAGMA 与事务基础 | pending |
+| P0-T01-M01 | Python 3.12 `src/` 工程与 pytest 骨架 | completed |
+| P0-T01-M02 | SQLite 连接、PRAGMA 与事务基础 | ready |
 | P0-T01-M03 | migration discovery、顺序和 history/checksum | pending |
 | P0-T01-M04 | `001_init` 与 Project create/open/save API | pending |
 | P0-T01-M05 | migration 失败、checksum、只读/Unicode/长路径异常测试 | pending |
@@ -142,17 +142,19 @@ Agent 可以在实现中细化这些小目标，但不得扩大 P0-T01 的范围
 
 - **时间：** 2026-07-28
 - **Agent：** Claude Code (Haiku 4.5)
-- **完成内容：** Python 3.12 已可用；M01 从 blocked 改为 in_progress；开始创建 Python 3.12 工程骨架
-- **修改文件：** `DEVELOPMENT_STATE.md`
-- **测试命令：** `py -3.12 --version`
-- **测试结果：** Python 3.12.10 可用
-- **未完成：** P0-T01-M01 工程骨架、测试与文档同步
+- **完成内容：** P0-T01-M01 工程骨架、pytest 验收、Ruff/mypy 检查与 Git 提交完成；M02 已标记为 ready
+- **修改文件：** `pyproject.toml`、`README.md`、`.gitignore`、`src/transrealm/` 分层包、`tests/test_smoke.py`、`DEVELOPMENT_STATE.md`
+- **测试命令：** `py -3.12 -m pytest -v && py -3.12 -m ruff check src tests && py -3.12 -m mypy src tests`
+- **测试结果：** pytest 4 passed；Ruff All checks passed；mypy Success: no issues found
+- **未完成：** P0-T01-M02 及后续 milestones
 - **风险/阻塞：** 无
-- **恢复动作：** 继续完成 M01 工程骨架、pytest 验收、文档同步与 Git 提交
+- **恢复动作：** 直接读取 `07_Developer_Task_List.md` P0-T01 章节与 `04_Database_Schema.md` 第 1–3 节，开始 M02 SQLite 连接与事务基础
 
 ### Completed milestones
 
-暂无。
+- **P0-T01-M01** — Python 3.12 `src/` 工程与 pytest 骨架（completed）
+  - 交付物：`pyproject.toml`、分层 `src/transrealm/` 包、`tests/test_smoke.py`、`.gitignore`、`README.md`
+  - 验收证据：pytest 4 passed；Ruff/mypy 无问题；domain 层无 PySide6/SQLite/HTTP 依赖
 
 ### Decisions made during implementation
 
