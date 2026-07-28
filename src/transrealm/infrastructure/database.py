@@ -126,7 +126,7 @@ def create_database(path: Path) -> DatabaseConnection:
     except sqlite3.Error as exc:
         raise ConnectionError(f"Unable to open database: {exc}", path=path) from exc
     except OSError as exc:
-        if exc.errno == 13 or exc.winerror == 5:  # noqa: PLR2004
+        if exc.errno == 13 or getattr(exc, "winerror", None) == 5:  # noqa: PLR2004
             raise PermissionDeniedError(
                 "Database path is not accessible (permission denied).",
                 path=path,

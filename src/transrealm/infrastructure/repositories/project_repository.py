@@ -49,7 +49,7 @@ class ProjectRepository:
             )
 
         with transaction(self._db):
-            self._db.execute(
+            cursor = self._db.execute(
                 "UPDATE projects SET name = ?, source_language = ?, target_language = ?, "
                 "updated_at = ?, schema_version = ? WHERE id = ?",
                 (
@@ -61,6 +61,8 @@ class ProjectRepository:
                     project.id,
                 ),
             )
+            if cursor.rowcount == 0:
+                raise ValueError(f"Project with id {project.id} does not exist.")
         return Project(
             id=project.id,
             name=project.name,

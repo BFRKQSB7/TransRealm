@@ -126,6 +126,10 @@ class MigrationRunner:
         columns = [desc[0] for desc in cursor.description]
         return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
+    def close(self) -> None:
+        """Close the underlying database connection."""
+        self._db.close()
+
 
 def run_migrations(
     db_path: Path,
@@ -139,4 +143,4 @@ def run_migrations(
     try:
         return runner.apply(migrations, app_version=app_version)
     finally:
-        runner._db.close()
+        runner.close()

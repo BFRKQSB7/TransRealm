@@ -108,8 +108,8 @@ def test_project_service_supports_long_path(tmp_path: Path) -> None:
     reopened.close()
 
 
-def test_project_save_missing_id_is_noop(db_path: Path) -> None:
-    """Saving a project with a non-existent id does not corrupt the database."""
+def test_project_save_missing_id_raises(db_path: Path) -> None:
+    """Saving a project with a non-existent id raises ValueError."""
     from transrealm.domain.project import Project
     from transrealm.infrastructure.repositories.project_repository import ProjectRepository
 
@@ -128,7 +128,8 @@ def test_project_save_missing_id_is_noop(db_path: Path) -> None:
         updated_at=None,
         schema_version=1,
     )
-    repo.save(bogus)
+    with pytest.raises(ValueError):
+        repo.save(bogus)
     repo.close()
 
     reopened = ProjectService(db_path, app_version="0.1.0")
