@@ -5,7 +5,7 @@ protocol_version: 1
 current_phase: Phase 0
 current_release: V0.x
 current_task: P0-T01
-current_milestone: P0-T01-M02
+current_milestone: P0-T01-M03
 state: in_progress
 last_updated: 2026-07-28
 ---
@@ -81,39 +81,39 @@ last_updated: 2026-07-28
 - **Task：** P0-T01 — Project / SQLite / Migration 基础
 - **状态：** in_progress
 - **完整定义：** `07_Developer_Task_List.md` 的“P0-T01”章节
-- **前置依赖：**文档与技术决策已满足；Python 3.12 已可用；M01 已完成
+- **前置依赖：**文档与技术决策已满足；Python 3.12 已可用；M01/M02 已完成
 
 ### 当前小目标
 
-- **Milestone：** P0-T01-M02 — SQLite 连接、PRAGMA 与事务基础
-- **状态：** ready
-- **目标：** 建立 SQLite 连接管理、外键启用、事务包装和基础错误处理，为 migration runner 和 Repository 提供可复用的数据库访问层。
-- **非目标：** 不实现 migration 脚本、Project Repository 业务表或 GUI。
+- **Milestone：** P0-T01-M03 — migration discovery、顺序和 history/checksum
+- **状态：** in_progress
+- **目标：** 实现 migration 发现、顺序执行、history/checksum 记录与校验，为 `001_init` 及后续 migration 提供可重复运行的 runner。
+- **非目标：** 不实现具体业务 migration 脚本、Project Repository 或 GUI。
 
-### M02 必读文档
+### M03 必读文档
 
 按顺序读取：
 
 1. `07_Developer_Task_List.md` — P0-T01 完整任务；
-2. `04_Database_Schema.md` 第 1–3 节 — migration 规则与 SQLite 约束；
+2. `04_Database_Schema.md` 第 1–3 节 — migration 规则与 `schema_migrations`；
 3. `03_Technical_Design.md` 第 6/10 节 — 持久化与分层边界；
 4. `06_AI_Development_Guide.md` — 测试和异常覆盖规则。
 
-### M02 预期交付物
+### M03 预期交付物
 
-- `infrastructure/database.py` 中的 SQLite 连接工厂与上下文管理器；
-- 外键启用、事务提交/回滚、超时与隔离级别配置；
-- 基础数据库错误类型与可操作错误信息；
-- Windows 长路径/Unicode 路径兼容性封装；
-- pytest 单元测试覆盖连接、事务、外键和只读/异常路径；
-- 不引入 migration 脚本或业务 Repository。
+- `infrastructure/migrations/` 包与 runner；
+- migration 文件发现、排序、校验和与执行；
+- `schema_migrations` 表（migration_id、checksum、applied_at、app_version）；
+- 重复执行幂等、顺序错误与 checksum 不匹配拒绝；
+- pytest 单元测试覆盖正常/异常路径；
+- 不引入 `001_init` 以外的业务 migration 脚本。
 
-### M02 验收
+### M03 验收
 
-- `sqlite3` 连接通过统一工厂创建，启用外键；
-- 事务上下文管理器支持正常提交与异常回滚；
-- 错误类型能区分连接失败、权限错误与 SQL 错误；
-- Windows 长路径和 Unicode 路径可正确打开；
+- migration 按编号顺序执行；
+- 同一 migration 重复打开不会重复执行；
+- checksum 不匹配被拒绝并报告；
+- migration history 可查询；
 - pytest 测试显式断言，记录通过/失败数；
 - 本文件已更新为下一个小目标。
 
@@ -124,8 +124,8 @@ last_updated: 2026-07-28
 | Milestone | 目标 | 状态 |
 |---|---|---|
 | P0-T01-M01 | Python 3.12 `src/` 工程与 pytest 骨架 | completed |
-| P0-T01-M02 | SQLite 连接、PRAGMA 与事务基础 | in_progress |
-| P0-T01-M03 | migration discovery、顺序和 history/checksum | pending |
+| P0-T01-M02 | SQLite 连接、PRAGMA 与事务基础 | completed |
+| P0-T01-M03 | migration discovery、顺序和 history/checksum | in_progress |
 | P0-T01-M04 | `001_init` 与 Project create/open/save API | pending |
 | P0-T01-M05 | migration 失败、checksum、只读/Unicode/长路径异常测试 | pending |
 | P0-T01-M06 | P0-T01 Code Review、文档同步与完成验收 | pending |
@@ -140,19 +140,22 @@ Agent 可以在实现中细化这些小目标，但不得扩大 P0-T01 的范围
 
 - **时间：** 2026-07-28
 - **Agent：** Claude Code (Haiku 4.5)
-- **完成内容：** P0-T01-M01 已完成并提交；frontmatter 与队列表已推进到 P0-T01-M02 in_progress
-- **修改文件：** `DEVELOPMENT_STATE.md`
+- **完成内容：** P0-T01-M02 已完成并提交；frontmatter 与队列表已推进到 P0-T01-M03 in_progress
+- **修改文件：** `src/transrealm/infrastructure/database.py`、`src/transrealm/infrastructure/errors.py`、`tests/test_database.py`、`tests/test_smoke.py`、`DEVELOPMENT_STATE.md`
 - **测试命令：** `py -3.12 -m pytest -v && py -3.12 -m ruff check src tests && py -3.12 -m mypy src tests`
-- **测试结果：** pytest 4 passed；Ruff All checks passed；mypy Success: no issues found
-- **未完成：** P0-T01-M02 及后续 milestones
+- **测试结果：** pytest 16 passed；Ruff All checks passed；mypy Success: no issues found in 10 source files
+- **未完成：** P0-T01-M03 及后续 milestones
 - **风险/阻塞：** 无
-- **恢复动作：** 直接读取 `07_Developer_Task_List.md` P0-T01 章节与 `04_Database_Schema.md` 第 1–3 节，开始 M02 SQLite 连接与事务基础
+- **恢复动作：** 直接读取 `07_Developer_Task_List.md` P0-T01 章节与 `04_Database_Schema.md` 第 1–3 节，开始 M03 migration runner
 
 ### Completed milestones
 
 - **P0-T01-M01** — Python 3.12 `src/` 工程与 pytest 骨架（completed）
   - 交付物：`pyproject.toml`、分层 `src/transrealm/` 包、`tests/test_smoke.py`、`.gitignore`、`README.md`
   - 验收证据：pytest 4 passed；Ruff/mypy 无问题；domain 层无 PySide6/SQLite/HTTP 依赖
+- **P0-T01-M02** — SQLite 连接、PRAGMA 与事务基础（completed）
+  - 交付物：`src/transrealm/infrastructure/database.py`、事务与错误类型、`tests/test_database.py`
+  - 验收证据：pytest 12 passed（合计 16）；Ruff/mypy 无问题；外键/WAL/Unicode/长路径/只读路径已覆盖
 
 ### Decisions made during implementation
 
