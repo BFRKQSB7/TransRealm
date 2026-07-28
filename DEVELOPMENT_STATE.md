@@ -5,7 +5,7 @@ protocol_version: 1
 current_phase: Phase 0
 current_release: V0.x
 current_task: P0-T02
-current_milestone: P0-T02-M01
+current_milestone: P0-T02-M02
 state: in_progress
 last_updated: 2026-07-28
 ---
@@ -85,37 +85,35 @@ last_updated: 2026-07-28
 
 ### 当前小目标
 
-- **Milestone：** P0-T02-M01 — TXT 解析器与最小 Segment 模型
+- **Milestone：** P0-T02-M02 — Parser 接口抽象与 TXT 异常测试
 - **状态：** in_progress
-- **目标：** 实现 TXT 文件的导入与分段，生成稳定的 Segment 领域模型，写入数据库并支持读取。
-- **非目标：** 不实现 JSON/SRT/ASS/VTT、GUI、模型调用、翻译流程。
+- **目标：** 定义通用 Parser 接口，将 TXT parser 接入该接口，并补充异常与边缘场景测试（空行、重复行、大文件边界、文件不存在、编码错误）。
+- **非目标：** 不实现 JSON/SRT/ASS/VTT 解析器、GUI 或翻译流程。
 
-### P0-T02-M01 必读文档
+### P0-T02-M02 必读文档
 
 按顺序读取：
 
 1. `07_Developer_Task_List.md` — P0-T02 完整任务；
-2. `01_PRD.md` 第 9/10 节 — 文件格式与 Segment 概念；
-3. `04_Database_Schema.md` 第 3 节 — SourceDocument、Segment、TranslationRevision；
-4. `03_Technical_Design.md` 第 4/6 节 — 数据流与 Segment 状态；
-5. `06_AI_Development_Guide.md` — 测试与异常规则。
+2. `03_Technical_Design.md` 第 4 节 — Import/Parser -> Segment Repository 分层；
+3. `04_Database_Schema.md` 第 3 节 — SourceDocument、Segment；
+4. `06_AI_Development_Guide.md` — 异常测试要求。
 
-### P0-T02-M01 预期交付物
+### P0-T02-M02 预期交付物
 
-- `domain/segment.py` Segment 与 SourceDocument 领域模型；
-- `application/import_service.py` 用例：读取 TXT 文件并生成 Segment；
-- `infrastructure/parsers/txt_parser.py` TXT 解析器；
-- `infrastructure/repositories/segment_repository.py` 持久化；
-- `002_add_source_document_and_segment.sql` migration；
-- pytest 测试覆盖 TXT 分段、stable key、重复导入、空文件。
+- `infrastructure/parsers/parser.py` 通用 Parser 协议/接口；
+- `infrastructure/parsers/txt_parser.py` 实现该接口；
+- `application/import_service.py` 按接口调度 parser；
+- 异常/边缘测试：空行、仅空白字符文件、重复行产生不同 stable key、文件不存在、编码错误；
+- 不引入新 migration 或业务表。
 
-### P0-T02-M01 验收
+### P0-T02-M02 验收
 
-- TXT 文件按行或按段落切分为 Segment；
-- Segment 具有稳定 key（基于源内容/位置 hash）；
-- 导入后 Segment 可写入数据库并读取；
-- 重复导入同一文件不重复生成 Segment；
-- pytest 测试显式断言，记录通过/失败数；
+- 通用 Parser 接口可注册、可按格式解析；
+- TXT parser 实现该接口；
+- 异常测试全部通过；
+- 既有 49 个测试不因修改而失败；
+- ruff、mypy 无问题；
 - 本文件已更新为下一个小目标。
 
 ## 5. P0-T01 建议小目标队列
@@ -130,7 +128,8 @@ last_updated: 2026-07-28
 | P0-T01-M04 | `001_init` 与 Project create/open/save API | completed |
 | P0-T01-M05 | migration 失败、checksum、只读/Unicode/长路径异常测试 | completed |
 | P0-T01-M06 | P0-T01 Code Review、文档同步与完成验收 | completed |
-| P0-T02-M01 | TXT 解析器与最小 Segment 模型 | in_progress |
+| P0-T02-M01 | TXT 解析器与最小 Segment 模型 | completed |
+| P0-T02-M02 | Parser 接口抽象与 TXT 异常测试 | in_progress |
 
 Agent 可以在实现中细化这些小目标，但不得扩大 P0-T01 的范围。
 
@@ -142,13 +141,13 @@ Agent 可以在实现中细化这些小目标，但不得扩大 P0-T01 的范围
 
 - **时间：** 2026-07-28
 - **Agent：** Claude Code (Haiku 4.5)
-- **完成内容：** P0-T01 全部 milestones 已完成；`07_Developer_Task_List.md` 中 P0-T01 已标记 completed；范围内 Code Review 修复已提交；frontmatter 与队列表已推进到 P0-T02-M01 in_progress
-- **修改文件：** `07_Developer_Task_List.md`、`DEVELOPMENT_STATE.md`、`src/transrealm/infrastructure/database.py`、`src/transrealm/infrastructure/migrations/runner.py`、`src/transrealm/infrastructure/repositories/project_repository.py`、`tests/test_exceptions.py`
+- **完成内容：** P0-T02-M01 已完成并提交；frontmatter 与队列表已推进到 P0-T02-M02 in_progress
+- **修改文件：** `src/transrealm/domain/segment.py`、`src/transrealm/infrastructure/parsers/txt_parser.py`、`src/transrealm/infrastructure/repositories/segment_repository.py`、`src/transrealm/application/import_service.py`、`src/transrealm/migrations/002_add_source_document_and_segment.sql`、`tests/test_txt_parser.py`、`DEVELOPMENT_STATE.md`
 - **测试命令：** `py -3.12 -m pytest -v && py -3.12 -m ruff check src tests && py -3.12 -m mypy src tests`
-- **测试结果：** pytest 41 passed；Ruff All checks passed；mypy Success: no issues found in 22 source files
-- **未完成：** P0-T02-M01 及后续 milestones
+- **测试结果：** pytest 49 passed；Ruff All checks passed；mypy Success: no issues found in 28 source files
+- **未完成：** P0-T02-M02 及后续 milestones
 - **风险/阻塞：** 无
-- **恢复动作：** 读取 `07_Developer_Task_List.md` P0-T02 章节与相关编号文档，开始 M01 TXT 解析器与 Segment 模型
+- **恢复动作：** 读取 `07_Developer_Task_List.md` P0-T02 章节，开始 M02 Parser 接口抽象与异常测试
 
 ### Completed milestones
 
@@ -170,6 +169,9 @@ Agent 可以在实现中细化这些小目标，但不得扩大 P0-T01 的范围
 - **P0-T01-M06** — P0-T01 Code Review、文档同步与完成验收（completed）
   - 交付物：范围内 Code Review 修复、`07_Developer_Task_List.md` 状态同步、`DEVELOPMENT_STATE.md` 推进
   - 验收证据：全部 41 测试通过；ruff/mypy 无问题；MigrationRunner.close 与错误检查已加固
+- **P0-T02-M01** — TXT 解析器与最小 Segment 模型（completed）
+  - 交付物：`domain/segment.py`、TXT parser、Import Service、Segment Repository、`002` migration、`tests/test_txt_parser.py`
+  - 验收证据：pytest 8 passed（合计 49）；Ruff/mypy 无问题；TXT 分段/stable key/重复导入/空文件/编码错误已覆盖
 
 ### Decisions made during implementation
 
