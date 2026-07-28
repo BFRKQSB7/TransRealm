@@ -2,7 +2,9 @@
 
 import importlib
 import importlib.util
+import subprocess
 import sys
+from pathlib import Path
 
 import transrealm
 import transrealm.adapters
@@ -28,13 +30,23 @@ def test_layer_packages_are_importable() -> None:
 
 def test_domain_layer_has_no_forbidden_runtime_dependencies() -> None:
     """Domain layer does not depend on Qt/SQLite/HTTP SDKs at import time."""
-    forbidden = {"PySide6", "sqlite3", "urllib3", "httpx", "requests", "aiohttp"}
-    loaded = set(sys.modules.keys())
-    domain_modules = {
-        name for name in loaded if name.startswith("transrealm.domain")
-    }
-    assert domain_modules, "expected at least one loaded transrealm.domain module"
-    assert not (forbidden & loaded), f"domain layer loaded forbidden deps: {forbidden & loaded}"
+    src = Path(__file__).parent.parent / "src"
+    script = """
+import sys
+sys.path.insert(0, sys.argv[1])
+import transrealm.domain
+forbidden = {"PySide6", "sqlite3", "urllib3", "httpx", "requests", "aiohttp"}
+loaded = set(sys.modules.keys())
+assert not (forbidden & loaded), f"domain layer loaded forbidden deps: {forbidden & loaded}"
+print("ok")
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script, str(src)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
 
 
 def test_all_layer_packages_have_dunder_init() -> None:
