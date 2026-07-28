@@ -5,7 +5,7 @@ protocol_version: 1
 current_phase: Phase 0
 current_release: V0.x
 current_task: P0-T01
-current_milestone: P0-T01-M01
+current_milestone: P0-T01-M02
 state: in_progress
 last_updated: 2026-07-28
 ---
@@ -90,33 +90,31 @@ last_updated: 2026-07-28
 - **目标：** 建立 SQLite 连接管理、外键启用、事务包装和基础错误处理，为 migration runner 和 Repository 提供可复用的数据库访问层。
 - **非目标：** 不实现 migration 脚本、Project Repository 业务表或 GUI。
 
-### M01 必读文档
+### M02 必读文档
 
 按顺序读取：
 
 1. `07_Developer_Task_List.md` — P0-T01 完整任务；
-2. `03_Technical_Design.md` — 技术栈、Python 分层、Project/路径规则；
-3. `04_Database_Schema.md` — migration 与 V1.0 最小实体；
-4. `06_AI_Development_Guide.md` — 开发、测试和报告规则；
-5. `01_PRD.md` 第 21 节 — V1.0 与平台边界。
+2. `04_Database_Schema.md` 第 1–3 节 — migration 规则与 SQLite 约束；
+3. `03_Technical_Design.md` 第 6/10 节 — 持久化与分层边界；
+4. `06_AI_Development_Guide.md` — 测试和异常覆盖规则。
 
-### M01 预期交付物
+### M02 预期交付物
 
-- Python 3.12 项目元数据与锁定依赖的基础配置；
-- `src/` 布局；
-- `ui`、`application`、`domain`、`infrastructure`、`adapters` 包边界；
-- `tests/` 与可运行 pytest 配置；
-- 最小 smoke test，验证包可导入、测试可执行；
-- Windows 路径和 UTF-8 基线配置；
-- 不引入未被当前目标使用的框架或依赖。
+- `infrastructure/database.py` 中的 SQLite 连接工厂与上下文管理器；
+- 外键启用、事务提交/回滚、超时与隔离级别配置；
+- 基础数据库错误类型与可操作错误信息；
+- Windows 长路径/Unicode 路径兼容性封装；
+- pytest 单元测试覆盖连接、事务、外键和只读/异常路径；
+- 不引入 migration 脚本或业务 Repository。
 
-### M01 验收
+### M02 验收
 
-- Python 版本约束明确为 3.12；
-- `pytest` 能运行且至少包含一个有显式断言的 smoke test；
-- domain 层不依赖 PySide6、SQLite 或 HTTP SDK；
-- 当前工程结构与 `03_Technical_Design.md` 一致；
-- 记录实际测试命令、通过数和失败数；
+- `sqlite3` 连接通过统一工厂创建，启用外键；
+- 事务上下文管理器支持正常提交与异常回滚；
+- 错误类型能区分连接失败、权限错误与 SQL 错误；
+- Windows 长路径和 Unicode 路径可正确打开；
+- pytest 测试显式断言，记录通过/失败数；
 - 本文件已更新为下一个小目标。
 
 ## 5. P0-T01 建议小目标队列
@@ -126,7 +124,7 @@ last_updated: 2026-07-28
 | Milestone | 目标 | 状态 |
 |---|---|---|
 | P0-T01-M01 | Python 3.12 `src/` 工程与 pytest 骨架 | completed |
-| P0-T01-M02 | SQLite 连接、PRAGMA 与事务基础 | ready |
+| P0-T01-M02 | SQLite 连接、PRAGMA 与事务基础 | in_progress |
 | P0-T01-M03 | migration discovery、顺序和 history/checksum | pending |
 | P0-T01-M04 | `001_init` 与 Project create/open/save API | pending |
 | P0-T01-M05 | migration 失败、checksum、只读/Unicode/长路径异常测试 | pending |
@@ -142,8 +140,8 @@ Agent 可以在实现中细化这些小目标，但不得扩大 P0-T01 的范围
 
 - **时间：** 2026-07-28
 - **Agent：** Claude Code (Haiku 4.5)
-- **完成内容：** P0-T01-M01 工程骨架、pytest 验收、Ruff/mypy 检查与 Git 提交完成；M02 已标记为 ready
-- **修改文件：** `pyproject.toml`、`README.md`、`.gitignore`、`src/transrealm/` 分层包、`tests/test_smoke.py`、`DEVELOPMENT_STATE.md`
+- **完成内容：** P0-T01-M01 已完成并提交；frontmatter 与队列表已推进到 P0-T01-M02 in_progress
+- **修改文件：** `DEVELOPMENT_STATE.md`
 - **测试命令：** `py -3.12 -m pytest -v && py -3.12 -m ruff check src tests && py -3.12 -m mypy src tests`
 - **测试结果：** pytest 4 passed；Ruff All checks passed；mypy Success: no issues found
 - **未完成：** P0-T01-M02 及后续 milestones
