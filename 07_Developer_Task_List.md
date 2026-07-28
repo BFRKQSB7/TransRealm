@@ -68,7 +68,7 @@ P0-T01 Project/SQLite/Migration 基础
 
 - **Phase/Release：** Phase 0 / V0.x
 - **Priority：** P0
-- **状态：** blocked（本机缺少 Python 3.12；运行检查点见 `DEVELOPMENT_STATE.md`）
+- **状态：** completed
 - **目标：** 建立可创建、保存、关闭并重新打开的 Project 持久化骨架，以及可重复验证的 SQLite Migration 执行器。
 - **非目标：** GUI 完整页面、文件 Parser、模型调用、`.aiproject` 打包、RAG/TM/Character Data。
 - **前置依赖：** 编号文档基线、Python 3.12 + PySide6 + SQLite 技术栈、Windows 11 优先和绿色版优先决策均已批准。
@@ -77,7 +77,7 @@ P0-T01 Project/SQLite/Migration 基础
 - **交付物：** Python `src/` 项目骨架、依赖与测试配置、`001_init` migration、migration history/checksum、Project create/open/save API、临时测试 Project、pytest 自动化测试。
 - **功能验收：** 新建数据库自动应用 migration；重复打开不重复执行；Project 元数据保存后可读回；外键启用；migration 顺序和 checksum 可查询。
 - **异常验收：** migration 中途失败时事务回滚；错误 checksum 被拒绝；Windows Unicode/长路径和只读/无权限路径给出可操作错误；升级前备份失败时不得继续 migration。
-- **测试证据：** 自动化测试必须有显式断言，记录运行命令、通过数、失败数和关键输出。
+- **测试证据：** `py -3.12 -m pytest -v` 41 passed；`py -3.12 -m ruff check src tests` All checks passed；`py -3.12 -m mypy src tests` Success: no issues found in 22 source files。
 - **文档同步项：** 若表字段或 migration 规则改变，更新 `04_Database_Schema.md`；若 Project 生命周期改变，更新 `03_Technical_Design.md`；不得擅自扩大 PRD。
 
 ## 6. V1.0 范围
@@ -107,3 +107,28 @@ V1.0 不包含：RAG、智能 TM、World State、节点式 Workflow 编辑器、
 - Agent 流程变化 → `06_AI_Development_Guide.md`；
 - 设计理由变化 → `08_Architecture_Review.md`；
 - 当前小目标、测试证据、阻塞与恢复动作 → `DEVELOPMENT_STATE.md`。
+
+## 9. P0-T02 — Parser 与稳定 Segment
+
+- **Phase/Release：** Phase 0 / V0.x
+- **Priority：** P0
+- **状态：** in_progress
+- **目标：** 实现 TXT 文件 Parser，生成稳定的 Segment 领域模型，支持导入到 Project 数据库并读取；为后续 JSON/字幕格式 parser 奠定接口。
+- **非目标：** 不实现 JSON/SRT/ASS/VTT、GUI、模型调用、翻译流程、RAG/TM。
+- **前置依赖：** P0-T01 已完成；Project/SQLite/Migration 基础可用。
+- **输入文档：** `01_PRD.md` 第 9/10 节；`02_Development_Roadmap.md` Phase 0；`03_Technical_Design.md` 第 4/6 节；`04_Database_Schema.md` 第 3 节；`06_AI_Development_Guide.md`。
+- **修改范围：** `domain/segment.py`、TXT parser、`application/import_service.py`、Segment Repository、`002_add_source_document_and_segment.sql` migration、pytest 测试；不修改 PySide6 页面、Prompt、Model Adapter。
+- **交付物：** Segment 与 SourceDocument 领域模型、TXT parser、Import Service、Segment Repository、`002` migration、pytest 自动化测试。
+- **功能验收：**
+  - TXT 文件按行或段落切分为 Segment；
+  - Segment 具有稳定 key（基于源内容/位置 hash）；
+  - 导入后 Segment 可写入数据库并读取；
+  - 重复导入同一文件不重复生成 Segment；
+  - Segment 状态默认为 pending。
+- **异常验收：**
+  - 空 TXT 文件导入不产生 Segment；
+  - 文件不存在时给出可操作错误；
+  - 编码错误时被识别并报告；
+  - 导入失败不破坏已有 Project 数据。
+- **测试证据：** 自动化测试必须有显式断言，记录运行命令、通过数、失败数和关键输出。
+- **文档同步项：** 若表字段或 migration 规则改变，更新 `04_Database_Schema.md`；若 Segment/Parser 契约改变，更新 `03_Technical_Design.md`；不得擅自扩大 PRD。
