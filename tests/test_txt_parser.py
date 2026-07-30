@@ -6,6 +6,9 @@ import pytest
 
 from transrealm.application.import_service import ImportService
 from transrealm.application.project_service import ProjectService
+from transrealm.domain.segment import Segment, SourceDocument
+from transrealm.infrastructure.database import create_database
+from transrealm.infrastructure.errors import SqlExecutionError
 from transrealm.infrastructure.parsers.txt_parser import PARSER_VERSION, parse_txt
 from transrealm.infrastructure.repositories.segment_repository import SegmentRepository
 
@@ -95,7 +98,114 @@ def test_import_service_is_idempotent_by_hash(db_path: Path, txt_file: Path) -> 
         document2, segments2 = import_service.import_txt(project.id, txt_file)
 
     assert document1.id == document2.id
-    assert len(segments1) == len(segments2)
+    assert [segment.id for segment in segments1] == [segment.id for segment in segments2]
+    assert [segment.stable_key for segment in segments1] == [
+        segment.stable_key for segment in segments2
+    ]
+
+    db = create_database(db_path)
+    document_count = db.execute("SELECT COUNT(*) FROM source_documents").fetchone()[0]
+    segment_count = db.execute("SELECT COUNT(*) FROM segments").fetchone()[0]
+    db.close()
+    assert document_count == 1
+    assert segment_count == len(segments1)
+
+
+def test_import_service_creates_immutable_version_when_content_changes(
+    db_path: Path,
+    txt_file: Path,
+) -> None:
+    """Changed content creates a new version without mutating the old one."""
+    project_service = ProjectService(db_path, app_version="0.1.0")
+    project = project_service.create_project(name="P1", source_language="zh", target_language="en")
+    assert project.id is not None
+    project_service.close()
+
+    with ImportService(db_path, app_version="0.1.0") as import_service:
+        document1, segments1 = import_service.import_txt(project.id, txt_file)
+        txt_file.write_text("第一行\n替换行\n", encoding="utf-8")
+        document2, segments2 = import_service.import_txt(project.id, txt_file)
+
+    assert document1.id != document2.id
+    assert document1.source_hash != document2.source_hash
+    assert [segment.source_text for segment in segments1] == ["第一行", "第二行", "第三行"]
+    assert [segment.source_text for segment in segments2] == ["第一行", "替换行"]
+
+    db = create_database(db_path)
+    assert db.execute("SELECT COUNT(*) FROM source_documents").fetchone()[0] == 2
+    assert db.execute("SELECT COUNT(*) FROM segments").fetchone()[0] == 5
+    db.close()
+
+
+def test_import_service_empty_file_is_idempotent(db_path: Path, tmp_path: Path) -> None:
+    """An empty source version is persisted once and remains segment-free."""
+    path = tmp_path / "empty.txt"
+    path.write_text("", encoding="utf-8")
+    project_service = ProjectService(db_path, app_version="0.1.0")
+    project = project_service.create_project(name="P1", source_language="zh", target_language="en")
+    assert project.id is not None
+    project_service.close()
+
+    with ImportService(db_path, app_version="0.1.0") as import_service:
+        document1, segments1 = import_service.import_txt(project.id, path)
+        document2, segments2 = import_service.import_txt(project.id, path)
+
+    assert document1.id == document2.id
+    assert segments1 == segments2 == []
+    db = create_database(db_path)
+    assert db.execute("SELECT COUNT(*) FROM source_documents").fetchone()[0] == 1
+    assert db.execute("SELECT COUNT(*) FROM segments").fetchone()[0] == 0
+    db.close()
+
+
+def test_import_service_rolls_back_document_when_segment_insert_fails(
+    db_path: Path,
+    tmp_path: Path,
+) -> None:
+    """A segment constraint failure rolls back the whole source import."""
+    path = tmp_path / "collision.txt"
+    path.write_text("same\nsame\n", encoding="utf-8")
+    project_service = ProjectService(db_path, app_version="0.1.0")
+    project = project_service.create_project(name="P1", source_language="zh", target_language="en")
+    assert project.id is not None
+    project_service.close()
+
+    from transrealm.infrastructure.parsers.parser import ParserRegistry
+    from transrealm.infrastructure.parsers.txt_parser import TxtParser
+
+    class CollidingParser(TxtParser):
+        def parse(
+            self,
+            file_path: Path,
+            *,
+            project_id: int,
+            name: str | None = None,
+            encoding: str = "utf-8",
+        ) -> tuple[SourceDocument, list[Segment]]:
+            document, segments = super().parse(
+                file_path,
+                project_id=project_id,
+                name=name,
+                encoding=encoding,
+            )
+            segments[1].stable_key = segments[0].stable_key
+            return document, segments
+
+    registry = ParserRegistry()
+    registry.register(CollidingParser())
+    with ImportService(
+        db_path,
+        app_version="0.1.0",
+        parser_registry=registry,
+    ) as import_service:
+        with pytest.raises(SqlExecutionError):
+            import_service.import_txt(project.id, path)
+
+    db = create_database(db_path)
+    assert db.execute("SELECT COUNT(*) FROM source_documents").fetchone()[0] == 0
+    assert db.execute("SELECT COUNT(*) FROM segments").fetchone()[0] == 0
+    assert db.execute("SELECT COUNT(*) FROM projects").fetchone()[0] == 1
+    db.close()
 
 
 def test_segment_repository_lists_segments(db_path: Path, txt_file: Path) -> None:

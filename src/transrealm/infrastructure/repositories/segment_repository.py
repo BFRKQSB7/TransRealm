@@ -18,6 +18,52 @@ class SegmentRepository:
         """Open a repository for the database at ``path``."""
         return cls(create_database(path))
 
+    def import_document(
+        self,
+        document: SourceDocument,
+        segments: list[Segment],
+    ) -> tuple[SourceDocument, list[Segment]]:
+        """Persist one immutable source version and its segments atomically."""
+        now = datetime.now().isoformat()
+        with transaction(self._db):
+            cursor = self._db.execute(
+                "INSERT INTO source_documents "
+                "(project_id, name, format, encoding, source_hash, parser_version, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?) "
+                "ON CONFLICT(project_id, source_hash) DO NOTHING",
+                (
+                    document.project_id,
+                    document.name,
+                    document.format,
+                    document.encoding,
+                    document.source_hash,
+                    document.parser_version,
+                    now,
+                ),
+            )
+            new_id = cursor.lastrowid if cursor.rowcount == 1 else None
+            if new_id is None:
+                existing = self.find_source_document_by_hash(
+                    document.project_id,
+                    document.source_hash,
+                )
+                if existing is None or existing.id is None:
+                    raise RuntimeError("Conflicting source document could not be loaded")
+                return existing, self.list_segments_by_document(existing.id)
+
+            saved_document = SourceDocument(
+                id=new_id,
+                project_id=document.project_id,
+                name=document.name,
+                format=document.format,
+                encoding=document.encoding,
+                source_hash=document.source_hash,
+                parser_version=document.parser_version,
+                created_at=datetime.fromisoformat(now),
+            )
+            saved_segments = self._insert_segments(new_id, segments, now)
+        return saved_document, saved_segments
+
     def save_source_document(self, document: SourceDocument) -> SourceDocument:
         """Insert a source document and return the persisted entity."""
         now = datetime.now().isoformat()
@@ -68,45 +114,58 @@ class SegmentRepository:
     def save_segments(self, segments: list[Segment]) -> list[Segment]:
         """Insert segments and return them with ids assigned."""
         now = datetime.now().isoformat()
-        saved: list[Segment] = []
         with transaction(self._db):
-            for segment in segments:
-                cursor = self._db.execute(
-                    "INSERT INTO segments "
-                    "(source_document_id, stable_key, source_text, sequence, status, "
-                    "current_revision_id, version, lease_owner, lease_expires_at, "
-                    "created_at, updated_at) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (
-                        segment.source_document_id,
-                        segment.stable_key,
-                        segment.source_text,
-                        segment.sequence,
-                        segment.status,
-                        segment.current_revision_id,
-                        segment.version,
-                        segment.lease_owner,
-                        segment.lease_expires_at.isoformat() if segment.lease_expires_at else None,
-                        now,
-                        now,
-                    ),
-                )
-                saved.append(
-                    Segment(
-                        id=cursor.lastrowid,
-                        source_document_id=segment.source_document_id,
-                        stable_key=segment.stable_key,
-                        source_text=segment.source_text,
-                        sequence=segment.sequence,
-                        status=segment.status,
-                        current_revision_id=segment.current_revision_id,
-                        version=segment.version,
-                        lease_owner=segment.lease_owner,
-                        lease_expires_at=segment.lease_expires_at,
-                        created_at=datetime.fromisoformat(now),
-                        updated_at=datetime.fromisoformat(now),
-                    ),
-                )
+            return self._insert_segments(None, segments, now)
+
+    def _insert_segments(
+        self,
+        source_document_id: int | None,
+        segments: list[Segment],
+        now: str,
+    ) -> list[Segment]:
+        saved: list[Segment] = []
+        for segment in segments:
+            document_id = (
+                source_document_id
+                if source_document_id is not None
+                else segment.source_document_id
+            )
+            cursor = self._db.execute(
+                "INSERT INTO segments "
+                "(source_document_id, stable_key, source_text, sequence, status, "
+                "current_revision_id, version, lease_owner, lease_expires_at, "
+                "created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    document_id,
+                    segment.stable_key,
+                    segment.source_text,
+                    segment.sequence,
+                    segment.status,
+                    segment.current_revision_id,
+                    segment.version,
+                    segment.lease_owner,
+                    segment.lease_expires_at.isoformat() if segment.lease_expires_at else None,
+                    now,
+                    now,
+                ),
+            )
+            saved.append(
+                Segment(
+                    id=cursor.lastrowid,
+                    source_document_id=document_id,
+                    stable_key=segment.stable_key,
+                    source_text=segment.source_text,
+                    sequence=segment.sequence,
+                    status=segment.status,
+                    current_revision_id=segment.current_revision_id,
+                    version=segment.version,
+                    lease_owner=segment.lease_owner,
+                    lease_expires_at=segment.lease_expires_at,
+                    created_at=datetime.fromisoformat(now),
+                    updated_at=datetime.fromisoformat(now),
+                ),
+            )
         return saved
 
     def list_segments_by_document(self, source_document_id: int) -> list[Segment]:

@@ -61,36 +61,7 @@ class ImportService:
             encoding=encoding,
         )
 
-        existing = self._segment_repository.find_source_document_by_hash(
-            project_id,
-            document.source_hash,
-        )
-        if existing is not None:
-            assert existing.id is not None
-            existing_segments = self._segment_repository.list_segments_by_document(existing.id)
-            return existing, existing_segments
-
-        saved_document = self._segment_repository.save_source_document(document)
-        assert saved_document.id is not None
-        segments_with_id = [
-            Segment(
-                id=segment.id,
-                source_document_id=saved_document.id,
-                stable_key=segment.stable_key,
-                source_text=segment.source_text,
-                sequence=segment.sequence,
-                status=segment.status,
-                current_revision_id=segment.current_revision_id,
-                version=segment.version,
-                lease_owner=segment.lease_owner,
-                lease_expires_at=segment.lease_expires_at,
-                created_at=segment.created_at,
-                updated_at=segment.updated_at,
-            )
-            for segment in segments
-        ]
-        saved_segments = self._segment_repository.save_segments(segments_with_id)
-        return saved_document, saved_segments
+        return self._segment_repository.import_document(document, segments)
 
     def import_txt(
         self,

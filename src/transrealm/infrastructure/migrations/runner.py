@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from transrealm.infrastructure.database import DatabaseConnection, create_database
+from transrealm.infrastructure.migrations.backup import create_pre_upgrade_backup
 from transrealm.infrastructure.migrations.discovery import Migration, discover_migrations
 from transrealm.infrastructure.migrations.errors import (
     MigrationChecksumError,
@@ -15,6 +16,10 @@ class MigrationRunner:
 
     The runner maintains a `schema_migrations` table recording each applied
     migration id, checksum, application timestamp, and app version.
+
+    When pending migrations exist, the runner creates a single pre-upgrade
+    backup before applying the first migration. If backup creation fails,
+    no migrations are started.
     """
 
     _CREATE_HISTORY_TABLE = """
@@ -28,6 +33,12 @@ class MigrationRunner:
 
     def __init__(self, db: DatabaseConnection) -> None:
         self._db = db
+        self._last_backup_path: Path | None = None
+
+    @property
+    def last_backup_path(self) -> Path | None:
+        """Path to the most recent pre-upgrade backup, if any."""
+        return self._last_backup_path
 
     @classmethod
     def open(cls, path: Path) -> "MigrationRunner":
@@ -44,6 +55,10 @@ class MigrationRunner:
         )
         return {row[0]: row[1] for row in cursor.fetchall()}
 
+    def _create_backup(self) -> Path:
+        """Create a pre-upgrade backup of the current database."""
+        return create_pre_upgrade_backup(self._db.connection, self._db.path)
+
     def apply(self, migrations: list[Migration], *, app_version: str) -> list[Migration]:
         """Apply migrations that have not yet been applied.
 
@@ -57,11 +72,13 @@ class MigrationRunner:
         Raises:
             MigrationChecksumError: If an already-applied migration's checksum
                 does not match the file.
+            MigrationBackupError: If a pre-upgrade backup is required but
+                cannot be created.
             MigrationExecutionError: If a migration SQL script fails.
         """
         self._ensure_history_table()
         records = self._fetch_records()
-        applied: list[Migration] = []
+        pending: list[Migration] = []
 
         for migration in migrations:
             recorded_checksum = records.get(migration.migration_id)
@@ -74,8 +91,15 @@ class MigrationRunner:
                     )
                 continue
 
-            applied.append(migration)
+            pending.append(migration)
+
+        if pending:
+            self._last_backup_path = self._create_backup()
+
+        applied: list[Migration] = []
+        for migration in pending:
             self._apply_single(migration, app_version=app_version)
+            applied.append(migration)
 
         return applied
 

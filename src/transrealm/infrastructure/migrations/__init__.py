@@ -2,6 +2,7 @@
 
 from transrealm.infrastructure.migrations.discovery import Migration, discover_migrations
 from transrealm.infrastructure.migrations.errors import (
+    MigrationBackupError,
     MigrationChecksumError,
     MigrationError,
     MigrationExecutionError,
@@ -11,6 +12,7 @@ from transrealm.infrastructure.migrations.runner import MigrationRunner, run_mig
 
 __all__ = [
     "Migration",
+    "MigrationBackupError",
     "MigrationChecksumError",
     "MigrationError",
     "MigrationExecutionError",

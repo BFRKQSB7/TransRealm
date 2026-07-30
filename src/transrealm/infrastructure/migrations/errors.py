@@ -9,6 +9,17 @@ class MigrationError(DatabaseError):
     """Base class for migration errors."""
 
 
+class MigrationBackupError(MigrationError):
+    """Creating a pre-upgrade database backup failed."""
+
+    def __init__(
+        self,
+        message: str,
+        path: Path | None = None,
+    ) -> None:
+        super().__init__(message, path)
+
+
 class MigrationChecksumError(MigrationError):
     """A migration file's checksum does not match the recorded checksum."""
 

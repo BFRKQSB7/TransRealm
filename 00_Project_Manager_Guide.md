@@ -18,6 +18,8 @@
 - Prompt 具体模板（见 `05_Prompt_Architecture.md`）；
 - 任务明细（见 `07_Developer_Task_List.md`）。
 
+`07_Developer_Task_List.md` 保存稳定规划和验收，`DEVELOPMENT_STATE.md` 保存唯一运行时现场，`AI_CONTEXT_INDEX.md` 只负责按需导航；不要为同一职责新建平行路线图或状态文件。
+
 ## 2. Agent 自动开工入口
 
 日常开发时，项目负责人只需把 `DEVELOPMENT_STATE.md` 交给 Agent，并要求“按文件执行”。该文件是运行入口和检查点，不是产品需求或架构来源。
@@ -36,12 +38,7 @@ Agent 读取后必须：
 ## 3. 文档读取规则
 
 ### 完整接手项目
-按以下顺序阅读：
-
-1. `项目文档维护交接指令.md`；
-2. `初订项目名字.md`；
-3. `00_Project_Manager_Guide.md` 至 `08_Architecture_Review.md`，按文件名前数字顺序；
-4. 最后读取 `DEVELOPMENT_STATE.md`，以恢复当前 Task、检查点和工作区状态。
+先读取 `AI_CONTEXT_INDEX.md` 与 `DEVELOPMENT_STATE.md`，按当前指针加载 Task 和命中文档。只有发现索引失效、文档冲突、首次进入未覆盖领域，或用户明确要求全量审计时，才按 00–08 顺序扩展阅读；不再把每次完整接手等同于无差别通读。
 
 ### 普通开发任务
 先读取 `07_Developer_Task_List.md` 中对应任务，再读取该任务列出的输入文档。不得凭印象跳过任务指定的文档。
