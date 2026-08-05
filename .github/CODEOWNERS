@@ -1,0 +1,9 @@
+# High-risk paths require technical-owner review.
+/src/transrealm/migrations/ @BFRKQSB7
+/src/transrealm/infrastructure/migrations/ @BFRKQSB7
+/src/transrealm/adapters/credential_resolvers.py @BFRKQSB7
+/src/transrealm/adapters/http_transport.py @BFRKQSB7
+/src/transrealm/application/adapter_factory.py @BFRKQSB7
+/pyproject.toml @BFRKQSB7
+/.github/ @BFRKQSB7
+/RELEASE_CHECKLIST.md @BFRKQSB7

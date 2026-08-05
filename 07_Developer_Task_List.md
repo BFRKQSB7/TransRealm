@@ -6,16 +6,20 @@
 
 每个未完成 Task 必须包含：
 
-- Task 编号、Phase/Release、Priority 和状态；
+- Task 编号、Phase/Release、Priority、风险等级和状态；
+- `base_commit`、`allowed_paths`、`forbidden_paths` 与工作树归属；
 - Reality Audit 结论（`KEEP / REFINE / SIMPLIFY / MERGE / SPLIT / DEFER / REMOVE / DECISION_REQUIRED`）；
-- 目标、非目标和用户价值；
-- 前置依赖与现有现场；
+- 目标、非目标、用户价值和不可破坏的不变量；
+- 前置依赖、可复现基线和现有现场；
 - 输入文档和权威来源；
-- 硬约束与参考方案；
-- 执行 Agent 可自主决定的内容；
-- 修改范围上限与交付能力；
-- 功能、异常、安全和兼容性验收；
-- 测试证据、Code Review、文档同步和完成条件。
+- 硬约束、参考方案与执行 Agent 可自主决定的内容；
+- 修改范围上限、交付能力和不得触碰的边界；
+- 功能、异常、安全、兼容性和可观测性验收矩阵（场景、预期持久化状态、恢复动作、测试证据）；
+- 依赖、迁移、外部调用、GUI 和公开兼容性的变更预算；
+- 风险等级对应的质量门禁、独立 Review 和例外升级条件；
+- 测试证据、回滚点、文档同步和完成条件。
+
+任务单模板与风险/例外规则以 `09_Unattended_Development_Governance.md` 为准；本文件不记录即时工作树、测试数量或当前指针。
 
 状态使用 `pending / in_progress / blocked / verification / completed`；Milestone 的 `ready` 和 Reality Check 结论只记录在 `DEVELOPMENT_STATE.md`。一个 Task 只完成一组内聚的用户能力，不把后续功能顺手扩入当前 Task。
 
@@ -83,7 +87,24 @@ P0-T01 Project/SQLite/Migration 基础
 
 每个 Milestone 必须交付一个可独立验证的行为，并在同一切片中包含必要测试和最小实现。Milestone 表使用“行为与完成条件”，不得采用“先写全部 DTO/Repository、再写全部 UI”的纯水平切分，也不得预填测试通过数。证据要求：代码 Task 记录实际 pytest/Ruff/mypy；Adapter 使用可控 fake transport/server；GUI 必须实际启动并执行 pytest-qt/交互验证；恢复、备份和格式 round-trip 必须有数据库或文件级显式断言。
 
-## 5. 当前可执行 Task
+## 5. 治理准入 Task
+
+### GOV-BASELINE-01 — P0-T07/T08 候选现场审查与可复现基线
+
+- **Phase/Release：** 治理准入 / V1.0 前置
+- **Priority：** P0 / Release-blocking
+- **风险等级：** High
+- **状态：** completed
+- **目标：** 在不覆盖、丢弃或混入用户数据的前提下，审计并保护未提交的 P0-T07 至 P0-T08 staged、unstaged 与 untracked 候选现场，重新取得可复现质量证据，并形成可恢复的开发基线。
+- **非目标：** 不新增 P1 功能；不擅自提交、暂存、推送、创建远程资源或删除工作树；不把历史测试记录重新表述为本次结果。
+- **前置基线：** `master` 的 `e3cf48e` 已包含 P0-T03 至 P0-T06；当前候选现场含 P0-T07/T08 源码、测试、migration `006` 和文档，必须按 Git 实际状态核验。
+- **修改范围上限：** Git 状态证据、治理/状态文档、忽略规则及经用户授权的基线保护动作；不得改业务代码，除非验证发现可独立复现的 P0 缺陷并由技术负责人拆分为单独修复切片。
+- **功能验收：** 完整区分 staged/unstaged/untracked/用户运行数据；确认 migration `006`、后续源码和测试的归属；执行并记录当前工作树的 pytest/Ruff/mypy 结果；记录恢复方式、已知缺口和可定位的基线标识。
+- **异常/安全验收：** `*.db`、`*.db.bak`、凭据、日志和导出物不进入候选；不使用 reset/restore/clean/覆盖操作；质量失败时保持 `blocked` 或 `verification`，不得推进 P1。
+- **独立 Review：** 检查候选 P0 实现、migration `006`、状态文档和测试证据的一致性。
+- **完成条件：** 技术负责人确认候选现场可恢复并具有本次可复现门禁证据；需要提交、隔离分支或远程备份时取得用户的明确授权；随后才将 P1-T01-M01 恢复为 `ready`。
+
+## 6. 当前可执行 Task
 
 ### P0-T01 — Project / SQLite / Migration 基础
 
@@ -255,7 +276,7 @@ V1.0 不包含：RAG、智能 TM、World State、节点式 Workflow 编辑器、
 - **Task 编号：** P0-T07
 - **Phase/Release：** Phase 0 / V0.x
 - **Priority：** P0
-- **状态：** pending；当前运行指针见 `DEVELOPMENT_STATE.md`。
+- **状态：** completed
 - **Reality Audit：** `REFINE + SPLIT + SIMPLIFY`。Segment 已有 `status/current_revision_id/version/lease_*` 占位和事务基础；WorkflowDefinition、TranslationRun、SegmentAttempt、TranslationRevision、状态迁移、lease 原子操作和恢复均不存在。保留状态机目标，改成行为切片；只实现内置只读 Workflow，不提前实现 Workflow CRUD、继承、节点引擎或队列基础设施。
 - **目标：** 建立可审计、幂等、不会覆盖人工译文的翻译执行记录；在崩溃、重复提交、租约过期和取消后，使每个 Segment 保持可解释并可安全恢复。
 - **非目标：** 不增加文件格式、GUI、自动/工作台模式、通用调度队列、并行 worker 池、Workflow 编辑器、RAG/TM 或项目包。
@@ -287,20 +308,20 @@ V1.0 不包含：RAG、智能 TM、World State、节点式 Workflow 编辑器、
 - **文档同步项：** schema/状态/重试契约变化同步 `03/04/05`；Task、索引和运行现场同步 `07/index/state`；产品范围不变，不修改 `01`。
 - **完成条件：** M01–M05 全部通过；全量回归和 Review 无未解决阻塞；文档与真实 schema/状态一致；仅此时把 Task 标为 completed。
 
-| Milestone | 可独立验证的行为与完成条件 |
-|---|---|
-| P0-T07-M01 | **可重开执行骨架：** 新/旧 Project 应用新 migration 后都能读取一个版本化只读内置 Workflow；可创建引用它的 Run，并在第一次外部请求前持久化包含快照/审计基础的 Attempt。无效 Workflow/Profile/Segment 引用、重复定义版本或 migration 中断必须回滚。先执行 Reality Check；内部表/类拆分为参考方案。 |
-| P0-T07-M02 | **原子领取与幂等：** 一个 pending Segment 只能被一个 owner 以新 version 领取并关联新 Attempt；重复幂等键返回既有记录、不重复执行；未过期 lease、错误状态和 stale version 被拒绝。以可控 UTC 时钟验证过期边界和数据库重开。 |
-| P0-T07-M03 | **成功完成事务：** 对有效 Validator 结果一次性保存响应审计、追加 Revision、更新 current revision 并完成 Segment/Attempt/Run 统计；任一故障切点全部回滚或保持可恢复 processing，迟到 owner 和 locked/current 已变化时不得提交。 |
-| P0-T07-M04 | **失败、取消与启动恢复：** normalized permanent/retryable/validation 错误形成可解释 Attempt；仅 retryable failed 可重新排队并创建新 Attempt；取消保留既有 Revision/原因；启动只回收过期 processing，不覆盖人工/locked current。验证 transport retry 同 Attempt、repair/业务 retry 新 Attempt。 |
-| P0-T07-M05 | **恢复矩阵与 Task Gate：** 覆盖请求前、请求后、响应审计、Revision、current/status 前后崩溃，重复启动恢复、lease 冲突、锁定回归；执行全量 pytest/Ruff/mypy、规划范围 Code Review 和编号文档/索引/状态同步。不得以测试矩阵替代缺失行为。 |
+| Milestone | 可独立验证的行为与完成条件 | 状态 |
+|---|---|---|
+| P0-T07-M01 | **可重开执行骨架：** 新/旧 Project 应用新 migration 后都能读取一个版本化只读内置 Workflow；可创建引用它的 Run，并在第一次外部请求前持久化包含快照/审计基础的 Attempt。无效 Workflow/Profile/Segment 引用、重复定义版本或 migration 中断必须回滚。先执行 Reality Check；内部表/类拆分为参考方案。 | completed |
+| P0-T07-M02 | **原子领取与幂等：** 一个 pending Segment 只能被一个 owner 以新 version 领取并关联新 Attempt；重复幂等键返回既有记录、不重复执行；未过期 lease、错误状态和 stale version 被拒绝。以可控 UTC 时钟验证过期边界和数据库重开。 | completed |
+| P0-T07-M03 | **成功完成事务：** 对有效 Validator 结果一次性保存响应审计、追加 Revision、更新 current revision 并完成 Segment/Attempt/Run 统计；任一故障切点全部回滚或保持可恢复 processing，迟到 owner 和 locked/current 已变化时不得提交。 | completed |
+| P0-T07-M04 | **失败、取消与启动恢复：** normalized permanent/retryable/validation 错误形成可解释 Attempt；仅 retryable failed 可重新排队并创建新 Attempt；取消保留既有 Revision/原因；启动只回收过期 processing，不覆盖人工/locked current。验证 transport retry 同 Attempt、repair/业务 retry 新 Attempt。 | completed |
+| P0-T07-M05 | **恢复矩阵与 Task Gate：** 覆盖请求前、请求后、响应审计、Revision、current/status 前后崩溃，重复启动恢复、lease 冲突、锁定回归；执行全量 pytest/Ruff/mypy、规划范围 Code Review 和编号文档/索引/状态同步。不得以测试矩阵替代缺失行为。 | completed |
 
 ## 15. P0-T08 — TXT 翻译端到端与最小 GUI Shell
 
 - **Task 编号：** P0-T08
 - **Phase/Release：** Phase 0 / V0.x
 - **Priority：** P0
-- **状态：** pending
+- **状态：** completed
 - **Reality Audit：** `REFINE + SPLIT + SIMPLIFY`。TXT 导入、Profile/Connection、Context、Prompt、Adapter 协议、Validator 可复用；生产 HTTP transport/credential resolver、Application 层闭环、TXT exporter、PySide6/UI worker 均不存在，`pyproject.toml` 也未声明运行时或 Qt 测试依赖。保留薄 GUI，但先完成无 UI 闭环，不建立通用队列/事件总线。
 - **目标：** 让用户在 Windows 桌面入口中完成 Project 打开、TXT 导入、Profile 选择、受控翻译、进度/错误查看和 Revision 导出，并验证真实 Application Service 与 worker 边界。
 - **非目标：** 不实现自动/工作台产品模式、JSON/字幕、复杂批量调度、多 Profile/Glossary 管理、高级 Prompt 编辑或正式发布包。
@@ -323,12 +344,12 @@ V1.0 不包含：RAG、智能 TM、World State、节点式 Workflow 编辑器、
 
 | Milestone | 可独立验证的行为与完成条件 |
 |---|---|
-| P0-T08-M01 | **无 UI 成功闭环：** 给定已导入 TXT、Profile 和 fake Adapter，一个应用用例完成 compose/render/call/validate/T07 finalize，生成可重开 Revision；空 Segment、缺 Profile、预算不足不发请求。 |
-| P0-T08-M02 | **生产调用边界：** 通过受控本地 HTTP server 验证真实 transport 与配置 composition；环境变量及已支持的 Windows credential reference 可解析，timeout/redirect/认证/响应错误稳定归类且不泄密。新增依赖先做 Reality Check 和打包影响记录。 |
-| P0-T08-M03 | **失败与有限修复 E2E：** Adapter 错误、无效输出和一次 repair 进入正确 Attempt/Segment；永久错误不业务重试，repair 新建 Attempt，窗口/进程重启后仍可解释并按 T07 恢复。 |
-| P0-T08-M04 | **Revision 驱动 TXT 导出：** 当前或显式有效 Revision 按原 Segment 顺序导出；缺失/跨 Segment/无效 Revision、编码和不可写目标失败时不留下半文件，不回退未验证文本。 |
-| P0-T08-M05 | **非阻塞桌面闭环：** 最小主窗口与 Settings/Project/Translation 入口通过同一 Application Service 导入、选择 Profile、启动/取消翻译、显示进度/错误并导出；pytest-qt 和人工操作证明主线程可响应、关闭可恢复。 |
-| P0-T08-M06 | **Phase 0 Gate：** 对成功/失败/关闭/reopen 做 E2E 与 GUI review；运行全量质量命令；用一个候选打包工具完成本机 build/start 可行性 smoke 并记录依赖/Qt 插件问题，不冻结最终工具或发布 artifact；同步文档与状态。 |
+| P0-T08-M01 | **无 UI 成功闭环：** 给定已导入 TXT、Profile 和 fake Adapter，一个应用用例完成 compose/render/call/validate/T07 finalize，生成可重开 Revision；空 Segment、缺 Profile、预算不足不发请求。 | completed |
+| P0-T08-M02 | **生产调用边界：** 通过受控本地 HTTP server 验证真实 transport 与配置 composition；环境变量及已支持的 Windows credential reference 可解析，timeout/redirect/认证/响应错误稳定归类且不泄密。新增依赖先做 Reality Check 和打包影响记录。 | completed |
+| P0-T08-M03 | **失败与有限修复 E2E：** Adapter 错误、无效输出和一次 repair 进入正确 Attempt/Segment；永久错误不业务重试，repair 新建 Attempt，窗口/进程重启后仍可解释并按 T07 恢复。 | completed |
+| P0-T08-M04 | **Revision 驱动 TXT 导出：** 当前或显式有效 Revision 按原 Segment 顺序导出；缺失/跨 Segment/无效 Revision、编码和不可写目标失败时不留下半文件，不回退未验证文本。 | completed |
+| P0-T08-M05 | **非阻塞桌面闭环：** 最小主窗口与 Settings/Project/Translation 入口通过同一 Application Service 导入、选择 Profile、启动/取消翻译、显示进度/错误并导出；pytest-qt 和人工操作证明主线程可响应、关闭可恢复。 | completed |
+| P0-T08-M06 | **Phase 0 Gate：** 对成功/失败/关闭/reopen 做 E2E 与 GUI review；运行全量质量命令；用一个候选打包工具完成本机 build/start 可行性 smoke 并记录依赖/Qt 插件问题，不冻结最终工具或发布 artifact；同步文档与状态。 | completed |
 
 ## 16. P1-T01 — JSON / SRT / ASS / SSA / VTT round-trip
 

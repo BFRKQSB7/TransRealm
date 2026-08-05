@@ -1,0 +1,25 @@
+name: Candidate hygiene
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  hygiene:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check tracked candidate hygiene
+        run: py -3.12 scripts/check_candidate_hygiene.py
+      - name: Check migration ordering
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem src/transrealm/migrations -Filter *.sql | Sort-Object Name
+          if ($files.Count -eq 0) { throw 'No migrations found.' }
+          $numbers = $files | ForEach-Object { [int]($_.BaseName.Substring(0, 3)) }
+          for ($i = 1; $i -lt $numbers.Count; $i++) {
+            if ($numbers[$i] -le $numbers[$i - 1]) { throw 'Migration order is invalid.' }
+          }
