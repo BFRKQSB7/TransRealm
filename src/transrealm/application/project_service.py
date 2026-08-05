@@ -56,3 +56,9 @@ class ProjectService:
     def close(self) -> None:
         """Close the service and release resources."""
         self._repository.close()
+
+    def __enter__(self) -> "ProjectService":
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self.close()

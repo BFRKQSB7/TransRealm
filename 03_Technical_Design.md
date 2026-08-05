@@ -110,6 +110,18 @@ adapter 才调用 resolver 获取 token 并写入 `Authorization` 请求头；
 OpenAI-compatible 实现位于 `adapters/openai_adapter.py`，负责请求/响应映射、
 capability 校验和错误归一化。
 
+生产 transport 与凭据解析（P0-T08-M02）：`adapters/http_transport.py` 用 stdlib
+`urllib.request`（经 `asyncio.to_thread` 满足 async `Transport` 协议）实现零运行时
+依赖 transport：请求超时归为 `AdapterTimeoutError`，连接/截断响应归为
+`AdapterConnectionError`；重定向由 transport 自行处理，同源（scheme/host/port 不变）
+保留全部头，跨源或 HTTPS 降级剥离 `Authorization`/`Cookie`/`Proxy-Authorization`，
+且只跟随 `http`/`https` 重定向。`adapters/credential_resolvers.py` 提供
+`env:`（`os.environ`）与 `wincred:`（`ctypes` 调 `advapi32.CredReadW`）resolver；
+错误信息只含变量/目标名或 Win32 错误号，不含 secret 值。
+`application/adapter_factory.py` 的 `compose_adapter` 把持久化
+`ProviderConnection`（endpoint/timeout/retry/credential_reference）与
+`ModelProfile`（model/capability snapshot）组合成 adapter 实例。
+
 UI 只显示当前 Model Capability 支持的参数；不得假设所有兼容端点支持相同参数。
 
 ## 6. Segment 状态与恢复
@@ -154,9 +166,25 @@ Context Composer 必须记录 Context Manifest：来源、优先级、命中原�
 - 程序关闭或断电：依赖 SQLite 事务和 lease 恢复 processing；
 - 认证、参数和格式等永久错误：不自动重试，显示可操作错误。
 
+Phase 0 的有限修复（P0-T08-M03）由 `TranslationService` 编排：模型输出无效且
+首个校验问题被 `OutputParser` 标记为 `repairable`（空译文/污染）时，执行一次有界
+重呼并创建新 Attempt（新幂等键，同 rendered prompt），repair 预算默认 1；重呼后仍
+无效或问题不可修复则 finalize 为永久失败。repair 通过 T07 的
+`finalize_failure(retryable=True)` + `retry_failed` + `start_attempt` 路径进入新
+Attempt，repair 层独立记账于 Attempt 的 `validator_summary`，不与 Adapter transport
+retry 形成乘法重试。
+
 ## 9. Export 与格式保真
 
 Exporter 默认读取 Segment 的 `current_revision_id`；用户显式选择历史 Revision 时，必须验证该 Revision 属于同一 Segment 且有效，不能把 Adapter response、Validator candidate 或源文作为静默回退。解析器与 Exporter 必须共享格式专属定位元数据；缺失/错配 metadata 或 Revision 时拒绝导出，不留下半文件。
+
+Phase 0 的 TXT 导出（P0-T08-M04）由 `application/exporter.py` 的 `TxtExporter`
+实现：按 `ORDER BY sequence` 原顺序取 Segment，默认写 `current_revision_id`
+对应 Revision 文本；`revision_overrides: dict[segment_id, revision_id]` 支持显式
+选择，逐 Revision 校验存在且 `segment_id` 归属，未知 segment 键报错；任一 Segment
+缺可用 Revision 即失败、不回退源文。写入为同目录 `tempfile.mkstemp` + `os.replace`
+原子替换，编码失败或目标不可写均清理临时文件并保持目标不变；默认 UTF-8（源编码/
+BOM 保真属本节约定的 V1.0 基线，P1-T01 落实）。
 
 V1.0 保真基线：无翻译导出与导入 bytes 一致；翻译后只允许目标文本 span 改变，并保留原编码/BOM、换行及非目标结构。JSON 只翻译 string leaf value，保留 key、非字符串值、顺序、空白和转义；SRT/VTT 保留 cue 标识、时间轴/settings 与非目标块；ASS/SSA 根据 Events Format 只替换 Dialogue Text，保留 section、style、comment、字段顺序、标签和转义。损坏或不支持输入默认拒绝，不静默“修复”。round-trip golden tests 是 V1.0 发布门槛。
 
@@ -168,7 +196,11 @@ SQLite 访问统一由 infrastructure/repository 层管理连接与事务。测�
 
 P0-T08 的 GUI 仅为核心 TXT 翻译闭环提供薄桌面入口；UI 只能调用 Application Service，解析、数据库和模型请求必须在可控 worker 中执行并返回 DTO。每个 worker/thread 拥有自己的 SQLite connection 生命周期，不跨线程传递 connection/cursor；关闭时先停止接收新工作，再通过 P0-T07 的取消/lease 语义收敛，不能以强杀线程伪装成功。P1-T04 先补齐 Project Profile 选择与基础 Glossary，P1-T03 再增加自动模式与工作台模式的默认策略、参数暴露和交互差异；两种模式继续复用同一状态机、Validator、Application Service 和 Revision 保护。运行中 Run 不因 UI 模式切换改变 Profile/Workflow/参数；用户必须选择继续当前 Run 或取消后以新配置创建后续 Run。
 
+Phase 0 桌面壳（P0-T08-M05）：`ui/main_window.py`（三 Tab：Settings/Project/Translation）、`ui/pages.py`（三个页面）、`ui/worker.py`（`ServiceWorker` 通用任务执行器 + `TranslationWorker` 逐 Segment 翻译循环）。worker 槽通过信号排队到各自线程（直接调用 `moveToThread` 对象的槽会在调用线程执行，故用 `start_translate`/`run_requested` 信号触发），每个 worker 线程内创建的 Service 连接只在创建线程内开闭；取消经主线程直接置位的 `request_stop` 标志在 Segment 边界生效，关闭时 `request_stop` + `thread.quit()` + 有界 `wait()` 收敛，在途模型调用受 timeout 约束，遗留 processing 由 T07 lease 恢复。
+
 Windows 绿色版由独立打包任务生成，首选 PyInstaller 作为 V1.0 打包候选；Phase 0 只验证候选工具能 build/start，V1.0 Release Gate 才冻结依赖并验证启动、体积、PySide6 插件、路径/恢复/清理和杀毒扫描。打包工具属于可验证的实现选择，不改变 Project 数据格式；构建候选不代表已发布。
+
+Phase 0 build/start smoke（P0-T08-M06，PyInstaller 6.21.0 验证）：`--onedir --windowed` 可行，PyInstaller 内置 PySide6 hook（`pyi_rth_pyside6` + QtCore/Gui/Widgets）自动收集 `platforms/qwindows.dll`、styles、iconengines、imageformats 等 Qt 插件；应用只用 stdlib `sqlite3`、不导入 QtSql，故 `sqldrivers` 插件缺失属预期。**关键发现：** 迁移 SQL 数据文件（`transrealm/migrations/*.sql`）不会被 PyInstaller 自动收集——冻结应用仅建空 `schema_migrations`、无法应用迁移；必须显式 `--add-data "src/transrealm/migrations;transrealm/migrations"`（迁移目录经 `Path(__file__).parent.parent / "migrations"` 在 `_internal` 下解析），补上后 6 个迁移全部应用、全部业务表可创建。构建 ~1 分钟、onedir 体积约 123 MB（PySide6 主导），正式依赖锁/体积/UPX/图标/签名/杀毒属 V1.0 Release Gate。
 
 ## 11. Attempt 可观测性与安全
 

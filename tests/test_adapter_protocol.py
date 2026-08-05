@@ -334,6 +334,35 @@ class TestOpenAIAdapterRequestMapping:
         assert body["temperature"] == 0.5
         assert "top_p" not in body
 
+    @pytest.mark.parametrize(
+        "key, value",
+        [
+            ("model", "unapproved-model"),
+            ("messages", [{"role": "user", "content": "unapproved prompt"}]),
+            ("stream", True),
+            ("response_format", {"type": "text"}),
+        ],
+    )
+    def test_extra_params_cannot_override_request_identity(
+        self,
+        key: str,
+        value: object,
+    ) -> None:
+        transport = FakeTransport(response=TransportResponse(200, {}, b"{}", 0.1))
+        cap = make_capability(params={key})
+        adapter = make_adapter(transport, capability=cap)
+        request = AdapterRequest(
+            model_id="approved-model",
+            messages=(AdapterMessage(role="user", content="approved prompt"),),
+            extra_params={key: value},
+        )
+
+        with pytest.raises(AdapterValidationError, match=key) as exc:
+            run(adapter.chat_completion(request))
+
+        assert "unapproved" not in str(exc.value)
+        assert transport.last_call is None
+
     def test_timeout_passed_to_transport(self) -> None:
         transport = FakeTransport(response=TransportResponse(200, {}, b"{}", 0.1))
         adapter = make_adapter(transport)

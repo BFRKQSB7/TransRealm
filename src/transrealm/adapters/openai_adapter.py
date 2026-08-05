@@ -63,6 +63,9 @@ class OpenAICompatibleAdapter:
     """
 
     API_PATH = "/v1/chat/completions"
+    _PROTECTED_EXTRA_PARAMS = frozenset(
+        {"model", "messages", "response_format", "stream"},
+    )
 
     def __init__(
         self,
@@ -229,6 +232,11 @@ class OpenAICompatibleAdapter:
         if request.stream:
             body["stream"] = True
 
+        protected = sorted(set(request.extra_params) & self._PROTECTED_EXTRA_PARAMS)
+        if protected:
+            raise AdapterValidationError(
+                f"extra_params cannot override protected fields: {', '.join(protected)}.",
+            )
         filtered = self.filter_params(request.extra_params)
         body.update(filtered)
         return body

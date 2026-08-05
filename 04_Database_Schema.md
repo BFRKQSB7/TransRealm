@@ -16,9 +16,10 @@ migration/
   003_add_import_uniqueness.sql
   004_add_provider_connection.sql
   005_add_model_profile.sql
+  006_add_workflow_run_attempt_revision.sql
 ```
 
-数据库维护 `schema_migrations`：migration_id、checksum、applied_at、app_version。上表是截至 P0-T03 当前工作树已存在的 `001`–`005`，不是未来完整编号清单；后续 Agent 必须先检查真实 migration 目录再选择新编号。
+数据库维护 `schema_migrations`：migration_id、checksum、applied_at、app_version。上表截至 P0-T07-M01 已包含 `001`–`006`；后续 Agent 必须先检查真实 migration 目录再选择新编号。
 
 `projects.schema_version` 仅作为 Project/package 兼容性快照，由 migration/open 流程维护，不替代 `schema_migrations`；数据库实际已应用结构以 `schema_migrations` 为唯一权威。
 
@@ -62,9 +63,9 @@ SourceDocument 表示不可变的内容与解析版本；逻辑复用身份至�
 
 ### WorkflowDefinition
 
-`workflow_definitions`：id、name、origin（builtin/user）、parent_workflow_id、version、definition_json、is_read_only、created_at。
+`workflow_definitions`：id、name、origin（builtin/user）、parent_workflow_id、version、definition_json、definition_hash、is_read_only、created_at。
 
-V1.0 内置预设以只读、版本化定义提供；用户副本属于后期能力。`translation_runs.workflow_id` 外键引用实际执行定义，并保存运行时 version snapshot，保证结果可复现。
+V1.0 内置预设以只读、版本化定义提供；用户副本属于后期能力。`translation_runs.workflow_id` 外键引用实际执行定义，并保存运行时 version 与 definition_hash snapshot，保证结果可复现。内置 Workflow 在打开时 idempotent seed，并校验 definition_hash 以发现被错误改写。
 
 ### TranslationRun 与 SegmentAttempt
 

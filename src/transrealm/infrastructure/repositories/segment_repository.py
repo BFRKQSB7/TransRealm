@@ -111,6 +111,29 @@ class SegmentRepository:
             return None
         return self._row_to_source_document(row)
 
+    def get_source_document_by_id(self, source_document_id: int) -> SourceDocument | None:
+        """Fetch a source document by id, or None if not found."""
+        cursor = self._db.execute(
+            "SELECT id, project_id, name, format, encoding, source_hash, "
+            "parser_version, created_at "
+            "FROM source_documents WHERE id = ?",
+            (source_document_id,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return self._row_to_source_document(row)
+
+    def list_source_documents_by_project(self, project_id: int) -> list[SourceDocument]:
+        """Return all source documents for a project ordered by id."""
+        cursor = self._db.execute(
+            "SELECT id, project_id, name, format, encoding, source_hash, "
+            "parser_version, created_at "
+            "FROM source_documents WHERE project_id = ? ORDER BY id",
+            (project_id,),
+        )
+        return [self._row_to_source_document(row) for row in cursor.fetchall()]
+
     def save_segments(self, segments: list[Segment]) -> list[Segment]:
         """Insert segments and return them with ids assigned."""
         now = datetime.now().isoformat()
@@ -177,6 +200,19 @@ class SegmentRepository:
             (source_document_id,),
         )
         return [self._row_to_segment(row) for row in cursor.fetchall()]
+
+    def get_by_id(self, segment_id: int) -> Segment | None:
+        """Fetch a segment by id, or None if not found."""
+        cursor = self._db.execute(
+            "SELECT id, source_document_id, stable_key, source_text, sequence, status, "
+            "current_revision_id, version, lease_owner, lease_expires_at, created_at, updated_at "
+            "FROM segments WHERE id = ?",
+            (segment_id,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return self._row_to_segment(row)
 
     def find_segment_by_stable_key(
         self,

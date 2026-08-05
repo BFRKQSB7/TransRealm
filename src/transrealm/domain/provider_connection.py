@@ -79,10 +79,17 @@ class ProviderConnection:
             )
 
         parsed = urllib.parse.urlparse(self.endpoint)
-        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-            raise ProviderConnectionError(
-                f"Endpoint must be an HTTP/HTTPS URL: {self.endpoint!r}",
-            )
+        if (
+            parsed.scheme not in {"http", "https"}
+            or not parsed.hostname
+            or parsed.username is not None
+            or parsed.password is not None
+        ):
+            raise ProviderConnectionError("Endpoint must be an HTTP/HTTPS URL without userinfo.")
+        try:
+            parsed.port
+        except ValueError as exc:
+            raise ProviderConnectionError("Endpoint port is invalid.") from exc
 
         if self.timeout_seconds <= 0:
             raise ProviderConnectionError(

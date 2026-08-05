@@ -114,6 +114,25 @@ class TestProviderConnectionValidation:
                 endpoint=endpoint,
             )
 
+    @pytest.mark.parametrize(
+        "endpoint",
+        [
+            "https://user@example.com/v1",
+            "https://user:secret@example.com/v1",
+            "http://user:secret@localhost:8080/v1",
+            "https://example.com:not-a-port/v1",
+        ],
+    )
+    def test_create_rejects_endpoint_userinfo_or_invalid_port(self, endpoint: str) -> None:
+        """Endpoints cannot persist credentials or malformed ports."""
+        with pytest.raises(ProviderConnectionError) as exc:
+            ProviderConnection.create(
+                name="x",
+                provider_type="openai-compatible",
+                endpoint=endpoint,
+            )
+        assert "secret" not in str(exc.value)
+
     def test_create_rejects_non_positive_timeout(self) -> None:
         """Timeout must be positive."""
         with pytest.raises(ProviderConnectionError):

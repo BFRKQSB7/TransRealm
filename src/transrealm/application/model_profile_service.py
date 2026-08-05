@@ -122,3 +122,9 @@ class ModelProfileService:
     def close(self) -> None:
         """Close the service and release resources."""
         self._profile_repository.close()
+
+    def __enter__(self) -> ModelProfileService:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self.close()
