@@ -7,7 +7,7 @@ current_phase: Phase 1
 current_release: V1.0
 current_task: P1-T01
 current_milestone: P1-T01-M01
-state: ready
+state: blocked
 last_updated: 2026-08-06
 baseline_commit: 5ef3be6
 baseline_integrity: committed_and_verified
@@ -15,7 +15,10 @@ worktree_disposition: governance_commit_pending
 gate_status: open
 review_status: P0_independent_review_resolved
 rollback_ref: 5ef3be6
-evidence_location: DEVELOPMENT_STATE.md#current-development-context
+pending_decision: DEC-P1-T01-FOUNDATION
+decision_prompt: DEVELOPMENT_STATE.md#pending-decision
+decision_result: pending
+resume_milestone: P1-T01-M01
 ---
 
 # 译境 / TransRealm — Agent 自动开工与开发状态
@@ -32,7 +35,7 @@ evidence_location: DEVELOPMENT_STATE.md#current-development-context
 4. 按当前 Task 的“输入文档”读取必要契约：产品/范围读 `01_PRD.md` 与 `02_Development_Roadmap.md`；架构读 `03_Technical_Design.md` 与 `08_Architecture_Review.md`；数据库读 `04_Database_Schema.md`；Prompt/Context/输出读 `05_Prompt_Architecture.md`；高风险、例外、发布/回滚读 `09_Unattended_Development_Governance.md`；候选发布才读 `RELEASE_CHECKLIST.md`。
 5. 在写代码前记录 FIT、ADAPT 或 REPLAN。FIT 直接执行；ADAPT 只改可逆内部实现；REPLAN 停止冲突部分并记录证据、最小替代方案、影响、回滚成本和待裁决项。
 6. 状态为 `ready`、`in_progress` 或 `verification` 且没有 REPLAN 时，直接推进当前小目标：测试/验收样例 → 最小实现 → 功能与异常测试 → Review → 文档与本文件同步。
-7. 完成或中断时，更新本文件中的实际结果、命令/输出、风险、阻塞、恢复动作和下一小目标。没有测试证据、Review 或文档同步不得标记 `completed`。
+7. 完成或中断时，更新本文件中的实际结果、命令/输出、兼容性基线（受影响旧能力、旧测试、新测试和实测结果）、风险、阻塞、恢复动作和下一小目标。没有测试证据、旧功能回归、Review 或文档同步不得标记 `completed`。
 
 只有产品或架构变化、破坏性或对外操作、用户专属凭据/文件、付费调用，或无法由代码/测试/Git 消除的实质歧义才询问用户。常规可逆选择自行决定。
 
@@ -77,11 +80,42 @@ evidence_location: DEVELOPMENT_STATE.md#current-development-context
 - 未来 Task 中的类名、Manager/Service、文件落点和局部算法默认是参考实现，除非权威文档明确标注为强制契约。
 - 无人开发的角色、风险、门禁、例外和发布/回滚规则以 `09_Unattended_Development_Governance.md` 为准。
 
+### 待决策节点
+
+- **pending_decision：** `DEC-P1-T01-FOUNDATION`
+- **触发 Milestone：** P1-T01-M01
+- **问题：** 选择后续六种格式共用的 format metadata、原始 bytes/span 表示和旧 TXT Project 升级策略。该选择决定 no-op byte identity、Revision 只替换目标 span 和 P1-T02 Project 容器的基础，不能由开发 Agent 自行猜测。
+- **不可变约束：** 不重写 `001`–`007` migration；TXT no-op 必须字节一致；翻译仅改变目标 span；原编码/BOM/换行必须可恢复；metadata 与源内容版本同事务保存；缺失或错配安全失败；不实现其他格式或改变翻译状态机。
+- **现场证据：** 当前 `TxtExporter` 按 Revision 顺序写 UTF-8，未保留原 bytes/encoding/BOM/换行；`SourceDocument` 当前只保存 format、encoding、source_hash、parser_version；P1-T01-M01 是后续 JSON/SRT/VTT/ASS/SSA 的共同底座。
+- **候选方案：**
+  1. 原始 bytes + 每 Segment byte span；保真最直接，但多字节编码/span 验证复杂。
+  2. 原始 bytes + 格式专属定位 metadata；允许每格式安全定位，需严格契约避免五套分叉逻辑。
+  3. 重序列化格式对象；拒绝，无法满足 byte identity。
+- **技术负责人推荐：** 方案 2：持久化原始 bytes、encoding/BOM/newline 与版本化 format metadata；TXT 使用受验证的 byte/character replacement mapping，后续格式使用同一 metadata envelope 中的格式专属定位信息。理由：满足保真且不强迫 JSON/字幕共享错误的 span 模型。
+- **待更新文档：** `03_Technical_Design.md` §9、`04_Database_Schema.md` §3/5、`07_Developer_Task_List.md` P1-T01、必要时 `01_PRD.md`。
+- **验收/回滚条件：** 旧库升级有新 migration 与备份；TXT no-op/translated/error/metadata mismatch/不可写目标有 fixture；失败不污染数据库或目标文件；回滚使用迁移前备份或前向修复，不能删除用户数据。
+- **resume_milestone：** P1-T01-M01
+
+### 切换至决策 Agent
+
+```text
+请切换至决策 Agent。读取 D:\TransRealm\DEVELOPMENT_STATE.md 中的“待决策节点”。
+只评估，不写业务代码。基于不可变约束、现场证据和候选方案，输出唯一推荐或明确保留项；说明否决理由、要更新的权威文档、验收、迁移/回滚条件和恢复 Milestone。完成后把 decision_result 与开发恢复提示词写回 DEVELOPMENT_STATE.md，并提醒用户切回开发 Agent。
+```
+
+### 切回开发 Agent
+
+决策完成前不要开始 P1-T01-M01。决策 Agent 写回 `decision_result` 后使用：
+
+```text
+请切回开发 Agent。读取 D:\TransRealm\DEVELOPMENT_STATE.md 的 decision_result、resume_milestone 及更新后的权威文档。只实施已裁决范围；先重新完成 FIT/ADAPT/REPLAN，再继续目标 Milestone。不得重新讨论已裁决的产品/契约选择。
+```
+
 ### 当前开发现场
 
-- **基线事实：** `master` HEAD 为 `e3cf48e`，Git 已确认覆盖 P0-T03 至 P0-T06；P0-T07 至 P0-T08、migration `006`/`007` 及相关测试位于未提交候选现场。2026-08-06 已在候选工作树执行 `pytest`（498 passed）、Ruff（通过）和 mypy（87 source files 无问题），但该结果仍不能把候选变为可恢复基线。
+- **基线事实：** `master` 的 P0 基线已在 `5ef3be6` 固化，治理/CI 基线已在 `90f1c70` 固化并推送至公开 GitHub `BFRKQSB7/TransRealm`。候选工作树仅包含尚未提交的决策节点治理文档改动。
 - **工作树处置：** 必须保留现有 staged、unstaged、untracked 与用户数据；禁止 `reset --hard`、`restore`、`checkout` 覆盖、`clean` 或递归删除。`x.db` 与备份数据库已由 `.gitignore` 忽略。
-- **基线状态：** P0-T07/T08 与 P0-R1/R2/R3 已通过独立复审、hygiene 和全量质量门禁，并在本地提交 `5ef3be6` 固化。该提交是当前回滚 ref；公开 GitHub 备份仓库仍待本轮治理提交后创建。
+- **基线状态：** 当前回滚 ref 为 `90f1c70`；pytest 498 passed、Ruff 通过、mypy 89 source files 无问题，Candidate hygiene CI 已成功。
 
 ### 当前 Task
 
@@ -93,12 +127,12 @@ evidence_location: DEVELOPMENT_STATE.md#current-development-context
 ### 当前小目标
 
 - **Milestone：** P1-T01-M01 — 保真载体与 TXT 证明
-- **状态：** ready
+- **状态：** blocked（等待 `DEC-P1-T01-FOUNDATION` 裁决）
 - **plan_alignment：** FIT
 - **目标：** 在旧 Project 可升级前提下持久化格式 metadata，并让 TXT no-op 字节一致、Revision 替换只改目标 span；metadata 缺失/错配安全失败。
 - **Reality Check：** P0 的 SourceDocument/Segment、Revision Exporter、Run/Attempt/lease 和迁移链均已受提交与测试保护；M01 必须先重新核验 TXT 原 bytes/encoding/BOM/换行信息是否存在，再决定最小 metadata migration 和 exporter seam。
 - **禁止事项：** 不重写 `001`–`007` migration；不实现 JSON/SRT/VTT/ASS/SSA；不改变翻译状态机、Project 格式或公开发布。
-- **恢复动作：** 先读 `07` 的 P1-T01 全定义、`03` §4/9、`04` §3/5、`06`；完成 FIT/ADAPT/REPLAN 后只推进 P1-T01-M01。
+- **兼容性基线（裁决后填写）：** base commit 为 `90f1c70`；必须列出 P1-T01-M01 影响的既有 TXT 导入、Revision export、migration backup/upgrade 和 Run/Revision 测试 nodeid，先后各运行一次；新增 TXT 保真测试必须单独列出。全量 pytest 仅作附加门禁。
 
 ## 5. 历史 Milestone 状态索引
 

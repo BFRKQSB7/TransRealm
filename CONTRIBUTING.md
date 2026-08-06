@@ -24,6 +24,12 @@ GUI changes also require a local GUI interaction test. Migration, import/export,
 - New dependencies require a Task-approved reason, version, license, security, lockfile, and packaging review.
 - Do not stage, commit, push, create releases, or make paid requests without explicit task/user authorization.
 
+## Regression protection
+
+Every new capability must identify the old behavior it could affect, the invariant that must remain true, and the exact existing tests to run before and after the change. Add at least one new test for the new capability.
+
+A passing full suite is required but does not replace this declared compatibility baseline. Removing or changing an existing test requires a written reason and independent review.
+
 ## Review
 
 Every pull request identifies its Task/Milestone, base commit, FIT/ADAPT/REPLAN decision, risk, tests, rollback path, and documentation changes. Credential, HTTP, migration, Project format, dependency, CI, and release changes require independent review.

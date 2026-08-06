@@ -42,21 +42,39 @@
 
 ```text
 读取当前 Task 的目标、非目标、硬约束和验收
+ -> 锁定 base_commit 与兼容性基线
+ -> 运行声明的旧功能测试并记录结果
  -> Reality Check（FIT / ADAPT / REPLAN）
- -> 测试或验收样例
+ -> 新增测试或验收样例
  -> 最小实现
+ -> 新增测试 + 同一旧测试集 + 全量 pytest/Ruff/mypy
  -> 功能、异常及适用的安全/兼容性测试
  -> 独立 Review
  -> 同步受影响文档与 DEVELOPMENT_STATE.md
 ```
 
-测试失败、证据缺失或文档未同步时不得标记 `completed`。GUI 改动必须实际启动和操作；migration、导入/导出、恢复、网络边界必须有对应端到端或故障证据。
+全量 pytest 是最低门槛，不能替代 Task 中声明的旧功能清单。新增能力必须有至少一条新增测试；受影响旧测试失败、未运行或无理由删改时不得标记 `completed`。GUI 改动必须实际启动和操作；migration、导入/导出、恢复、网络边界必须有对应端到端或故障证据。
 
 ## 5. 架构与数据变更
 
 涉及 Project 格式、数据库、公开接口、默认用户行为、依赖或安全边界时，先说明原方案、新方案、收益、缺点、风险、迁移/回滚成本和受影响任务。数据库只允许追加编号 migration，不能修改已发布 migration。
 
-## 6. 完成报告
+## 6. 决策节点切换
+
+仅当 `09_Unattended_Development_Governance.md` 的决策节点阈值成立时，开发 Agent 才暂停冲突范围。此时必须把以下提示词完整写入 `DEVELOPMENT_STATE.md`，并提醒用户切换：
+
+```text
+请切换至决策 Agent。读取 D:\TransRealm\DEVELOPMENT_STATE.md 中的 pending_decision。
+只评估，不写业务代码。基于其中的不可变约束、现场证据和候选方案，输出唯一推荐或明确保留项；说明否决理由、要更新的权威文档、验收、迁移/回滚条件和恢复 Milestone。完成后把 decision_result 与开发恢复提示词写回 DEVELOPMENT_STATE.md，并提醒用户切回开发 Agent。
+```
+
+决策 Agent 完成后，状态文件必须提供以下恢复提示词：
+
+```text
+请切回开发 Agent。读取 D:\TransRealm\DEVELOPMENT_STATE.md 的 decision_result、resume_milestone 及更新后的权威文档。只实施已裁决范围；先重新完成 FIT/ADAPT/REPLAN，再继续目标 Milestone。不得重新讨论已裁决的产品/契约选择。
+```
+
+## 7. 完成报告
 
 每个完成或中断的切片必须在 `DEVELOPMENT_STATE.md` 留下：
 

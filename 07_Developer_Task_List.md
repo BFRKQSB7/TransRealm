@@ -15,7 +15,10 @@
 - 硬约束、参考方案与执行 Agent 可自主决定的内容；
 - 修改范围上限、交付能力和不得触碰的边界；
 - 功能、异常、安全、兼容性和可观测性验收矩阵（场景、预期持久化状态、恢复动作、测试证据）；
+- **兼容性基线：** `base_commit`、受影响既有能力、不可破坏不变量、对应旧测试文件/nodeid、旧测试命令与预期；
+- **新增能力测试：** 至少一个新增测试文件/nodeid，以及新能力的验收证据；
 - 依赖、迁移、外部调用、GUI 和公开兼容性的变更预算；
+- 可选 `Decision Gate`：`decision_id`、触发条件、不可变约束、现场证据、候选方案/推荐、需更新文档、验收/回滚条件与 `resume_milestone`；
 - 风险等级对应的质量门禁、独立 Review 和例外升级条件；
 - 测试证据、回滚点、文档同步和完成条件。
 
@@ -61,7 +64,7 @@ Agent 收到 `DEVELOPMENT_STATE.md` 后，无真实阻塞时自动读取当前 T
  -> 标记状态
 ```
 
-测试失败、证据缺失或文档未同步时，不得标记 `completed`。
+测试失败、证据缺失、兼容性基线未运行、受影响旧测试失败或文档未同步时，不得标记 `completed`。每个新增能力至少有一条新增测试；删改既有测试必须记录理由并经独立 Review，不能用“全量 pytest 通过”替代旧功能回归清单。
 
 ## 4. 执行顺序与依赖
 
@@ -86,6 +89,19 @@ P0-T01 Project/SQLite/Migration 基础
 每个未完成 Task 下的 **Reality Audit** 是 2026-07-30 的规划取证结果，不是完成状态。分类含义：`KEEP` 保留目标；`REFINE` 修正边界/依赖/验收；`SIMPLIFY` 删除不必要抽象；`MERGE` 合并重复交付；`SPLIT` 拆成垂直检查点；`DEFER` 延后；`REMOVE` 移出范围；`DECISION_REQUIRED` 等待用户裁决。后续代码变化可使该结果陈旧，因此每个 Milestone 仍须独立执行 `FIT / ADAPT / REPLAN`。
 
 每个 Milestone 必须交付一个可独立验证的行为，并在同一切片中包含必要测试和最小实现。Milestone 表使用“行为与完成条件”，不得采用“先写全部 DTO/Repository、再写全部 UI”的纯水平切分，也不得预填测试通过数。证据要求：代码 Task 记录实际 pytest/Ruff/mypy；Adapter 使用可控 fake transport/server；GUI 必须实际启动并执行 pytest-qt/交互验证；恢复、备份和格式 round-trip 必须有数据库或文件级显式断言。
+
+### 4.1 已计划的 Decision Gate
+
+仅以下 P1 节点默认需要开发/决策 Agent 切换；其余 Milestone 按既有硬约束直接执行，除非新证据造成契约冲突：
+
+| decision_id | 触发点 | 决策范围 | 恢复点 |
+|---|---|---|---|
+| DEC-P1-T01-FOUNDATION | P1-T01-M01 | format metadata、原始 bytes/span、TXT 旧库升级底座 | P1-T01-M01 |
+| DEC-P1-T02-CONTAINER | P1-T02-M01/M03 | manifest 权威边界、开放目录安全模型、资源限额、Unicode/link 冲突 | P1-T02-M01 |
+| DEC-P1-T04-GLOSSARY | P1-T04-M02 | Glossary scope、重复词冲突、priority 语义 | P1-T04-M02 |
+| DEC-P1-T03-OVERRIDE | P1-T03-M03 | Prompt Override 编辑边界、拒绝规则、父版本失效策略 | P1-T03-M03 |
+| DEC-P1-T05-RELEASE | P1-T05-M01/M04 | lockfile、支持环境、打包工具、Windows 架构范围 | P1-T05-M01 |
+
 
 ## 5. 治理准入 Task
 
