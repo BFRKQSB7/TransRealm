@@ -10,7 +10,7 @@ state: ready
 last_updated: 2026-08-08
 baseline_commit: 3ef991d
 baseline_integrity: committed_and_verified
-worktree_disposition: baseline_committed_not_pushed
+worktree_disposition: committed_and_pushed
 gate_status: open
 plan_alignment: pending_reality_check
 review_status: P1-T05-M02_independent_review_resolved
@@ -225,7 +225,7 @@ Agent 可以在实现中细化这些小目标，但不得扩大当前 Task 的�
 - **测试命令：** `py -3.12 -m pytest -q`（全量）；`py -3.12 -m pytest -q tests/test_p1_t05_m02.py`；`py -3.12 -m ruff check src tests`；`py -3.12 -m mypy src tests`；`py -3.12 scripts/verify_task.py --task P1-T05-M02 --base-commit 3ef991d --allow tests/test_p1_t05_m02.py --allow DEVELOPMENT_STATE.md --allow 03_Technical_Design.md --allow 07_Developer_Task_List.md --allow 08_Architecture_Review.md --baseline-test tests/test_p0_t07_m05.py --baseline-test tests/test_p0_t08_m02.py --baseline-test tests/test_p0_t08_m03.py --baseline-test tests/test_p0_t08_m05.py --baseline-test tests/test_p1_t03_m04.py --baseline-test tests/test_p1_t03_m05.py --baseline-test tests/test_p1_t05_m01.py --new-test tests/test_p1_t05_m02.py`；`py -3.12 scripts/check_candidate_hygiene.py`
 - **测试结果：** 全量 pytest **1316 passed**（基线 1305 + M02 新增 11，1 skipped 因本环境无符号链接创建权限）；Ruff All checks passed；mypy Success: no issues found in 128 source files；verify_task exit 0（baseline 101 passed + new 11 passed，outside_scope 空——对未提交改动只校验 committed delta=07/08/state）；check_candidate_hygiene exit 0（Candidate hygiene passed）；长文本资源基线：`LONG_TEXT_RESOURCE_BASELINE {"fixture": "fixed 120-line long text", "input_chars": 21743, "segment_count": 120, "model_calls": 120, "elapsed_seconds": ~2.99, "peak_python_bytes": ~2.53M, "python_version": "3.12.x"}`。
 - **未完成：** P1-T05-M03 未开始（当前指针，ready + pending_reality_check）。
-- **风险/阻塞：** 无技术阻塞。独立 Review **APPROVE**（无 BLOCKER/SHOULD-FIX；MINOR 已处理：`platform.python_version()` 诚实记录、误导注释（"崩溃适配器零调用"实为 calls==1 网络请求零发出）修正、补 mid-response 截断旅程测试；MINOR 记录取舍：资源基线证据临时性（JSON 写 tmp、print 需 `-s` 才显示，布尔 Gate 不依赖数值，可比较基线需候选归档时固化）、超时测试 2s 余量（sleep 3s vs timeout 1s）确定性足够、`service._run_service._db` 私有属性耦合（重构 AttributeError 大鸣大放非静默漏测）、"断连"主切点为 connection refused（mid-response 已补测，transport 层 P0-T08-M02 截断分类已覆盖））。verify_task 对未提交改动只校验 committed delta（07/08/state 均在 allow），scope 约束由 Review 兜底（`governance_commit_pending`）。工作树改动未提交，未获授权不 commit/push。
+- **风险/阻塞：** 无技术阻塞。独立 Review **APPROVE**（无 BLOCKER/SHOULD-FIX；MINOR 已处理：`platform.python_version()` 诚实记录、误导注释（"崩溃适配器零调用"实为 calls==1 网络请求零发出）修正、补 mid-response 截断旅程测试；MINOR 记录取舍：资源基线证据临时性（JSON 写 tmp、print 需 `-s` 才显示，布尔 Gate 不依赖数值，可比较基线需候选归档时固化）、超时测试 2s 余量（sleep 3s vs timeout 1s）确定性足够、`service._run_service._db` 私有属性耦合（重构 AttributeError 大鸣大放非静默漏测）、"断连"主切点为 connection refused（mid-response 已补测，transport 层 P0-T08-M02 截断分类已覆盖））。verify_task 对未提交改动只校验 committed delta（07/08/state 均在 allow），scope 约束由 Review 兜底（此前 `governance_commit_pending`）。**2026-08-08 用户已授权 git（本地 + 云端）**：M02 改动已提交 `c424df5` 并推送 `origin/master`（含基线 `3ef991d` 与状态推进 `06620c7`），本地与云端一致（`## master...origin/master` 无 ahead/behind）；后续已完成切片可提交并推送，不再处于 `governance_commit_pending`。
 - **恢复动作：** 读取本文件；当前小目标 P1-T05-M03（格式/迁移/Project 双形态/security Gate），状态 ready + pending_reality_check。开工前先核验六格式 golden、旧库 migration backup/restore、开放目录/`.aiproject` 跨机/tamper/path/resource limits、secret scan 与失败隔离证据（按 `01` §17/20/21、`02`、`03` §3/6/8/10/11/12、`04`、`07` §20 M03、`08` 核验），记录 FIT/ADAPT/REPLAN，从最小六格式/旧库/容器/secret 矩阵开始，不越出 P1-T05；M03 依赖 M01 冻结的 `requirements.lock`/`03` §12 矩阵与 M02 的旅程级崩溃/恢复证据。
 
 ### Previous code checkpoint
