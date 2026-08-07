@@ -5,7 +5,7 @@ protocol_version: 2
 current_phase: Phase 1
 current_release: V1.0
 current_task: P1-T05
-current_milestone: P1-T05-M02
+current_milestone: P1-T05-M03
 state: ready
 last_updated: 2026-08-08
 baseline_commit: 3ef991d
@@ -13,12 +13,12 @@ baseline_integrity: committed_and_verified
 worktree_disposition: baseline_committed_not_pushed
 gate_status: open
 plan_alignment: pending_reality_check
-review_status: P1-T05-M01_independent_review_resolved
+review_status: P1-T05-M02_independent_review_resolved
 rollback_ref: 3ef991d
 pending_decision: none
 decision_prompt: DEVELOPMENT_STATE.md#pending-decision
 decision_result: DECIDED方案2：采用”原始 bytes + 版本化 format metadata envelope + 格式专属定位信息”的保真底座；TXT 定位信息必须由 parser 生成并由 exporter 在替换前针对原始 bytes、hash、encoding/BOM/newline、span 边界和解码结果逐项验证。不得把所有格式强行压成一个通用 span 模型。旧 TXT Project 只做可升级迁移，不从 source_text 猜造原始 bytes；缺少可验证原始 bytes/metadata 时安全拒绝保真导出，用户提供并校验原文件后才允许显式补齐载体。
-resume_milestone: P1-T05-M02
+resume_milestone: P1-T05-M03
 ---
 
 # 译境 / TransRealm — Agent 自动开工与开发状态
@@ -124,16 +124,16 @@ resume_milestone: P1-T05-M02
 ### 当前 Task
 
 - **Task：** P1-T05 — V1.0 异常恢复与 Release Candidate Gate
-- **状态：** in_progress（M01 completed；M02 ready）
+- **状态：** in_progress（M01–M02 completed；M03 ready）
 - **完整定义：** `07_Developer_Task_List.md` 的"P1-T05"章节
 - **前置依赖：** P1-T03、P1-T04 及所有前序 Task 完成（已完成）；工作树先形成可恢复 Git 基线（**已满足**——本地基线 `3ef991d`，2026-08-08 经用户授权 commit，未 push）；发布候选版本、依赖和文档冻结（依赖/文档已由 M01 冻结，候选版本号在 M04 构建时定）。
 
 ### 当前小目标
 
-- **Milestone：** P1-T05-M02 — 翻译/恢复/长文本 Gate
+- **Milestone：** P1-T05-M03 — 格式/迁移/Project 双形态/security Gate
 - **状态：** ready
 - **plan_alignment：** pending_reality_check
-- **目标：** 自动覆盖请求与事务崩溃切点、断网/model-stop/timeout、lease/retry/cancel/locked；固定长文本用 fake/local server 跑完整旅程，状态全可解释、数据损失零、completed 不重复覆盖并记录资源基线（完整定义见 `07` §20 P1-T05-M02）。
+- **目标：** 六格式 golden、旧库 migration backup/restore、开放目录/`.aiproject` 跨机/tamper/path/resource limits、secret scan 和失败隔离全部通过；演练文档中的恢复步骤（完整定义见 `07` §20 P1-T05-M03）。
 - **禁止事项：** 不新增产品能力；不自动创建 GitHub 资源、不提交/推送/发布、不用真实付费 API 跑自动矩阵；不得删除既有用户数据、备份或既有工作树改动。
 - **前置已满足：** 可恢复 Git 基线 `3ef991d`（2026-08-08 用户授权本地 commit，未 push）——`09` §6"候选仅能来自可定位基线"满足，`scripts/verify_task.py` 现可对 P1-T05 改动生效。
 
@@ -208,6 +208,7 @@ resume_milestone: P1-T05-M02
 | P1-T03-M04 | **人工 Revision 与锁定：** Reality Check **ADAPT**——`TranslationRevision` 已有 `origin ∈ {ai,user,import}` + `is_locked`（`006` 即定义，**无需新 migration**）、`finalize_success` 已有"current 未变 + 非 locked" fencing、`recover_expired_leases` 对 locked current 转 completed 不重建、exporter 默认读 current + `revision_overrides` 显式选择；唯一缺口是追加 user Revision/lock/unlock/切换 current 的 use case 与 UI 编辑面。新增 `TranslationRunService.append_user_revision`（单事务 INSERT origin=user Revision + `UPDATE segments SET status='completed', current_revision_id=?, version=version+1 ... WHERE status != 'processing'`，processing 段拒绝、version bump 使 stale claim 失效）、`set_current_revision`（切换任一属于该 segment 的有效 revision，拒绝 processing 并校验归属）、`lock_current_revision`/`unlock_current_revision`（单条 `UPDATE ... WHERE id=(SELECT current_revision_id FROM segments WHERE id=?)` 原子切换 `is_locked`）；`SegmentProgress` 增 `revision_text`/`revision_locked`（`list_segment_progress` 经 `TranslationRevisionRepository.get_many_by_ids` 填充，向后兼容）；`ui/workbench.py` 新增 `WorkbenchRevisionEditor`（只发信号：source 只读 + 译文可编辑 + Save/Lock/Unlock）、`TranslationPage` 工作台编辑面（选中重建、Save/Lock/Unlock 经 ServiceWorker 线程调 service、刷新恢复选中并 `initial` 保留草稿）。锁定保护由既有 seam 兜底（finalize 拒绝 locked current 的迟到结果、recover 转 completed 不重建、auto worker 只翻译 pending 段）——自动迟到结果和重译不能覆盖 locked current；导出遵循选择语义。新增 `tests/test_p1_t03_m04.py` **21 项**（append/set/lock/unlock use case、finalize 拒绝 locked、auto 重译跳过 locked 段无新 request、recover locked 转 completed/unlocked 回 pending、导出默认 locked current + override 选历史、pytest-qt 编辑保存/lock-unlock/草稿跨 refresh 保留）。受影响旧测试子集 **413 passed** + 全量 pytest **1288 passed**（基线 1267 + M04 21，1 skipped 因本环境无符号链接创建权限）、Ruff clean、mypy 125 files no issues；独立 Review **无 BLOCKER**，1 SHOULD-FIX（草稿保留死代码——`set_revision` 无条件覆盖 `initial`）已修复并补测试，MINOR 已处理（lock TOCTOU 原子化、补 recover-unlocked-user-current 边界测试），MINOR 记录取舍（UI 暂无历史 revision 切换入口），见 `08`。指针推进至 P1-T03-M05。 | completed |
 | P1-T03-M05 | **模式切换与 GUI Gate：** Reality Check **ADAPT**——M01–M04 落地与 seam 齐备，唯一缺口是模式切换 UI 无调用方、运行中切换无提示、无文档列表 + 切换 Project 保留旧 `_document_id`（M01 已知边界）、重启后文档/结果/锁定证据缺位。新增 `TranslationPage` 交互模式选择器（`QComboBox` Auto/Workbench，经 `ServiceWorker` 调 `ProjectService.set_mode` 持久化；运行中激活拒绝并提示 finish or Cancel、选择器恢复——运行中 Run 不原地改变 Profile/Workflow/参数；`set_mode` 成功路径同步 `_mode` 防 refresh 失败失同步）与每 Project 文档选择器（`TranslationRunService.list_source_documents` 只读转发 `SegmentRepository.list_source_documents_by_project`，UI 经 Application Service 不违反结构性守卫；提交时捕获 `current`/`project_id` 无跨线程读；有效文档属该 Project 则沿用否则清空，消除跨 Project 陈旧 `_document_id`；无有效文档组合框不高亮首项；`_on_document_selected` 重读进度、运行中切文档同样被拒）；`_set_running` 集中管理 `_running` 与 Translate/Cancel/Export/文档选择器按钮态；取消/关闭/重启门禁复用既有 seam（`request_stop` Segment 边界取消、closeEvent 有界 wait 收敛、共享 SQLite 重开自动恢复 mode/active/文档/结果/锁定）。新增 `tests/test_p1_t03_m05.py` **10 项**（`list_source_documents` 按 Project 有序/隔离；模式切换持久化 + 工作台面显隐 + 选择器同步、运行中切换拒绝并恢复、无 Project 切换报错 + 选择器恢复、workbench 无 active Profile 引导（主线程同步、无 Run 无请求）、workbench 取消 + Run cancelled、workbench 关闭收敛无 processing + Run cancelled + Attempt 全终态、重启保留 mode/active/文档选择器/翻译结果/锁定 Revision、跨 Project 切换重置文档上下文 + 组合框重选加载、运行中文档切换被拒绝 + 选择器锁定）。受影响旧测试子集 **461 passed** + 全量 pytest **1298 passed**（基线 1288 + M05 10，1 skipped 因本环境无符号链接创建权限）、Ruff clean、mypy 126 files no issues；实际可用性 smoke（真实窗口 + 完整旅程驱动：建 Project/active Profile/导入/切 workbench/文档选择/workbench 翻译/切回 auto/窗口关闭收敛）SMOKE PASS；独立 Review **无 BLOCKER**，2 SHOULD-FIX（运行中文档切换无守卫——选择器运行中禁用 + `_on_document_selected` 拒绝；set_mode 成功但 refresh 失败 UI/DB 失同步——成功路径同步 `_mode`）已修复并补测试，MINOR 已处理（组合框无有效文档不高亮首项、`_on_translate` 加 `_running` 守卫、refresh None 清空陈旧文档状态），MINOR 记录取舍（Project 切换后不自动选中文档，需显式选择；workbench 缺 active 主线程同步短路由），见 `08`。P1-T03 全部 M01–M05 完成，Task 标记 **completed**。指针推进至 P1-T05-M01。 | completed |
 | P1-T05-M01 | **冻结可判定矩阵：** Reality Check **FIT**——新增 `03` §12（判定原则/支持环境 Windows 11 build≥22000 x64/依赖锁定/质量命令表/公共矩阵规范/P0-P1 release-blocking 等级）+ `requirements.lock`（pip freeze 快照 24 项，排除 transrealm/pip，与 pyproject 一致且等于安装版本）+ `tests/test_p1_t05_m01.py` 7 项（锁存在/格式/排除、锁==安装、锁满足 pyproject runtime+dev 范围、工具链入锁、支持环境 Windows 11 build≥22000+x64+py3.12）。全量 pytest **1305 passed**（基线 1298 + 7，1 skipped 本环境无符号链接创建权限）、Ruff clean、mypy 127 files no issues；独立 Review **APPROVE-WITH-MINORS**（无 BLOCKER；1 SHOULD-FIX Windows 11 build 判定已修复；MINOR 2/4 已处理、3/5 记录取舍）见 `08`；DEC-P1-T05-RELEASE 评估**不触发**（打包工具 PyInstaller 已 smoke 验证并定首选、支持环境唯一确定、lockfile 形式可逆）。**解除条件：P1-T05 前置"工作树先形成可恢复 Git 基线"未满足（governance_commit_pending，需用户授权 commit），M02 由此 blocked。** | completed |
+| P1-T05-M02 | **翻译/恢复/长文本 Gate：** Reality Check **ADAPT**——验证型 Gate，目标/硬约束/验收不变；现场核验（基线复现 1305/1 skip）T07 lease/fencing/recover/retry、T08 生产 transport + 本地 server（timeout/断连/截断均 retryable）、`TranslationService` 旅程编排（`SimulatedCrashError` 透传）、`TranslationWorker` 逐 Segment + `request_stop`、locked fencing 齐备。新增 `tests/test_p1_t05_m02.py` **11 项**（旅程级：claim 后请求前崩溃→lease 回收、断网 connection refused→connection_error retryable、mid-response 截断→connection_error retryable、model-stop/挂起→timeout_error retryable、finalize 三写入点 CrashInjector 崩溃回滚→lease 回收、locked current 不被自动覆盖、completed 重译被 not-pending 拒绝且外部调用不变、长文本完整旅程 + 资源基线、fixture 防漂移）；固定长文本 fixture = 模块级 `_LONG_TEXT`（120 行 / 21,743 字符），计数式本地 server 逐 Segment 回显，完整旅程（import→translate→restart→recover→export round-trip），资源基线（tracemalloc 峰值/耗时/Segment 数/外部调用次数）打印 `LONG_TEXT_RESOURCE_BASELINE` + JSON 证据，只记录不虚构阈值；实测 120 calls/120 segments/~3.0s/~2.5MB peak。lease/retry/cancel/locked 复引既有 nodeid（P0-T07-M05/P0-T08-M02/P0-T08-M03/P0-T08-M05/P1-T03-M04/P1-T03-M05/P1-T05-M01，101 passed）。全量 pytest **1316 passed**（基线 1305 + 11，1 skipped 本环境无符号链接创建权限）、Ruff clean、mypy 128 files no issues、verify_task exit 0、check_candidate_hygiene passed；独立 Review **APPROVE**（无 BLOCKER/SHOULD-FIX；MINOR 处理：`platform.python_version()` 诚实记录、误导注释修正、补 mid-response 截断旅程测试；MINOR 记录取舍：资源基线证据临时性、超时测试余量、私有属性耦合、connection-refused 为"断连"主切点）见 `08`；fixture/允许重复调用/证据位置同步 `03` §12.5。指针推进至 P1-T05-M03。 | completed |
 
 Agent 可以在实现中细化这些小目标，但不得扩大当前 Task 的范围。
 
@@ -216,6 +217,18 @@ Agent 可以在实现中细化这些小目标，但不得扩大当前 Task 的�
 完成或中断小目标时更新以下内容，不新增流水账文件：
 
 ### Last code checkpoint
+
+- **时间：** 2026-08-08
+- **Agent：** Claude（执行 Agent）
+- **完成内容：** 完成 P1-T05-M02 翻译/恢复/长文本 Gate（Reality Check **ADAPT**）。现场核验（基线：全量 pytest 1305 passed/1 skip、Ruff clean、mypy 127 files 复现一致）：T07 lease/fencing/recover/retry seam（`start_attempt`/`finalize_success`/`finalize_failure`/`recover_expired_leases`/`retry_failed`/`cancel_attempt` + `_attempt_repository` 原子事务 + CrashInjector，P0-T07-M05 服务级崩溃矩阵齐备）；T08 生产 transport + 本地 `ThreadingHTTPServer`（`StdlibHttpTransport` + `compose_adapter` 可注入，超时/断连/截断 → timeout/connection_error 均 retryable，P0-T08-M02 传输级分类 + E2E）；`TranslationService.translate_segment` 旅程编排（claim→adapter→parse→finalize，`SimulatedCrashError` 透传，`finalize_success` 在 adapter try/except 之外故崩溃直接传播）；`TranslationWorker.translate` 逐 Segment + `request_stop` 边界取消（P1-T03-M05）；locked/current fencing（P1-T03-M04/T07-M05）。**DEC-P1-T05-RELEASE 不触发**（本 M 不涉及打包/支持环境/lockfile）。**ADAPT（验证型 Gate，目标/硬约束/验收不变，不新增产品能力）**：新增 `tests/test_p1_t05_m02.py` **11 项**旅程级矩阵——请求切点：claim 后请求前崩溃（`CrashBeforeRequestAdapter` 抛 `SimulatedCrashError`，请求按定义从未发出；`translate_segment` 透传故 DB 停留 processing+lease）、请求中断网（`server.stop()` → connection refused → connection_error retryable）、mid-response 截断（`_TruncatedResponseError` 哨兵：Content-Length:100 只写 5 字节 → IncompleteRead → connection_error retryable，补 Roadmap §3"请求发出后、响应写入前"旅程级切点）、model-stop/挂起（server sleep 3s vs 客户端 timeout 1s → timeout_error retryable）；事务切点：finalize 三写入点（revision insert / segment current update / attempt audit update）经 CrashInjector 注入 `service._run_service._db`（`SegmentAttemptRepository` 持用的写连接），崩溃在 `transaction()` 内回滚后传播，DB 保持可恢复的 claim 后状态、无伪 completed、无孤立 current、无半写 revision；恢复语义：lease 过期 → `recover_expired_leases` 回 pending、stale attempt `cancelled/lease_expired`，`retry_failed` 重排在新 run 中成功（原始 run 失败 attempt 可解释），locked current 不被自动覆盖（completed 非 pending 无法 claim、不发请求），completed 重译被 "not pending" 拒绝且外部调用次数不变；固定长文本 fixture = 模块级 `_LONG_TEXT`（120 行 / 21,743 字符，`test_fixture_is_fixed_and_recorded` 断言精确大小防漂移），计数式本地 server 逐 Segment 回显（clean journey 恰每 Segment 一请求，多余/错序请求 → OutputParser UNKNOWN_ID 大鸣大放），完整旅程（import→translate→restart→recover→`TxtExporter` round-trip 目标 span 已替换），资源基线（tracemalloc 峰值 / perf_counter 耗时 / Segment 数 / 外部调用次数）打印 `LONG_TEXT_RESOURCE_BASELINE` + JSON 证据，只记录不虚构阈值（`02` §3）；实测 120 calls / 120 segments / ~3.0s / ~2.5MB peak（`platform.python_version()` 诚实记录环境）。lease/retry/cancel/locked 服务级矩阵与 GUI 取消/关闭/重启门禁复引既有 nodeid（verify_task --baseline-test：P0-T07-M05/P0-T08-M02/P0-T08-M03/P0-T08-M05/P1-T03-M04/P1-T03-M05/P1-T05-M01，101 passed），Review 抽查确认声明真实。
+- **修改文件：** `tests/test_p1_t05_m02.py`（新增 11 项）；权威文档 `03` §12.5（M02 fixture 定义/允许重复调用/证据位置）、`07` §20（P1-T05 状态 M01–M02 completed、M02 completed 证据）、`08`（M02 取舍 + Review 结果）；`DEVELOPMENT_STATE.md`。
+- **测试命令：** `py -3.12 -m pytest -q`（全量）；`py -3.12 -m pytest -q tests/test_p1_t05_m02.py`；`py -3.12 -m ruff check src tests`；`py -3.12 -m mypy src tests`；`py -3.12 scripts/verify_task.py --task P1-T05-M02 --base-commit 3ef991d --allow tests/test_p1_t05_m02.py --allow DEVELOPMENT_STATE.md --allow 03_Technical_Design.md --allow 07_Developer_Task_List.md --allow 08_Architecture_Review.md --baseline-test tests/test_p0_t07_m05.py --baseline-test tests/test_p0_t08_m02.py --baseline-test tests/test_p0_t08_m03.py --baseline-test tests/test_p0_t08_m05.py --baseline-test tests/test_p1_t03_m04.py --baseline-test tests/test_p1_t03_m05.py --baseline-test tests/test_p1_t05_m01.py --new-test tests/test_p1_t05_m02.py`；`py -3.12 scripts/check_candidate_hygiene.py`
+- **测试结果：** 全量 pytest **1316 passed**（基线 1305 + M02 新增 11，1 skipped 因本环境无符号链接创建权限）；Ruff All checks passed；mypy Success: no issues found in 128 source files；verify_task exit 0（baseline 101 passed + new 11 passed，outside_scope 空——对未提交改动只校验 committed delta=07/08/state）；check_candidate_hygiene exit 0（Candidate hygiene passed）；长文本资源基线：`LONG_TEXT_RESOURCE_BASELINE {"fixture": "fixed 120-line long text", "input_chars": 21743, "segment_count": 120, "model_calls": 120, "elapsed_seconds": ~2.99, "peak_python_bytes": ~2.53M, "python_version": "3.12.x"}`。
+- **未完成：** P1-T05-M03 未开始（当前指针，ready + pending_reality_check）。
+- **风险/阻塞：** 无技术阻塞。独立 Review **APPROVE**（无 BLOCKER/SHOULD-FIX；MINOR 已处理：`platform.python_version()` 诚实记录、误导注释（"崩溃适配器零调用"实为 calls==1 网络请求零发出）修正、补 mid-response 截断旅程测试；MINOR 记录取舍：资源基线证据临时性（JSON 写 tmp、print 需 `-s` 才显示，布尔 Gate 不依赖数值，可比较基线需候选归档时固化）、超时测试 2s 余量（sleep 3s vs timeout 1s）确定性足够、`service._run_service._db` 私有属性耦合（重构 AttributeError 大鸣大放非静默漏测）、"断连"主切点为 connection refused（mid-response 已补测，transport 层 P0-T08-M02 截断分类已覆盖））。verify_task 对未提交改动只校验 committed delta（07/08/state 均在 allow），scope 约束由 Review 兜底（`governance_commit_pending`）。工作树改动未提交，未获授权不 commit/push。
+- **恢复动作：** 读取本文件；当前小目标 P1-T05-M03（格式/迁移/Project 双形态/security Gate），状态 ready + pending_reality_check。开工前先核验六格式 golden、旧库 migration backup/restore、开放目录/`.aiproject` 跨机/tamper/path/resource limits、secret scan 与失败隔离证据（按 `01` §17/20/21、`02`、`03` §3/6/8/10/11/12、`04`、`07` §20 M03、`08` 核验），记录 FIT/ADAPT/REPLAN，从最小六格式/旧库/容器/secret 矩阵开始，不越出 P1-T05；M03 依赖 M01 冻结的 `requirements.lock`/`03` §12 矩阵与 M02 的旅程级崩溃/恢复证据。
+
+### Previous code checkpoint
 
 - **时间：** 2026-08-08
 - **Agent：** Claude（执行 Agent）

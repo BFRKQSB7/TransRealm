@@ -427,9 +427,10 @@ Gate 是布尔判定，不把"执行过"当通过（对齐 `02` V1.0 Release Gat
 ### 12.5 公共矩阵规范
 
 - fixture：固定输入基准的规范由各自 M 定义（M02 长文本/崩溃切点、M03 六格式/旧库/容器、M04 绿色版）；M01 冻结其命名与证据位置约定，不预置未验证数据。
-- 允许重复调用：每项记录固定场景允许的重复外部调用次数（transport retry、repair 次数以 `07`/P0-T04/P0-T08-M03 契约为准）；矩阵不新增调用。
+  - **M02（P1-T05-M02，2026-08-08 实测）**：长文本 fixture = 模块级固定 `_LONG_TEXT`（120 行 / 21,743 字符，`tests/test_p1_t05_m02.py` 内常量，测试 `test_fixture_is_fixed_and_recorded` 断言精确大小防漂移），用计数式本地 `ThreadingHTTPServer` 逐 Segment 回显译文（每 Segment 恰一请求）；崩溃切点 = `CrashInjector`（finalize 三个写入 SQL needle）+ 可控 server 行为注入（挂起→`timeout_error`、连接拒绝/截断→`connection_error`，均 retryable）+ 请求前崩溃（`CrashBeforeRequestAdapter` 抛 `SimulatedCrashError`，该切点请求按定义从未发出）。旅程级矩阵与资源基线记录见 `tests/test_p1_t05_m02.py`（11 项：claim 后请求前、断网、mid-response 截断、model-stop/超时、finalize 三写入点、locked 保留、completed 不重调、长文本基线、fixture 防漂移）。
+- 允许重复调用：每项记录固定场景允许的重复外部调用次数（transport retry、repair 次数以 `07`/P0-T04/P0-T08-M03 契约为准）；矩阵不新增调用。M02 长文本 clean journey 允许次数 = Segment 数（120），clean 输出无 repair/transport retry；网络/超时场景允许一次 retryable 失败 + 一次成功重译（`retry_failed` 新 run）。
 - 零数据损失：任何故障注入不得丢失/损坏既有 Project、Revision、Segment、备份或目标文件；失败不得污染 DB 或目标；不得静默删除外置数据。
-- 证据位置：每 Gate 通过证据落点 = 测试 nodeid、smoke 目录、`requirements.lock`、本文件、`08` 落地取舍记录、`DEVELOPMENT_STATE.md`。
+- 证据位置：每 Gate 通过证据落点 = 测试 nodeid、smoke 目录、`requirements.lock`、本文件、`08` 落地取舍记录、`DEVELOPMENT_STATE.md`。M02 资源基线（内存峰值/耗时/Segment 数/外部调用次数）打印为 `LONG_TEXT_RESOURCE_BASELINE` 并写入 JSON 证据（tmp），只记录不断言虚构阈值（`02` §3 长文本测试）。
 
 ### 12.6 P0/P1 release-blocking 等级
 
