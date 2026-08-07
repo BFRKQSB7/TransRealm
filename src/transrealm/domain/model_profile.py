@@ -21,6 +21,10 @@ class ModelProfileError(ValueError):
     """Invalid model profile configuration."""
 
 
+class ModelProfileInUseError(ModelProfileError):
+    """A profile cannot be deleted because projects or attempts reference it."""
+
+
 @dataclass
 class ModelCapability:
     """Describes the runtime capabilities of a model/provider endpoint."""

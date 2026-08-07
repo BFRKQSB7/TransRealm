@@ -27,7 +27,7 @@ class ContextBudgetError(ValueError):
 EstimateFn = Callable[[str, EstimateMethod], BudgetEstimate]
 
 
-def _default_estimate(content: str, method: EstimateMethod) -> BudgetEstimate:
+def default_estimate(content: str, method: EstimateMethod) -> BudgetEstimate:
     """Conservative default estimate: 1 token ~= 4 characters."""
     char_count = len(content)
     token_count = max(1, char_count // 4)
@@ -62,7 +62,7 @@ class ContextComposer:
     _GLOSSARY_PRIORITY = 1
 
     def __init__(self, estimator: EstimateFn | None = None) -> None:
-        self._estimator = estimator or _default_estimate
+        self._estimator = estimator or default_estimate
 
     def compose(
         self,

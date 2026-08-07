@@ -4,9 +4,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from transrealm.domain.provider_connection import ProviderConnection, ProviderConnectionError
+from transrealm.domain.provider_connection import (
+    ProviderConnection,
+    ProviderConnectionError,
+    ProviderConnectionInUseError,
+)
 from transrealm.infrastructure.database import create_database
 from transrealm.infrastructure.migrations.runner import MigrationRunner
+from transrealm.infrastructure.repositories.model_profile_repository import (
+    ModelProfileRepository,
+)
 from transrealm.infrastructure.repositories.provider_connection_repository import (
     ProviderConnectionRepository,
 )
@@ -22,6 +29,7 @@ class ProviderConnectionService:
         self._app_version = app_version
         self._db = create_database(db_path)
         self._repository = ProviderConnectionRepository(self._db)
+        self._profile_repository = ModelProfileRepository(self._db)
         self._run_migrations()
 
     def _run_migrations(self) -> None:
@@ -96,7 +104,24 @@ class ProviderConnectionService:
         return self._repository.list_all()
 
     def delete_connection(self, connection_id: int) -> bool:
-        """Delete a connection by id."""
+        """Delete a connection by id.
+
+        Raises:
+            ProviderConnectionInUseError: If any model profile references this
+                connection. The caller must delete or repoint those profiles
+                first; the DB FK RESTRICT backstops concurrent writers.
+        """
+        if self._repository.get_by_id(connection_id) is None:
+            return False
+
+        referencing = self._profile_repository.list_by_connection(connection_id)
+        if referencing:
+            names = ", ".join(p.name for p in referencing)
+            raise ProviderConnectionInUseError(
+                f"ProviderConnection with id {connection_id} is referenced by "
+                f"profile(s): {names}. Delete or repoint those profiles first.",
+            )
+
         return self._repository.delete(connection_id)
 
     def close(self) -> None:

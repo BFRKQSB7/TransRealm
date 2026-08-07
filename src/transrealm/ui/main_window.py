@@ -81,10 +81,14 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(tabs)
 
         self._project.project_ready.connect(self._translation.set_project)
+        self._project.project_settings_changed.connect(self._translation.set_project)
         self._project.document_ready.connect(self._translation.set_document)
-        self._settings.profiles_changed.connect(self._translation.set_profiles)
+        self._translation.request_project_setup.connect(
+            lambda: tabs.setCurrentIndex(1),
+        )
 
         self._settings.refresh()
+        self._project.refresh()
 
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
         if self._shutdown_workers():

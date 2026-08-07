@@ -17,6 +17,7 @@ from PySide6.QtCore import QObject, Signal, Slot
 from transrealm.adapters.protocol import ModelAdapter
 from transrealm.application.adapter_factory import compose_adapter
 from transrealm.application.model_profile_service import ModelProfileService
+from transrealm.application.project_service import ProjectService
 from transrealm.application.provider_connection_service import ProviderConnectionService
 from transrealm.application.translation_service import TranslationService
 from transrealm.domain.segment import Segment
@@ -89,9 +90,13 @@ class TranslationWorker(QObject):
     progress = Signal(int, int, str)  # done, total, current stable key
     segment_completed = Signal(str, int)  # stable key, revision id
     segment_failed = Signal(str, str)  # stable key, error message
+    config_missing = Signal(str)  # actionable reason to set up the project first
     finished = Signal()
     failed = Signal(str)
     start_translate = Signal(int, int, int)  # project_id, document_id, profile_id
+    start_translate_auto = Signal(int, int)  # project_id, document_id
+    # project_id, document_id, profile_id, params
+    start_translate_workbench = Signal(int, int, int, object)
 
     def __init__(
         self,
@@ -109,6 +114,8 @@ class TranslationWorker(QObject):
         # Queued connection: emitting start_translate from the main thread runs
         # the translate loop on this object's worker thread.
         self.start_translate.connect(self.translate)
+        self.start_translate_auto.connect(self.translate_auto)
+        self.start_translate_workbench.connect(self.translate_workbench)
 
     def request_stop(self) -> None:
         """Request cancellation at the next segment boundary.
@@ -118,8 +125,63 @@ class TranslationWorker(QObject):
         """
         self._stop_requested = True
 
+    @Slot(int, int)
+    def translate_auto(self, project_id: int, source_document_id: int) -> None:
+        """Translate in auto mode using the project's active profile.
+
+        Resolves the active ModelProfile on this worker thread and then runs
+        the same translate loop as the explicit-profile path. When the project
+        is missing or has no active profile, emits ``config_missing`` (no run
+        is created and the adapter is never called) so the UI can guide the
+        user with a single recoverable step.
+        """
+        if self._is_running:
+            self.failed.emit("A translation is already running.")
+            self.finished.emit()
+            return
+
+        try:
+            with ProjectService(self._db_path, app_version=self._app_version) as projects:
+                project = projects.get_project(project_id)
+        except Exception as exc:
+            self.failed.emit(str(exc))
+            self.finished.emit()
+            return
+        if project is None:
+            self.config_missing.emit(
+                f"Project {project_id} does not exist. Select a project first.",
+            )
+            self.finished.emit()
+            return
+        profile_id = project.active_profile_id
+        if profile_id is None:
+            self.config_missing.emit(
+                "This project has no active profile. Set one in the Project tab.",
+            )
+            self.finished.emit()
+            return
+        self.translate(project_id, source_document_id, profile_id)
+
+    @Slot(int, int, int, object)
+    def translate_workbench(
+        self,
+        project_id: int,
+        source_document_id: int,
+        profile_id: int,
+        params: object,
+    ) -> None:
+        """Translate with explicit profile and workbench parameters."""
+        extra_params = params if isinstance(params, dict) else None
+        self.translate(project_id, source_document_id, profile_id, extra_params=extra_params)
+
     @Slot(int, int, int)
-    def translate(self, project_id: int, source_document_id: int, profile_id: int) -> None:
+    def translate(
+        self,
+        project_id: int,
+        source_document_id: int,
+        profile_id: int,
+        extra_params: dict[str, object] | None = None,
+    ) -> None:
         """Translate every pending segment of a document on this thread."""
         if self._is_running:
             self.failed.emit("A translation is already running.")
@@ -160,6 +222,7 @@ class TranslationWorker(QObject):
                             run_id=run.id,
                             segment_id=segment.id,
                             profile_id=profile_id,
+                            extra_params=extra_params,
                         ),
                     )
                     assert revision.id is not None

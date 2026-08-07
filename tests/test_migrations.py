@@ -234,7 +234,7 @@ def test_import_uniqueness_migration_adds_database_constraints(tmp_path: Path) -
     }
     history = MigrationRunner(db).history()
     db.close()
-    assert index_metadata["uq_source_documents_project_hash"] == 1
+    assert index_metadata["uq_source_documents_project_hash_format_parser"] == 1
     assert segment_index_metadata["uq_segments_document_stable_key"] == 1
     assert any(record["migration_id"] == "003_add_import_uniqueness" for record in history)
 
@@ -246,12 +246,9 @@ def test_import_uniqueness_migration_preserves_legacy_conflicts(
     real_dir = Path(__file__).parents[1] / "src" / "transrealm" / "migrations"
     migrations = discover_migrations(real_dir)
     db_path = tmp_path / "legacy.db"
-    run_migrations(db_path, real_dir, app_version="0.1.0")
-
     db = create_database(db_path)
-    db.execute("DROP INDEX uq_source_documents_project_hash")
-    db.execute("DELETE FROM schema_migrations WHERE migration_id = '003_add_import_uniqueness'")
-    db.connection.commit()
+    # A pre-003 legacy database has no uniqueness index yet.
+    MigrationRunner(db).apply(migrations[:2], app_version="0.1.0")
     with transaction(db):
         project_id = db.execute(
             "INSERT INTO projects (name, source_language, target_language) "
@@ -264,6 +261,7 @@ def test_import_uniqueness_migration_preserves_legacy_conflicts(
                 "VALUES (?, ?, 'txt', 'utf-8', 'same-hash', '1.0.0')",
                 (project_id, name),
             )
+
     migration_003 = next(
         m for m in migrations if m.migration_id == "003_add_import_uniqueness"
     )

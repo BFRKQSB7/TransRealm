@@ -69,6 +69,18 @@ class TranslationRevisionRepository:
         )
         return [self._row_to_revision(row) for row in cursor.fetchall()]
 
+    def get_many_by_ids(self, revision_ids: list[int]) -> dict[int, TranslationRevision]:
+        """Fetch revisions by id, mapping id to entity for the requested ids."""
+        if not revision_ids:
+            return {}
+        placeholders = ",".join("?" for _ in revision_ids)
+        cursor = self._db.execute(
+            "SELECT id, segment_id, text, origin, attempt_id, is_locked, created_at "
+            f"FROM translation_revisions WHERE id IN ({placeholders})",
+            tuple(revision_ids),
+        )
+        return {int(str(row[0])): self._row_to_revision(row) for row in cursor.fetchall()}
+
     @staticmethod
     def _row_to_revision(row: tuple[object, ...]) -> TranslationRevision:
         return TranslationRevision(

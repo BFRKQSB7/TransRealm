@@ -133,7 +133,11 @@ def _setup_project_and_document(
     tmp_path: Path,
     content: str,
 ) -> int:
-    """Create a project and import ``content``; returns the document id."""
+    """Create a project, set its active profile and import ``content``.
+
+    Returns the document id. Auto mode (P1-T03-M01) translates with the
+    project's active profile, so the helper must set one before translate.
+    """
     _setup_profile(qtbot, window)
     project = window._project
     translation = window._translation
@@ -141,6 +145,18 @@ def _setup_project_and_document(
     project._project_name.setText("Demo")
     project._create_project.click()
     qtbot.waitUntil(lambda: project._project_id is not None, timeout=5000)
+
+    qtbot.waitUntil(lambda: project._active_profile_combo.count() >= 1, timeout=5000)
+    project._active_profile_combo.setCurrentIndex(
+        project._active_profile_combo.findData(
+            project._active_profile_combo.itemData(0),
+        ),
+    )
+    project._set_active.click()
+    qtbot.waitUntil(
+        lambda: "Active:" in project._active_profile_label.text(),
+        timeout=5000,
+    )
 
     source = tmp_path / "source.txt"
     source.write_text(content, encoding="utf-8")
@@ -175,7 +191,6 @@ class TestFullFlow:
         ])
 
         translation = window._translation
-        qtbot.waitUntil(lambda: translation._profile_combo.count() == 1, timeout=5000)
         translation.translate()
         _wait_finished(qtbot, window._translation_worker)
 
@@ -219,7 +234,6 @@ class TestNonBlocking:
         )
 
         translation = window._translation
-        qtbot.waitUntil(lambda: translation._profile_combo.count() >= 1, timeout=5000)
 
         ticks = {"n": 0}
 
@@ -264,7 +278,6 @@ class TestNonBlocking:
         )
 
         translation = window._translation
-        qtbot.waitUntil(lambda: translation._profile_combo.count() >= 1, timeout=5000)
         translation.translate()
         qtbot.waitUntil(lambda: translation._progress.value() >= 1, timeout=5000)
         translation._cancel.click()
@@ -298,7 +311,6 @@ class TestCloseConvergence:
         )
 
         translation = window._translation
-        qtbot.waitUntil(lambda: translation._profile_combo.count() >= 1, timeout=5000)
         translation.translate()
         qtbot.waitUntil(lambda: translation._progress.value() >= 1, timeout=5000)
 
@@ -334,7 +346,6 @@ class TestCloseConvergence:
         holder["adapter"] = SequenceAdapter([_valid_response(segment.stable_key, "甲")], delay=5.5)
 
         translation = window._translation
-        qtbot.waitUntil(lambda: translation._profile_combo.count() >= 1, timeout=5000)
         translation.translate()
         qtbot.waitUntil(lambda: holder["adapter"].calls == 1, timeout=5000)
 

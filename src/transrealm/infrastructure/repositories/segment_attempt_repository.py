@@ -209,6 +209,27 @@ class SegmentAttemptRepository:
         )
         return [self._row_to_attempt(row) for row in cursor.fetchall()]
 
+    def list_by_document(self, source_document_id: int) -> list[SegmentAttempt]:
+        """Return all attempts whose segment belongs to a source document."""
+        qualified = ", ".join(
+            f"segment_attempts.{column}" for column in _ATTEMPT_COLUMNS.split(", ")
+        )
+        cursor = self._db.execute(
+            f"SELECT {qualified} FROM segment_attempts "
+            "JOIN segments ON segments.id = segment_attempts.segment_id "
+            "WHERE segments.source_document_id = ? ORDER BY segment_attempts.id",
+            (source_document_id,),
+        )
+        return [self._row_to_attempt(row) for row in cursor.fetchall()]
+
+    def count_by_model_profile(self, profile_id: int) -> int:
+        """Return the number of attempts referencing a given model profile."""
+        cursor = self._db.execute(
+            "SELECT COUNT(*) FROM segment_attempts WHERE model_profile_id = ?",
+            (profile_id,),
+        )
+        return int(str(cursor.fetchone()[0]))
+
     def finalize_success(
         self,
         *,

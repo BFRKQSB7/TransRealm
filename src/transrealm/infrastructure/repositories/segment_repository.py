@@ -28,9 +28,11 @@ class SegmentRepository:
         with transaction(self._db):
             cursor = self._db.execute(
                 "INSERT INTO source_documents "
-                "(project_id, name, format, encoding, source_hash, parser_version, created_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?) "
-                "ON CONFLICT(project_id, source_hash) DO NOTHING",
+                "(project_id, name, format, encoding, source_hash, parser_version, "
+                "raw_bytes, format_metadata, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                "ON CONFLICT(project_id, source_hash, format, parser_version) "
+                "DO NOTHING",
                 (
                     document.project_id,
                     document.name,
@@ -38,14 +40,18 @@ class SegmentRepository:
                     document.encoding,
                     document.source_hash,
                     document.parser_version,
+                    document.raw_bytes,
+                    document.format_metadata,
                     now,
                 ),
             )
             new_id = cursor.lastrowid if cursor.rowcount == 1 else None
             if new_id is None:
-                existing = self.find_source_document_by_hash(
+                existing = self.find_source_document_by_identity(
                     document.project_id,
                     document.source_hash,
+                    document.format,
+                    document.parser_version,
                 )
                 if existing is None or existing.id is None:
                     raise RuntimeError("Conflicting source document could not be loaded")
@@ -60,6 +66,8 @@ class SegmentRepository:
                 source_hash=document.source_hash,
                 parser_version=document.parser_version,
                 created_at=datetime.fromisoformat(now),
+                raw_bytes=document.raw_bytes,
+                format_metadata=document.format_metadata,
             )
             saved_segments = self._insert_segments(new_id, segments, now)
         return saved_document, saved_segments
@@ -70,8 +78,9 @@ class SegmentRepository:
         with transaction(self._db):
             cursor = self._db.execute(
                 "INSERT INTO source_documents "
-                "(project_id, name, format, encoding, source_hash, parser_version, created_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "(project_id, name, format, encoding, source_hash, parser_version, "
+                "raw_bytes, format_metadata, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     document.project_id,
                     document.name,
@@ -79,6 +88,8 @@ class SegmentRepository:
                     document.encoding,
                     document.source_hash,
                     document.parser_version,
+                    document.raw_bytes,
+                    document.format_metadata,
                     now,
                 ),
             )
@@ -92,19 +103,24 @@ class SegmentRepository:
             source_hash=document.source_hash,
             parser_version=document.parser_version,
             created_at=datetime.fromisoformat(now),
+            raw_bytes=document.raw_bytes,
+            format_metadata=document.format_metadata,
         )
 
-    def find_source_document_by_hash(
+    def find_source_document_by_identity(
         self,
         project_id: int,
         source_hash: str,
+        format: str,  # noqa: A002
+        parser_version: str,
     ) -> SourceDocument | None:
-        """Find a source document by project and content hash."""
+        """Find a source document by its logical reuse identity."""
         cursor = self._db.execute(
             "SELECT id, project_id, name, format, encoding, source_hash, "
-            "parser_version, created_at "
-            "FROM source_documents WHERE project_id = ? AND source_hash = ?",
-            (project_id, source_hash),
+            "parser_version, created_at, raw_bytes, format_metadata "
+            "FROM source_documents "
+            "WHERE project_id = ? AND source_hash = ? AND format = ? AND parser_version = ?",
+            (project_id, source_hash, format, parser_version),
         )
         row = cursor.fetchone()
         if row is None:
@@ -115,7 +131,7 @@ class SegmentRepository:
         """Fetch a source document by id, or None if not found."""
         cursor = self._db.execute(
             "SELECT id, project_id, name, format, encoding, source_hash, "
-            "parser_version, created_at "
+            "parser_version, created_at, raw_bytes, format_metadata "
             "FROM source_documents WHERE id = ?",
             (source_document_id,),
         )
@@ -128,11 +144,30 @@ class SegmentRepository:
         """Return all source documents for a project ordered by id."""
         cursor = self._db.execute(
             "SELECT id, project_id, name, format, encoding, source_hash, "
-            "parser_version, created_at "
+            "parser_version, created_at, raw_bytes, format_metadata "
             "FROM source_documents WHERE project_id = ? ORDER BY id",
             (project_id,),
         )
         return [self._row_to_source_document(row) for row in cursor.fetchall()]
+
+    def save_fidelity_carrier(
+        self,
+        source_document_id: int,
+        *,
+        raw_bytes: bytes | None,
+        format_metadata: str | None,
+    ) -> SourceDocument:
+        """Backfill the fidelity carrier for a document in one transaction."""
+        with transaction(self._db):
+            self._db.execute(
+                "UPDATE source_documents SET raw_bytes = ?, format_metadata = ? "
+                "WHERE id = ?",
+                (raw_bytes, format_metadata, source_document_id),
+            )
+        updated = self.get_source_document_by_id(source_document_id)
+        if updated is None:
+            raise RuntimeError("SourceDocument disappeared during fidelity backfill.")
+        return updated
 
     def save_segments(self, segments: list[Segment]) -> list[Segment]:
         """Insert segments and return them with ids assigned."""
@@ -242,6 +277,8 @@ class SegmentRepository:
             source_hash=str(row[5]),
             parser_version=str(row[6]),
             created_at=datetime.fromisoformat(str(row[7])),
+            raw_bytes=row[8] if isinstance(row[8], bytes) else None,
+            format_metadata=str(row[9]) if row[9] is not None else None,
         )
 
     @staticmethod

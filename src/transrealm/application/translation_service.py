@@ -19,20 +19,29 @@ from transrealm.adapters.errors import AdapterError
 from transrealm.adapters.protocol import ModelAdapter
 from transrealm.application.context import ContextBudget, ContextManifest, EstimateMethod
 from transrealm.application.context_composer import ContextComposer
+from transrealm.application.glossary_context import build_glossary_candidates
 from transrealm.application.output_parser import OutputParser
+from transrealm.application.preset_templates import current_preset, resolve_override_template
 from transrealm.application.prompt_renderer import PromptRenderer, RenderedPrompt
 from transrealm.application.translation_run_service import (
     BUILTIN_GENERAL_TRANSLATION_WORKFLOW,
     TranslationRunService,
 )
 from transrealm.domain.model_profile import ModelProfile
+from transrealm.domain.prompt_override import PromptOverride
 from transrealm.domain.translation_revision import TranslationRevision
 from transrealm.domain.translation_run import TranslationRun
 from transrealm.infrastructure.database import create_database
+from transrealm.infrastructure.repositories.glossary_entry_repository import (
+    GlossaryEntryRepository,
+)
 from transrealm.infrastructure.repositories.model_profile_repository import (
     ModelProfileRepository,
 )
 from transrealm.infrastructure.repositories.project_repository import ProjectRepository
+from transrealm.infrastructure.repositories.prompt_override_repository import (
+    PromptOverrideRepository,
+)
 from transrealm.infrastructure.repositories.segment_repository import SegmentRepository
 from transrealm.infrastructure.repositories.translation_workflow_repository import (
     WorkflowDefinitionRepository,
@@ -68,8 +77,10 @@ class TranslationService:
         self._db = create_database(db_path)
         self._segment_repository = SegmentRepository(self._db)
         self._profile_repository = ModelProfileRepository(self._db)
+        self._override_repository = PromptOverrideRepository(self._db)
         self._project_repository = ProjectRepository(self._db)
         self._workflow_repository = WorkflowDefinitionRepository(self._db)
+        self._glossary_repository = GlossaryEntryRepository(self._db)
         self._adapter = adapter
         self._clock = clock or (lambda: datetime.now(UTC))
         self._composer = ContextComposer()
@@ -99,6 +110,7 @@ class TranslationService:
         profile_id: int,
         lease_duration_seconds: int = 60,
         max_repair_attempts: int = 1,
+        extra_params: dict[str, object] | None = None,
     ) -> TranslationRevision:
         """Translate one segment end to end and return the persisted revision.
 
@@ -112,6 +124,13 @@ class TranslationService:
         to ``max_repair_attempts``) as a fresh attempt with a new idempotency
         key. Non-repairable output, or output still invalid after the repair
         budget is exhausted, is finalized as a permanent failure.
+
+        ``extra_params`` are the request parameters captured for this attempt
+        (the workbench draft, or the profile defaults when not provided). Each
+        attempt snapshots them, so changing the workbench parameters affects
+        only attempts claimed afterwards — completed attempts and revisions are
+        never rewritten. The adapter filters the parameters against the
+        capability before sending, so unsupported parameters are never sent.
 
         Raises:
             TranslationServiceError: For missing run/segment/profile, empty
@@ -173,16 +192,28 @@ class TranslationService:
         neighbors = self._segment_repository.list_segments_by_document(
             segment.source_document_id,
         )
+        glossary_candidates = build_glossary_candidates(
+            self._glossary_repository.list_locked_by_project(run.project_id),
+            estimate_method=budget.estimate_method,
+        )
         manifest = self._composer.compose(
             profile_id=str(profile.id),
             template_version=profile.template_version,
             current=segment,
             neighbors=neighbors,
+            glossary_candidates=glossary_candidates,
             budget=budget,
         )
+        override = self._override_repository.get_by_profile(profile.id)
+        template = None
+        if override is not None:
+            # Fail-closed before any attempt is claimed: a stale override
+            # (parent preset version changed) is rejected without a request.
+            template = resolve_override_template(override, current_preset())
         rendered = self._renderer.render(
             profile_id=str(profile.id),
             template_version=profile.template_version,
+            template=template,
             manifest=manifest,
             source_language=project.source_language,
             target_language=project.target_language,
@@ -191,26 +222,28 @@ class TranslationService:
         claim_segment = segment
         repairs_used = 0
         repair_reason: str | None = None
+        request_params = dict(profile.default_params if extra_params is None else extra_params)
         while True:
             attempt = self._run_service.start_attempt(
                 run_id=run_id,
                 segment=claim_segment,
                 profile=profile,
                 prompt_hash=rendered.prompt_hash,
-                context_summary=self._context_summary(manifest, rendered),
+                context_summary=self._context_summary(manifest, rendered, override=override),
                 validator_summary=self._validator_summary(
                     rendered,
                     repairs_used=repairs_used,
                     repair_reason=repair_reason,
                 ),
                 lease_duration_seconds=lease_duration_seconds,
+                request_params=request_params,
             )
             assert attempt.id is not None
 
             started = self._clock()
             try:
                 response = await self._adapter.chat_completion(
-                    self._build_adapter_request(profile, rendered),
+                    self._build_adapter_request(profile, rendered, extra_params=request_params),
                 )
             except AdapterError as exc:
                 self._run_service.finalize_failure(
@@ -336,26 +369,38 @@ class TranslationService:
         self,
         profile: ModelProfile,
         rendered: RenderedPrompt,
+        *,
+        extra_params: dict[str, object] | None = None,
     ) -> AdapterRequest:
-        """Build a normalized adapter request from the rendered prompt."""
+        """Build a normalized adapter request from the rendered prompt.
+
+        ``extra_params`` are the parameters captured for this attempt (the
+        workbench draft, or the profile defaults when not provided); the
+        adapter still filters them against the capability before sending.
+        """
         return AdapterRequest(
             model_id=profile.model_id,
             messages=(AdapterMessage(role="user", content=rendered.prompt_text),),
-            extra_params=dict(profile.default_params),
+            extra_params=dict(profile.default_params if extra_params is None else extra_params),
         )
 
     def _context_summary(
         self,
         manifest: ContextManifest,
         rendered: RenderedPrompt,
+        *,
+        override: PromptOverride | None = None,
     ) -> dict[str, object]:
         """Build the T07 attempt audit record for context selection."""
-        return {
+        summary: dict[str, object] = {
             "selected_count": len(manifest.selected),
             "pruned_count": len(manifest.pruned),
             "selected_sources": [candidate.source.name for candidate in manifest.selected],
             "prompt_hash": rendered.prompt_hash,
         }
+        if override is not None:
+            summary["override_parent_version"] = override.parent_template_version
+        return summary
 
     def _validator_summary(
         self,
@@ -383,8 +428,10 @@ class TranslationService:
     def close(self) -> None:
         """Close the run service and the read connection."""
         self._run_service.close()
+        self._glossary_repository.close()
         self._workflow_repository.close()
         self._project_repository.close()
+        self._override_repository.close()
         self._profile_repository.close()
         self._segment_repository.close()
 

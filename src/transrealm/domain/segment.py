@@ -6,7 +6,13 @@ from datetime import datetime
 
 @dataclass
 class SourceDocument:
-    """A source file imported into a Project."""
+    """A source file imported into a Project.
+
+    ``raw_bytes`` and ``format_metadata`` form the fidelity carrier
+    (DEC-P1-T01-FOUNDATION): the original bytes plus a versioned format
+    metadata envelope. They are NULL for old documents that predate fidelity
+    and are filled by re-import or explicit backfill.
+    """
 
     id: int | None
     project_id: int
@@ -16,6 +22,8 @@ class SourceDocument:
     source_hash: str
     parser_version: str
     created_at: datetime | None
+    raw_bytes: bytes | None = None
+    format_metadata: str | None = None
 
     @classmethod
     def create(
@@ -27,6 +35,8 @@ class SourceDocument:
         encoding: str,
         source_hash: str,
         parser_version: str,
+        raw_bytes: bytes | None = None,
+        format_metadata: str | None = None,
     ) -> "SourceDocument":
         """Create a new, unsaved SourceDocument instance."""
         return cls(
@@ -38,6 +48,8 @@ class SourceDocument:
             source_hash=source_hash,
             parser_version=parser_version,
             created_at=None,
+            raw_bytes=raw_bytes,
+            format_metadata=format_metadata,
         )
 
 

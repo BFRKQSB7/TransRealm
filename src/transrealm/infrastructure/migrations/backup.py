@@ -83,31 +83,15 @@ def create_pre_upgrade_backup(
             path=backup_path,
         ) from exc
 
-    def _verify_backup(path: Path) -> None:
-        normalized = _normalize_path(path)
-        try:
-            verify = sqlite3.connect(str(normalized))
-        except sqlite3.Error as exc:
-            raise MigrationBackupError(
-                f"Backup is not a valid SQLite database: {exc}",
-                path=path,
-            ) from exc
-        try:
-            verify.execute("PRAGMA schema_version")
-            verify.execute("PRAGMA integrity_check").fetchone()
-        except sqlite3.Error as exc:
-            raise MigrationBackupError(
-                f"Backup verification failed: {exc}",
-                path=path,
-            ) from exc
-        finally:
-            verify.close()
-
     backup_ok = False
     try:
         with dest:
             source_connection.backup(dest)
-        _verify_backup(backup_path)
+        _verify_openable_sqlite(
+            backup_path,
+            open_message="Backup is not a valid SQLite database: {exc}",
+            verify_message="Backup verification failed: {exc}",
+        )
         backup_ok = True
     except MigrationBackupError:
         raise
@@ -130,3 +114,93 @@ def create_pre_upgrade_backup(
                 pass
 
     return backup_path
+
+
+def _verify_openable_sqlite(
+    path: Path,
+    *,
+    open_message: str,
+    verify_message: str,
+) -> None:
+    """Reopen ``path`` and assert it is a valid SQLite database.
+
+    ``open_message`` / ``verify_message`` are ``str.format`` templates receiving
+    ``exc`` (the open failure / query failure respectively), so callers control
+    the user-facing error wording.
+    """
+    normalized = _normalize_path(path)
+    try:
+        verify = sqlite3.connect(str(normalized))
+    except sqlite3.Error as exc:
+        raise MigrationBackupError(open_message.format(exc=exc), path=path) from exc
+    try:
+        verify.execute("PRAGMA schema_version")
+        verify.execute("PRAGMA integrity_check").fetchone()
+    except sqlite3.Error as exc:
+        raise MigrationBackupError(verify_message.format(exc=exc), path=path) from exc
+    finally:
+        verify.close()
+
+
+def create_consistent_snapshot(db_path: Path, target_path: Path) -> Path:
+    """Create a consistent, openable snapshot of ``db_path`` at ``target_path``.
+
+    Uses the SQLite backup API (the same mechanism as
+    ``create_pre_upgrade_backup``), so the snapshot is consistent even while WAL
+    is active; ``db_path`` is never copied as a raw file. The snapshot is
+    reopened and verified before returning. ``target_path``'s parent must
+    already exist; an existing file at ``target_path`` is removed first.
+
+    Args:
+        db_path: Source database path.
+        target_path: Where to write the snapshot.
+
+    Returns:
+        The snapshot path.
+
+    Raises:
+        MigrationBackupError: If the snapshot cannot be created or verified.
+    """
+    db_path = Path(db_path)
+    target_path = Path(target_path)
+    if not db_path.is_file():
+        raise MigrationBackupError(
+            f"Source database does not exist: {db_path}",
+            path=db_path,
+        )
+    target_path.unlink(missing_ok=True)
+    source: sqlite3.Connection | None = None
+    dest: sqlite3.Connection | None = None
+    backup_ok = False
+    try:
+        source = sqlite3.connect(str(_normalize_path(db_path)))
+        dest = sqlite3.connect(str(_normalize_path(target_path)))
+        with dest:
+            source.backup(dest)
+        _verify_openable_sqlite(
+            target_path,
+            open_message="Snapshot is not a valid SQLite database: {exc}",
+            verify_message="Snapshot verification failed: {exc}",
+        )
+        backup_ok = True
+    except sqlite3.Error as exc:
+        raise MigrationBackupError(
+            f"SQLite snapshot failed: {exc}",
+            path=target_path,
+        ) from exc
+    except OSError as exc:
+        raise MigrationBackupError(
+            f"Snapshot I/O failed: {exc}",
+            path=target_path,
+        ) from exc
+    finally:
+        if dest is not None:
+            dest.close()
+        if source is not None:
+            source.close()
+        if not backup_ok:
+            try:
+                target_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+    return target_path

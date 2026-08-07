@@ -18,6 +18,10 @@ class ProviderConnectionError(ValueError):
     """Invalid provider connection configuration."""
 
 
+class ProviderConnectionInUseError(ProviderConnectionError):
+    """A connection cannot be deleted because model profiles reference it."""
+
+
 @dataclass
 class ProviderConnection:
     """Non-sensitive configuration for connecting to a model provider."""

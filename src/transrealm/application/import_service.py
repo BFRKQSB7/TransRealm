@@ -80,6 +80,70 @@ class ImportService:
             encoding=encoding,
         )
 
+    def backfill_fidelity(
+        self,
+        source_document_id: int,
+        file_path: Path,
+        *,
+        encoding: str = "utf-8",
+    ) -> SourceDocument:
+        """Explicitly add the fidelity carrier to a document that lacks it.
+
+        Old TXT projects migrated before fidelity existed have no preserved
+        original bytes, and the original bytes must never be guessed from
+        ``source_text``. This path is the only way to fill the carrier: the
+        user provides the original file, which is re-parsed; the source hash
+        and the existing segment mapping (count, stable_key, source_text,
+        sequence) must match before the raw bytes and envelope are persisted
+        in a single transaction.
+
+        Raises:
+            ValueError: If the document does not exist, the file's hash does
+                not match, or the re-parsed segment mapping differs.
+        """
+        document = self._segment_repository.get_source_document_by_id(
+            source_document_id,
+        )
+        if document is None:
+            raise ValueError(
+                f"SourceDocument with id {source_document_id} does not exist.",
+            )
+        parser = self._parser_registry.get(document.format)
+        parsed_document, parsed_segments = parser.parse(
+            file_path,
+            project_id=document.project_id,
+            name=document.name,
+            encoding=encoding,
+        )
+        if parsed_document.source_hash != document.source_hash:
+            raise ValueError(
+                "Provided file does not match the source document hash; "
+                "refusing to backfill fidelity data.",
+            )
+        existing = self._segment_repository.list_segments_by_document(
+            source_document_id,
+        )
+        if len(existing) != len(parsed_segments):
+            raise ValueError(
+                "Provided file's segment mapping does not match the document; "
+                "refusing to backfill fidelity data.",
+            )
+        for old, new in zip(existing, parsed_segments):
+            if (
+                old.stable_key != new.stable_key
+                or old.source_text != new.source_text
+                or old.sequence != new.sequence
+            ):
+                raise ValueError(
+                    "Provided file's segment mapping does not match the document; "
+                    "refusing to backfill fidelity data.",
+                )
+        return self._segment_repository.save_fidelity_carrier(
+            source_document_id,
+            raw_bytes=parsed_document.raw_bytes,
+            format_metadata=parsed_document.format_metadata,
+        )
+
     def close(self) -> None:
         """Close the service and release resources."""
         self._segment_repository.close()

@@ -52,11 +52,20 @@ class ParserRegistry:
 
 
 def default_registry() -> ParserRegistry:
-    """Return a registry with the built-in TXT parser registered."""
+    """Return a registry with the built-in format parsers registered."""
+    from transrealm.infrastructure.parsers.ass_ssa_parser import AssParser, SsaParser
+    from transrealm.infrastructure.parsers.json_parser import JSONParser
+    from transrealm.infrastructure.parsers.srt_parser import SRTParser
     from transrealm.infrastructure.parsers.txt_parser import TxtParser
+    from transrealm.infrastructure.parsers.vtt_parser import VTTParser
 
     registry = ParserRegistry()
     registry.register(TxtParser())
+    registry.register(JSONParser())
+    registry.register(SRTParser())
+    registry.register(VTTParser())
+    registry.register(AssParser())
+    registry.register(SsaParser())
     return registry
 
 

@@ -8,8 +8,9 @@ from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from transrealm.application.workbench import SegmentProgress
 from transrealm.domain.model_profile import ModelProfile
-from transrealm.domain.segment import Segment
+from transrealm.domain.segment import Segment, SourceDocument
 from transrealm.domain.segment_attempt import SegmentAttempt, SegmentAttemptError
 from transrealm.domain.translation_revision import TranslationRevision
 from transrealm.domain.translation_run import TranslationRun
@@ -18,7 +19,7 @@ from transrealm.domain.translation_workflow import (
     WorkflowDefinitionError,
     canonical_definition_json,
 )
-from transrealm.infrastructure.database import create_database
+from transrealm.infrastructure.database import SqlExecutionError, create_database, transaction
 from transrealm.infrastructure.migrations.runner import MigrationRunner
 from transrealm.infrastructure.repositories.project_repository import ProjectRepository
 from transrealm.infrastructure.repositories.segment_attempt_repository import (
@@ -112,13 +113,29 @@ class TranslationRunService:
         If the built-in workflow is missing, insert it. If it exists but its hash
         does not match the expected definition, the database has been tampered with
         and the service refuses to start.
+
+        Two worker threads can open a TranslationRunService concurrently (for
+        example a workbench refresh and a translate loop), so the check-then-insert
+        may lose the race to a peer that just seeded the same row. The unique
+        constraint then makes the insert fail; re-reading and verifying the peer's
+        row keeps seeding idempotent under concurrency.
         """
         existing = self._workflow_repository.get_by_name_and_version(
             BUILTIN_GENERAL_TRANSLATION_WORKFLOW.name,
             BUILTIN_GENERAL_TRANSLATION_WORKFLOW.version,
         )
         if existing is None:
-            self._workflow_repository.save(BUILTIN_GENERAL_TRANSLATION_WORKFLOW)
+            try:
+                self._workflow_repository.save(BUILTIN_GENERAL_TRANSLATION_WORKFLOW)
+            except SqlExecutionError:
+                existing = self._workflow_repository.get_by_name_and_version(
+                    BUILTIN_GENERAL_TRANSLATION_WORKFLOW.name,
+                    BUILTIN_GENERAL_TRANSLATION_WORKFLOW.version,
+                )
+                if existing is None:
+                    raise
+
+        if existing is None:
             return
 
         expected_hash = BUILTIN_GENERAL_TRANSLATION_WORKFLOW.definition_hash
@@ -168,6 +185,7 @@ class TranslationRunService:
         validator_summary: dict[str, object],
         idempotency_key: str | None = None,
         lease_duration_seconds: int = 60,
+        request_params: dict[str, object] | None = None,
     ) -> SegmentAttempt:
         """Claim a pending segment and persist a pre-request attempt.
 
@@ -224,6 +242,8 @@ class TranslationRunService:
             "output_protocol": profile.output_protocol,
             "capability_snapshot": profile.capability_snapshot,
         }
+        if request_params is not None:
+            profile_snapshot["request_params"] = request_params
 
         try:
             return self._attempt_repository.create_after_claim(
@@ -435,6 +455,153 @@ class TranslationRunService:
         """Fetch a revision by id."""
         return self._revision_repository.get_by_id(revision_id)
 
+    def append_user_revision(
+        self,
+        *,
+        segment_id: int,
+        text: str,
+    ) -> TranslationRevision:
+        """Append an ``origin=user`` revision and make it the current revision.
+
+        This is the workbench "save manual translation" use case. The write is
+        atomic: insert the user revision, then point ``segments.current_revision_id``
+        at it, mark the segment ``completed`` and bump its version so a stale
+        claim captured before the edit is fenced. A segment with an in-flight
+        attempt (``processing``) is rejected rather than racing the late
+        finalize; the P0-T07 fencing (current-changed / locked) is the backstop
+        for any edit that slips in concurrently.
+        """
+        segment = self._segment_repository.get_by_id(segment_id)
+        if segment is None:
+            raise TranslationRunServiceError(
+                f"Segment with id {segment_id} does not exist.",
+            )
+        if segment.status == "processing":
+            raise TranslationRunServiceError(
+                f"Cannot edit segment {segment_id}: a translation is in progress.",
+            )
+        revision = TranslationRevision.create(
+            segment_id=segment_id,
+            text=text,
+            origin="user",
+        )
+        now_iso = self._clock().isoformat()
+        with transaction(self._db):
+            cursor = self._db.execute(
+                "INSERT INTO translation_revisions "
+                "(segment_id, text, origin, attempt_id, is_locked, created_at) "
+                "VALUES (?, ?, 'user', NULL, 0, ?)",
+                (segment_id, revision.text, now_iso),
+            )
+            new_id = cursor.lastrowid
+            assert new_id is not None
+            cursor = self._db.execute(
+                "UPDATE segments SET status = 'completed', current_revision_id = ?, "
+                "version = version + 1, lease_owner = NULL, lease_expires_at = NULL, "
+                "updated_at = ? WHERE id = ? AND status != 'processing'",
+                (new_id, now_iso, segment_id),
+            )
+            if cursor.rowcount == 0:
+                raise TranslationRunServiceError(
+                    f"Cannot edit segment {segment_id}: a translation is in progress.",
+                )
+        loaded = self._revision_repository.get_by_id(new_id)
+        assert loaded is not None
+        return loaded
+
+    def set_current_revision(self, *, segment_id: int, revision_id: int) -> TranslationRevision:
+        """Point a segment's current revision at an existing revision of it.
+
+        The workbench "switch current" use case: any valid revision belonging to
+        the segment (AI, user or import origin) can be selected as the current
+        translation. The revision must exist and belong to the segment; a
+        ``processing`` segment is rejected so the switch cannot race an in-flight
+        finalize.
+        """
+        segment = self._segment_repository.get_by_id(segment_id)
+        if segment is None:
+            raise TranslationRunServiceError(
+                f"Segment with id {segment_id} does not exist.",
+            )
+        if segment.status == "processing":
+            raise TranslationRunServiceError(
+                f"Cannot switch current for segment {segment_id}: "
+                "a translation is in progress.",
+            )
+        revision = self._revision_repository.get_by_id(revision_id)
+        if revision is None:
+            raise TranslationRunServiceError(
+                f"Revision with id {revision_id} does not exist.",
+            )
+        if revision.segment_id != segment_id:
+            raise TranslationRunServiceError(
+                f"Revision {revision_id} belongs to segment {revision.segment_id}, "
+                f"not {segment_id}.",
+            )
+        now_iso = self._clock().isoformat()
+        with transaction(self._db):
+            cursor = self._db.execute(
+                "UPDATE segments SET status = 'completed', current_revision_id = ?, "
+                "version = version + 1, lease_owner = NULL, lease_expires_at = NULL, "
+                "updated_at = ? WHERE id = ? AND status != 'processing'",
+                (revision_id, now_iso, segment_id),
+            )
+            if cursor.rowcount == 0:
+                raise TranslationRunServiceError(
+                    f"Cannot switch current for segment {segment_id}: "
+                    "a translation is in progress.",
+                )
+        loaded = self._revision_repository.get_by_id(revision_id)
+        assert loaded is not None
+        return loaded
+
+    def lock_current_revision(self, *, segment_id: int) -> TranslationRevision:
+        """Lock a segment's current revision so automatic results cannot replace it.
+
+        The locked flag lives on the revision; ``finalize_success`` refuses to
+        complete an attempt whose expected current revision has become locked,
+        so a late automatic result is rejected even mid-flight.
+        """
+        return self._set_current_locked(segment_id=segment_id, locked=True)
+
+    def unlock_current_revision(self, *, segment_id: int) -> TranslationRevision:
+        """Unlock a segment's current revision, allowing automatic results again."""
+        return self._set_current_locked(segment_id=segment_id, locked=False)
+
+    def _set_current_locked(self, *, segment_id: int, locked: bool) -> TranslationRevision:
+        """Set the ``is_locked`` flag of a segment's current revision.
+
+        The flag write targets the current revision inside a single statement, so
+        a concurrent finalize cannot move the current revision between the read
+        and the write (locking a stale revision the user did not see).
+        """
+        segment = self._segment_repository.get_by_id(segment_id)
+        if segment is None:
+            raise TranslationRunServiceError(
+                f"Segment with id {segment_id} does not exist.",
+            )
+        with transaction(self._db):
+            cursor = self._db.execute(
+                "UPDATE translation_revisions SET is_locked = ? "
+                "WHERE id = (SELECT current_revision_id FROM segments WHERE id = ?) "
+                "AND id IS NOT NULL",
+                (1 if locked else 0, segment_id),
+            )
+            if cursor.rowcount == 0:
+                raise TranslationRunServiceError(
+                    f"Segment {segment_id} has no current revision to "
+                    f"{'lock' if locked else 'unlock'}.",
+                )
+            loaded_row = self._db.execute(
+                "SELECT current_revision_id FROM segments WHERE id = ?",
+                (segment_id,),
+            ).fetchone()
+        assert loaded_row is not None
+        revision_id = int(str(loaded_row[0]))
+        loaded = self._revision_repository.get_by_id(revision_id)
+        assert loaded is not None
+        return loaded
+
     def get_run(self, run_id: int) -> TranslationRun | None:
         """Fetch a run by id."""
         return self._run_repository.get_by_id(run_id)
@@ -450,6 +617,59 @@ class TranslationRunService:
     def list_attempts_for_run(self, run_id: int) -> list[SegmentAttempt]:
         """Return all attempts for a run."""
         return self._attempt_repository.list_by_run(run_id)
+
+    def list_source_documents(self, *, project_id: int) -> list[SourceDocument]:
+        """Return every imported source document of a project, ordered by id.
+
+        Read-only view for the translation page's document selector, so the UI
+        never reaches into the repository layer directly.
+        """
+        return self._segment_repository.list_source_documents_by_project(project_id)
+
+    def list_segment_progress(self, *, source_document_id: int) -> list[SegmentProgress]:
+        """Return each segment of a document with its latest attempt.
+
+        The latest attempt is the one with the highest attempt id for the
+        segment; a segment with no attempt yet has ``attempt_status`` and
+        ``attempt_error`` set to ``None``. This is a read-only view for the
+        workbench, so a failed segment surfaces its latest attempt's error.
+        """
+        segments = self._segment_repository.list_segments_by_document(source_document_id)
+        attempts = self._attempt_repository.list_by_document(source_document_id)
+        latest_by_segment: dict[int, SegmentAttempt] = {}
+        for attempt in attempts:
+            assert attempt.segment_id is not None
+            latest_by_segment[attempt.segment_id] = attempt
+        current_revision_ids = [
+            segment.current_revision_id
+            for segment in segments
+            if segment.current_revision_id is not None
+        ]
+        revisions_by_id = self._revision_repository.get_many_by_ids(current_revision_ids)
+        progress: list[SegmentProgress] = []
+        for segment in segments:
+            assert segment.id is not None
+            latest = latest_by_segment.get(segment.id)
+            current_revision_id = segment.current_revision_id
+            revision = (
+                revisions_by_id.get(current_revision_id)
+                if current_revision_id is not None
+                else None
+            )
+            progress.append(
+                SegmentProgress(
+                    segment_id=segment.id,
+                    stable_key=segment.stable_key,
+                    source_text=segment.source_text,
+                    status=segment.status,
+                    current_revision_id=segment.current_revision_id,
+                    attempt_status=latest.status if latest else None,
+                    attempt_error=latest.error_message if latest else None,
+                    revision_text=revision.text if revision else None,
+                    revision_locked=revision.is_locked if revision else False,
+                ),
+            )
+        return progress
 
     def close(self) -> None:
         """Close the service and release resources."""

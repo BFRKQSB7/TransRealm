@@ -27,7 +27,7 @@ Prompt 组装必须可追踪、可复现。用户 Override 不能破坏机器可
 
 首发 Profile 可包含 `general`、`sakura`、`murasaki`。它们是不同提示与输出策略，不代表专有 API 协议。
 
-预设模板不可直接修改；用户修改保存为 Override，并记录父模板版本。
+预设模板不可直接修改；用户修改保存为 Override，并记录父模板版本。Override 文本在保存时校验：未知变量、非法 `$` 语法和空文本拒绝（不持久化）；父预设版本已更新（`parent_template_version` ≠ 当前预设版本）的 Override 在渲染时 fail-closed 拒绝，不发送模型请求。模板只做占位符替换（`string.Template`），不执行任何模板代码。
 
 ## 3. Phase 0 翻译 Prompt 流程
 
@@ -107,7 +107,7 @@ Phase 2 只扩展候选召回、相似度评分和动态预算，不改变基础
 
 ## 7. Context Manifest 与 Debug
 
-每次 Attempt 在重启后记录或可解析到：Profile/template/capability snapshot 或稳定版本、Context 来源、命中原因、优先级、预算、估算、裁剪结果、Prompt hash、参数、输出协议和 Validator 结果。Model Profile 中的 parser/validator/repair 字段只保存声明式协议选择与上限，不复制可执行实现。
+每次 Attempt 在重启后记录或可解析到：Profile/template/capability snapshot 或稳定版本、Context 来源、命中原因、优先级、预算、估算、裁剪结果、Prompt hash、参数、输出协议和 Validator 结果。Model Profile 中的 parser/validator/repair 字段只保存声明式协议选择与上限，不复制可执行实现。P1-T03-M02 起，Attempt 的实际请求参数（工作台草稿或 Profile 默认参数）显式记录于 `profile_snapshot.request_params`——参数变更只形成其后领取 Attempt 的快照，不改写已完成历史。P1-T03-M03 起，使用 Prompt Override 渲染的 Attempt 在 `context_summary` 额外记录 `override_parent_version`，使实际渲染的模板来源可审计。
 
 原始 Prompt/响应默认可配置、可脱敏、可清理；API Key 不得出现。清理 Debug 正文后，Revision、请求 ID、hash、版本、状态、usage、错误与 Validator 摘要等最小审计字段仍须保留。
 
@@ -117,4 +117,4 @@ Model Profile 声明模型能力和输出协议；Model Adapter 负责实际 Pro
 
 ## 9. 质量边界
 
-普通用户使用预设 Profile/Workflow；高级用户可修改指令、风格和参数，但不能关闭 Segment ID、输出包装、格式保护、校验和安全限制。
+普通用户使用预设 Profile/Workflow；高级用户可修改指令、风格和参数，但不能关闭 Segment ID、输出包装、格式保护、校验和安全限制。这些边界是结构性的：Output Contract wrapper 由渲染器固定追加（Override 只替换模板正文），格式保护/校验/安全限制是独立流水线阶段，任何 Override 文本都无法关闭它们。

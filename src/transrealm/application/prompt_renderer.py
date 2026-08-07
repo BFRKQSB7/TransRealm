@@ -19,6 +19,7 @@ from transrealm.application.context import (
     OutputContract,
     OutputItem,
 )
+from transrealm.application.preset_templates import current_preset
 
 
 class PromptRenderError(ValueError):
@@ -71,12 +72,6 @@ class PromptRenderer:
     remove it by overriding the template.
     """
 
-    _DEFAULT_TEMPLATE = string.Template(
-        "Translate the following text from $source_language to $target_language.\n\n"
-        "Current segment:\n$current\n\n"
-        "Context:\n$context\n\n",
-    )
-
     _OUTPUT_SUFFIX = string.Template(
         "\n---OUTPUT CONTRACT---\n"
         "Return only a JSON object matching the following schema. "
@@ -90,7 +85,9 @@ class PromptRenderer:
         default_template: string.Template | None = None,
         output_schema: dict[str, Any] | None = None,
     ) -> None:
-        self._default_template = default_template or self._DEFAULT_TEMPLATE
+        if default_template is None:
+            default_template = string.Template(current_preset().template_text)
+        self._default_template = default_template
         self._default_schema = output_schema or DEFAULT_OUTPUT_SCHEMA
 
     def render(
