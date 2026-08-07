@@ -6,15 +6,15 @@ current_phase: Phase 1
 current_release: V1.0
 current_task: P1-T05
 current_milestone: P1-T05-M02
-state: blocked
+state: ready
 last_updated: 2026-08-08
-baseline_commit: 5ef3be6
+baseline_commit: 3ef991d
 baseline_integrity: committed_and_verified
-worktree_disposition: governance_commit_pending
+worktree_disposition: baseline_committed_not_pushed
 gate_status: open
 plan_alignment: pending_reality_check
 review_status: P1-T05-M01_independent_review_resolved
-rollback_ref: 90f1c70
+rollback_ref: 3ef991d
 pending_decision: none
 decision_prompt: DEVELOPMENT_STATE.md#pending-decision
 decision_result: DECIDED方案2：采用”原始 bytes + 版本化 format metadata envelope + 格式专属定位信息”的保真底座；TXT 定位信息必须由 parser 生成并由 exporter 在替换前针对原始 bytes、hash、encoding/BOM/newline、span 边界和解码结果逐项验证。不得把所有格式强行压成一个通用 span 模型。旧 TXT Project 只做可升级迁移，不从 source_text 猜造原始 bytes；缺少可验证原始 bytes/metadata 时安全拒绝保真导出，用户提供并校验原文件后才允许显式补齐载体。
@@ -124,18 +124,18 @@ resume_milestone: P1-T05-M02
 ### 当前 Task
 
 - **Task：** P1-T05 — V1.0 异常恢复与 Release Candidate Gate
-- **状态：** in_progress（M01 已 completed，M02 blocked——P1-T05 前置"工作树先形成可恢复 Git 基线"未满足，需用户授权 commit）
+- **状态：** in_progress（M01 completed；M02 ready）
 - **完整定义：** `07_Developer_Task_List.md` 的"P1-T05"章节
-- **前置依赖：** P1-T03、P1-T04 及所有前序 Task 完成（已完成）；工作树先形成可恢复 Git 基线（**未满足**——`governance_commit_pending`，需用户授权 commit/push）；发布候选版本、依赖和文档冻结（依赖/文档已由 M01 冻结，候选版本号在 M04 构建时定）。
+- **前置依赖：** P1-T03、P1-T04 及所有前序 Task 完成（已完成）；工作树先形成可恢复 Git 基线（**已满足**——本地基线 `3ef991d`，2026-08-08 经用户授权 commit，未 push）；发布候选版本、依赖和文档冻结（依赖/文档已由 M01 冻结，候选版本号在 M04 构建时定）。
 
 ### 当前小目标
 
 - **Milestone：** P1-T05-M02 — 翻译/恢复/长文本 Gate
-- **状态：** blocked
+- **状态：** ready
 - **plan_alignment：** pending_reality_check
 - **目标：** 自动覆盖请求与事务崩溃切点、断网/model-stop/timeout、lease/retry/cancel/locked；固定长文本用 fake/local server 跑完整旅程，状态全可解释、数据损失零、completed 不重复覆盖并记录资源基线（完整定义见 `07` §20 P1-T05-M02）。
 - **禁止事项：** 不新增产品能力；不自动创建 GitHub 资源、不提交/推送/发布、不用真实付费 API 跑自动矩阵；不得删除既有用户数据、备份或既有工作树改动。
-- **解除条件（blocked 原因）：** M02 开工前必须先由用户授权在工作树形成可恢复 Git 基线（commit 当前 P1-T01..T05-M01 改动；候选门禁 `scripts/verify_task.py` 需要 base_commit、`09` §6"发布候选仅能来自已验证、可定位的基线"）；或用户明确允许在未提交工作树上继续 M02。M01 已完成（证据见下方检查点与 `08`）。
+- **前置已满足：** 可恢复 Git 基线 `3ef991d`（2026-08-08 用户授权本地 commit，未 push）——`09` §6"候选仅能来自可定位基线"满足，`scripts/verify_task.py` 现可对 P1-T05 改动生效。
 
 ## 5. 历史 Milestone 状态索引
 
