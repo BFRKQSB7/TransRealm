@@ -21,8 +21,8 @@
 - **杀毒扫描未执行（知情例外）。** 候选未经反病毒扫描。本机 Windows Defender 实时保护已禁用且非管理员权限，`MpCmdRun` 扫描不可执行（hr=0x80004005）。2026-08-08 用户在知情前提下授权在未扫描状态发布（`DEVELOPMENT_STATE.md` 记录）；**建议发布后在具备 AV 能力的环境对候选 zip/onedir 补扫并归档结果。**
 - **冻结应用内的完整 GUI 自动化旅程未驱动。** 受 UIAutomation 驱动 Qt 的脆弱性限制，未自动化"冻结应用内创建项目→导入→翻译→导出"全旅程；当前证据 = 冻结应用的启动/迁移/关闭 smoke + 源码级真实窗口完整旅程（P1-T03/P0-T08）。发布后的最终人工 smoke 属用户后续动作。
 - **长文本/性能指标只记录基线，不断言阈值。** 资源基线（120 段长文本：约 3.0s、峰值约 2.5MB）是证据记录而非门禁阈值；可比较基线需在候选归档时固化。
-- **未接入远程 CI。** 当前门禁为本机命令（pytest/Ruff/mypy/verify_task/check_candidate_hygiene）；接入远程仓库后需保持相同命令并设为必需检查。
-- **未创建 GitHub Release / 未上传 artifact / 未正式发布。** 候选构建不等于发布；提交、推送、创建远程资源与正式发布均需用户单独授权。
+- **远程 CI 已接入并全绿。** `quality.yml`（pytest/Ruff/mypy）与 `security.yml`（Candidate hygiene + 迁移顺序）在 push/PR 上运行；2026-08-08 修复 CI 安装步骤（`-e ".[dev]"` 之后追加 `pip install -r requirements.lock`）使锁==安装守卫在 CI 上真实有效，Quality Test/Lint/Type check 均通过（CI 因环境差异额外 skip 符号链接相关用例，非失败）。
+- **GitHub Release v0.1.0 已创建（2026-08-08，用户授权）：** tag `v0.1.0`（提交 `7bf26be`），上传现有候选 `dist/transrealm-0.1.0-win-x64.zip`（sha256 `c59b3ebbe…`）。Release 地址 https://github.com/BFRKQSB7/TransRealm/releases/tag/v0.1.0 。CI 工作流修复为后续提交 `ffb4d8c`（不影响已发布 artifact）。
 
 ## 4. 设计边界（非缺陷）
 

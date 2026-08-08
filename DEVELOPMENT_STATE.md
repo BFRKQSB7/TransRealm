@@ -11,7 +11,7 @@ last_updated: 2026-08-08
 baseline_commit: 3ef991d
 baseline_integrity: committed_and_verified
 worktree_disposition: dirty_uncommitted
-gate_status: open
+gate_status: released
 plan_alignment: fitness_recorded
 review_status: P1-T05-M05_independent_review_approved
 rollback_ref: 3ef991d
@@ -138,7 +138,7 @@ resume_milestone: P1-T05-M05-completed
 - **目标：** 安装/使用/模式/Profile/Glossary/迁移/备份/恢复/清理/known issues/许可文档与候选一致；独立 Code Review 和全量命令通过；state 只在证据齐全时标 Gate 完成，不创建远程或发布（完整定义见 `07` §20 P1-T05-M05）。
 - **禁止事项：** 不新增产品能力；不自动创建 GitHub 资源、不提交/推送/发布、不用真实付费 API 跑自动矩阵；不得删除既有用户数据、备份或既有工作树改动；候选已构建于 `dist/`，不代表已发布。
 - **前置已满足：** 可恢复 Git 基线 `3ef991d` 满足 `09` §6；M04 候选 `dist/transrealm-0.1.0-win-x64.zip` 已构建并有 `build_manifest.json`（tool/version/hash/size、git `110dea9`、12 迁移、Qt 插件 8 类），`tests/test_p1_t05_m04.py` 4 项通过；M02 长文本/崩溃恢复与 M03 六格式/旧库/容器/security 矩阵证据齐备；`requirements.lock` 与 `03` §12 打包基线冻结。**未覆盖项（M05 已归档到 `docs/known-issues.md`）：** 杀毒扫描本机不可执行（Windows Defender 实时保护禁用 + 非管理员，需用户在 AV 环境扫描候选后归档）；冻结应用内 create/import/translate/export 的 GUI 自动化驱动未落地（以冻结启动/迁移/关闭 smoke + P1-T03/P0-T08 源码级旅程为证据，发布前最终手工 smoke 需用户授权时执行）。
-- **发布决策（2026-08-08，用户授权）：** 用户授权完整发布——提交 M03–M05 工作树 → push `origin/master` → tag `v0.1.0` → 创建 GitHub Release `v0.1.0` 并上传现有候选 `dist/transrealm-0.1.0-win-x64.zip`（sha256 `c59b3ebbe…`，保持已归档 hash）。**杀毒扫描未执行，用户在知情前提下授权发布（已记录于 `docs/known-issues.md` §3 为知情例外，建议发布后 AV 环境补扫并归档）；冻结 GUI 最终手工 smoke 属用户后续动作。** 发布执行与证据见本文件 §6 最新检查点。
+- **发布结果（2026-08-08，用户授权）：** 完整发布已执行——提交 `7bf26be`（M03–M05 交付）push `origin/master`；tag `v0.1.0`（annotated）push 成功；GitHub Release **v0.1.0** 已创建并上传现有候选 `dist/transrealm-0.1.0-win-x64.zip`（sha256 `c59b3ebbe…`），Release 地址 https://github.com/BFRKQSB7/TransRealm/releases/tag/v0.1.0 。**CI 修复提交 `ffb4d8c`**（`quality.yml` 安装步骤追加 `pip install -r requirements.lock`，使锁==安装守卫在 CI 有效；tag 保持不可变指向 `7bf26be`，该修复不影响已发布 artifact）。Quality CI（Test/Lint/Type check）与 Candidate hygiene 全绿。**杀毒扫描未执行，用户在知情前提下授权发布（已记录于 `docs/known-issues.md` §3 为知情例外，建议发布后 AV 环境补扫并归档）；冻结 GUI 最终人工 smoke 属用户后续动作。**
 
 ## 5. 历史 Milestone 状态索引
 
@@ -231,7 +231,8 @@ Agent 可以在实现中细化这些小目标，但不得扩大当前 Task 的�
 - **测试命令：** `py -3.12 -m pytest -q`（全量）；`py -3.12 -m pytest -q tests/test_p1_t05_m05.py`；`py -3.12 -m ruff check src tests`；`py -3.12 -m mypy src tests`；`py -3.12 scripts/verify_task.py --task P1-T05-M05 --base-commit 3ef991d --allow docs/ --allow README.md --allow 03_Technical_Design.md --allow 07_Developer_Task_List.md --allow 08_Architecture_Review.md --allow DEVELOPMENT_STATE.md --allow tests/test_p1_t05_m02.py --allow tests/test_p1_t05_m05.py --baseline-test tests/test_p1_t05_m01.py --new-test tests/test_p1_t05_m05.py`；`py -3.12 scripts/check_candidate_hygiene.py`
 - **测试结果：** 全量 pytest **1339 passed**（基线 1335 + M05 新增 4，1 skipped 因本环境无符号链接创建权限）；Ruff All checks passed；mypy Success: no issues found in 131 source files；verify_task exit 0（baseline 7 passed + new 4 passed，outside_scope 空、high_risk 空、removed_tests 空——对未提交改动只校验 committed delta=03/07/08/state/M02 test，scope 由 Review 兜底）；check_candidate_hygiene exit 0（Candidate hygiene passed）；文档一致性守卫 4 passed（含 known-issues zip sha256 `c59b3ebbe…` 与 manifest 一致）。
 - **未完成：** P1-T05-M05 完成，P1-T05 Task 标记 **completed**，无下一 Milestone（Phase 1 收口）。**未覆盖项（如实记录，不标通过，承接 M04）：** (a) 杀毒扫描本机不可执行——Windows Defender 实时保护禁用（`AntivirusEnabled=False`）且非管理员，`MpCmdRun` hr=0x80004005，候选未经 AV 扫描，需用户在 AV 环境扫描后归档；(b) 冻结应用内 create/import/translate/export 的 GUI 自动化驱动未落地，最终手工 smoke 需用户授权发布时执行。
-- **风险/阻塞：** 无技术阻塞。独立 Review **APPROVE**（首轮 REQUEST-CHANGES 的 1 SHOULD-FIX + 4 MINOR 全部修复并复核通过）。已知边界如实记录：GUI 仅 TXT 导入导出（服务层六格式）；`.aiproject`/开放目录未暴露 GUI；未翻译文档不能导出（每段需有修订）；工作台暂无历史 revision 切换 UI；Prompt override 父版本失效 fail-closed。工作树改动与候选产物未提交/推送（本会话未获授权不 commit/push）。
+- **发布记录（2026-08-08，用户授权完整发布）：** 提交 `7bf26be`（M03–M05 交付）已 push `origin/master`；tag `v0.1.0` 已 push；GitHub Release **v0.1.0** 已创建并上传 `dist/transrealm-0.1.0-win-x64.zip`（sha256 `c59b3ebbe…`）→ https://github.com/BFRKQSB7/TransRealm/releases/tag/v0.1.0 。CI 修复提交 `ffb4d8c`（`quality.yml` 安装步骤追加 `pip install -r requirements.lock`，修复 `test_lock_matches_installed_packages` 在 CI 的 `altgraph` 缺包失败；tag 保持不可变指向 `7bf26be`）。Quality CI（Test/Lint/Type check）+ Candidate hygiene 全绿。**杀毒扫描未执行（用户知情例外）**、冻结 GUI 最终人工 smoke 未执行（用户后续动作）——见 `docs/known-issues.md` §3。
+- **风险/阻塞：** 无技术阻塞。独立 Review **APPROVE**（首轮 REQUEST-CHANGES 的 1 SHOULD-FIX + 4 MINOR 全部修复并复核通过）。已知边界如实记录：GUI 仅 TXT 导入导出（服务层六格式）；`.aiproject`/开放目录未暴露 GUI；未翻译文档不能导出（每段需有修订）；工作台暂无历史 revision 切换 UI；Prompt override 父版本失效 fail-closed。M05 交付在用户授权后已提交/推送（`7bf26be` + CI 修复 `ffb4d8c`）；候选产物 `dist/` 仍 gitignored 不入库。
 - **恢复动作：** 本切片为 P1-T05 收口（Phase 1 完成），无下一开发 Milestone。后续动作属于用户决策：在 AV 环境扫描候选并归档、授权发布时执行冻结应用最终手工 smoke、如需发布单独授权提交/推送/创建远程资源/正式发布（执行 `RELEASE_CHECKLIST.md`）。恢复任何开发前先读取本文件与 `07` §20 完成记录。
 
 ### Previous code checkpoint
