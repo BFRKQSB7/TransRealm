@@ -121,6 +121,13 @@ resume_milestone: P1-T05-M05-completed
 - **工作树处置：** 必须保留现有 staged、unstaged、untracked 与用户数据；禁止 `reset --hard`、`restore`、`checkout` 覆盖、`clean` 或递归删除。`x.db` 与备份数据库已由 `.gitignore` 忽略；`dist/`/`build/` 已由 `.gitignore` 忽略（M04 候选产物不入库）。
 - **基线状态：** 当前回滚 ref 为 `3ef991d`；pytest **1339 passed**（1 skipped 本环境无符号链接创建权限）、Ruff clean、mypy 131 source files no issues，Candidate hygiene passed。
 
+### 用户功能请求（待办，2026-08-08 记录）
+
+用户使用 V1.0 候选后提出两项后续需求（未排期，属未来 Task 候选，见 `02` V1.x 规划）：
+
+1. **删除项目：** GUI 需提供删除项目入口。当前 `ProjectService`/`ProjectRepository`/UI 均无 delete 实现（`grep` 确认无 `delete`/`remove`/`DELETE FROM projects`），P1-T05 范围未含删除能力。实现时需处理：删除 project 级联其 source_documents/segments/translation_runs/revisions/glossary 等数据（FK 关系）、避免删除正在运行/未完成翻译的项目、与开放目录/`.aiproject` 载体的一致性（删除本地项目后载体是否同步删除/失效需裁决）。
+2. **UI 语言切换（中文）：** 当前 UI 全英文硬编码字符串（`ui/pages.py`/`ui/main_window.py`/`ui/workbench.py`），无 `QTranslator`/`tr()`/i18n 基础设施。需引入 Qt i18n（`tr()` + `.qm` 翻译文件 + 语言切换入口 + 持久化），并把现有硬编码文案改为可翻译键。
+
 ### 当前 Task
 
 - **Task：** P1-T05 — V1.0 异常恢复与 Release Candidate Gate
@@ -223,6 +230,17 @@ Agent 可以在实现中细化这些小目标，但不得扩大当前 Task 的�
 完成或中断小目标时更新以下内容，不新增流水账文件：
 
 ### Last code checkpoint
+
+- **时间：** 2026-08-08
+- **Agent：** Claude（执行 Agent）
+- **完成内容：** 支持修复——V1.0 候选打开用户遗留开发库报 **Checksum mismatch for migration 007**（`09` §8 关闭事件归档）。**触发条件：** `~/.transrealm/project.sqlite` 是 2026-08-06 02:58 创建的旧库（仅 7 迁移）；`007_add_run_workflow_snapshot.sql` 在该库创建**之后**、当日 03:23 commit `5ef3be6` 才提交定型，期间工作树里 007 内容被改动，旧库记录了旧版 007 校验和 `cc79002810534e4200c9af2dfec617b435ebbcf88ca778ab263659561e08f9c5`，与当前文件 SHA256 `bbf3b3ebb4b133119d6c34c233ef71af6da94b4a4a050b87faa91fcd6cc7e49a` 不匹配。**影响：** 每次 Application Service 打开都先跑 `MigrationRunner` 校验已应用迁移，007 校验失败（`MigrationChecksumError` fail-closed）→ 所有依赖数据库的按钮（建项目/加连接/翻译/导出）全部失效，表现为"按钮没反应"，状态栏显示 Checksum mismatch 报错。**根因：** 迁移文件在应用后（正式基线冻结前）被修改导致校验和漂移；runner 行为按设计正确（防止篡改），问题在旧库记录了陈旧校验和。**修复（数据层，无代码改动）：** 先备份 `project.sqlite.checksum-fix-backup` → 将 `schema_migrations` 中 007 的 checksum 更新为当前文件值（已核验新旧 007 schema 一致——`translation_runs.workflow_definition_snapshot` 列均存在，更新安全）；该库全空（0 项目、全表 0 行），无数据风险。**验证：** 冻结版打开真实库迁移 7→12 成功（约 1s 到 12 迁移）、窗口优雅关闭、12 个迁移 ID 全就位；冻结版按钮响应此前已在临时库自动化驱动验证（tab 切换 + Create Project 落库）。**回滚：** `project.sqlite.checksum-fix-backup`（旧库）与迁移产生的 `*.pre-upgrade-*.db.bak` 均为恢复点。**预防门禁：** 迁移文件自基线起 append-only 不再改动；该事件仅影响 2026-08-06 02:58–03:23 窗口创建的旧开发库，v0.1.0 新装用户不受影响（新库 12 迁移校验一致）。用户已确认修复生效，新增两项功能请求见本文件 §4「用户功能请求（待办）」。
+- **修改文件：** 无代码改动（仅数据修复 + 文档同步）：`DEVELOPMENT_STATE.md`（本记录 + §4 用户功能请求）、`08`（事件归档）。
+- **测试命令：** 冻结版 `dist/transrealm/transrealm.exe` 对真实 `~/.transrealm/project.sqlite` 启动验证（迁移 7→12）；`git log`/`sha256sum` 核对 007 文件历史与旧库记录。
+- **测试结果：** 真实库迁移 **12**、0 项目；冻结版启动/迁移/优雅关闭正常（exit 0）。
+- **风险/阻塞：** 无。用户已确认应用可用。
+- **恢复动作：** 用户库已迁移到当前 schema，可正常使用。待办功能：删除项目、UI 中文/语言切换（见 `02` V1.x 规划与 §4）。
+
+### Previous code checkpoint
 
 - **时间：** 2026-08-08
 - **Agent：** Claude（执行 Agent）

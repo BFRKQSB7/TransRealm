@@ -808,6 +808,9 @@ GitHub公开版本。
 - RAG
 - TM优化
 - 工作流增强
+- **用户请求（2026-08-08 记录）：**
+  - **删除项目：** GUI 提供删除项目入口。当前 `ProjectService`/`ProjectRepository`/UI 均无 delete 实现；需处理 project 级联数据删除、运行中项目保护、与 `.aiproject`/开放目录载体的一致性。
+  - **UI 语言切换（中文）：** 当前 UI 全英文硬编码（`ui/pages.py`/`ui/main_window.py`/`ui/workbench.py`），无 `QTranslator`/`tr()`/i18n；需引入 Qt i18n、翻译文件与语言切换入口。
 
 
 ---
