@@ -1,5 +1,7 @@
 # 译境 / TransRealm
 
+![](https://img.shields.io/badge/version-v0.1.0-blue)
+
 本地优先、AI 辅助的翻译工作台。V1.0 目标：单用户、SQLite、OpenAI-compatible HTTP、Windows 11 绿色版优先。
 
 ## 用户文档（V1.0 候选 0.1.0）
