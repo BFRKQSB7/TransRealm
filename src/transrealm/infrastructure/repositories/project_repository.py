@@ -2,9 +2,23 @@
 
 from datetime import datetime
 from pathlib import Path
+from typing import TypedDict
 
 from transrealm.domain.project import Project
 from transrealm.infrastructure.database import DatabaseConnection, create_database, transaction
+
+
+class ProjectDeletionCounts(TypedDict):
+    """Project-owned row counts and deletion blockers."""
+
+    source_documents: int
+    segments: int
+    translation_runs: int
+    segment_attempts: int
+    translation_revisions: int
+    glossary_entries: int
+    running_runs: int
+    active_processing_leases: int
 
 
 class ProjectRepository:
@@ -111,6 +125,79 @@ class ProjectRepository:
             (profile_id,),
         )
         return [self._row_to_project(row) for row in cursor.fetchall()]
+
+    def get_deletion_counts(self, project_id: int, *, now: str) -> ProjectDeletionCounts:
+        """Return Project-owned row counts and active deletion blockers."""
+        row = self._db.execute(
+            "SELECT "
+            "(SELECT COUNT(*) FROM source_documents WHERE project_id = ?), "
+            "(SELECT COUNT(*) FROM segments s "
+            "JOIN source_documents d ON d.id = s.source_document_id "
+            "WHERE d.project_id = ?), "
+            "(SELECT COUNT(*) FROM translation_runs WHERE project_id = ?), "
+            "(SELECT COUNT(*) FROM segment_attempts a "
+            "JOIN translation_runs r ON r.id = a.run_id "
+            "WHERE r.project_id = ?), "
+            "(SELECT COUNT(*) FROM translation_revisions v "
+            "JOIN segments s ON s.id = v.segment_id "
+            "JOIN source_documents d ON d.id = s.source_document_id "
+            "WHERE d.project_id = ?), "
+            "(SELECT COUNT(*) FROM glossary_entries WHERE project_id = ?), "
+            "(SELECT COUNT(*) FROM translation_runs "
+            "WHERE project_id = ? AND status = 'running'), "
+            "(SELECT COUNT(*) FROM segments s "
+            "JOIN source_documents d ON d.id = s.source_document_id "
+            "WHERE d.project_id = ? AND s.status = 'processing' "
+            "AND s.lease_expires_at IS NOT NULL AND s.lease_expires_at > ?)",
+            (
+                project_id,
+                project_id,
+                project_id,
+                project_id,
+                project_id,
+                project_id,
+                project_id,
+                project_id,
+                now,
+            ),
+        ).fetchone()
+        assert row is not None
+        return {
+            "source_documents": int(str(row[0])),
+            "segments": int(str(row[1])),
+            "translation_runs": int(str(row[2])),
+            "segment_attempts": int(str(row[3])),
+            "translation_revisions": int(str(row[4])),
+            "glossary_entries": int(str(row[5])),
+            "running_runs": int(str(row[6])),
+            "active_processing_leases": int(str(row[7])),
+        }
+
+    def delete_project(self, project_id: int, *, now: str) -> bool:
+        """Delete a Project atomically unless active work is observed."""
+        with transaction(self._db):
+            # Reserve the write transaction before checking blockers so a second
+            # local writer cannot start a run between the check and the cascade.
+            self._db.execute("BEGIN IMMEDIATE")
+            blockers = self._db.execute(
+                "SELECT "
+                "(SELECT COUNT(*) FROM translation_runs "
+                "WHERE project_id = ? AND status = 'running'), "
+                "(SELECT COUNT(*) FROM segments s "
+                "JOIN source_documents d ON d.id = s.source_document_id "
+                "WHERE d.project_id = ? AND s.status = 'processing' "
+                "AND s.lease_expires_at IS NOT NULL AND s.lease_expires_at > ?)",
+                (project_id, project_id, now),
+            ).fetchone()
+            assert blockers is not None
+            if int(str(blockers[0])) or int(str(blockers[1])):
+                return False
+
+            cursor = self._db.execute(
+                "DELETE FROM projects WHERE id = ?",
+                (project_id,),
+            )
+            return cursor.rowcount > 0
 
     @staticmethod
     def _row_to_project(row: tuple[object, ...]) -> Project:

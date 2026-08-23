@@ -1,15 +1,53 @@
 """Project application service."""
 
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 from transrealm.domain.project import Project, ProjectError
 from transrealm.infrastructure.database import create_database
+from transrealm.infrastructure.migrations.backup import create_consistent_snapshot
 from transrealm.infrastructure.migrations.discovery import Migration
 from transrealm.infrastructure.migrations.runner import MigrationRunner
 from transrealm.infrastructure.repositories.model_profile_repository import (
     ModelProfileRepository,
 )
 from transrealm.infrastructure.repositories.project_repository import ProjectRepository
+
+
+@dataclass(frozen=True)
+class ProjectDeletionSummary:
+    """User-facing deletion counts and active-work blockers."""
+
+    project_id: int
+    project_name: str
+    source_documents: int
+    segments: int
+    translation_runs: int
+    segment_attempts: int
+    translation_revisions: int
+    glossary_entries: int
+    running_runs: int
+    active_processing_leases: int
+
+
+class ProjectDeletionBlockedError(ProjectError):
+    """Raised when a Project has active work that must not be deleted."""
+
+    def __init__(self, summary: ProjectDeletionSummary) -> None:
+        blockers: list[str] = []
+        if summary.running_runs:
+            blockers.append(f"{summary.running_runs} running Run(s)")
+        if summary.active_processing_leases:
+            blockers.append(
+                f"{summary.active_processing_leases} active processing lease(s)",
+            )
+        super().__init__(
+            f"Project {summary.project_name!r} cannot be deleted: "
+            + ", ".join(blockers)
+            + ".",
+        )
+        self.summary = summary
 
 
 class ProjectService:
@@ -111,6 +149,66 @@ class ProjectService:
         if project is None:
             raise ProjectError(f"Project with id {project_id} does not exist.")
         return self._repository.save(project.with_active_profile(None))
+
+    def get_project_deletion_summary(self, project_id: int) -> ProjectDeletionSummary | None:
+        """Return deletion counts for a Project, or ``None`` if it is missing."""
+        project = self._repository.get_by_id(project_id)
+        if project is None:
+            return None
+        counts = self._repository.get_deletion_counts(
+            project_id,
+            now=datetime.now().isoformat(),
+        )
+        return ProjectDeletionSummary(
+            project_id=project_id,
+            project_name=project.name,
+            **counts,
+        )
+
+    def delete_project(self, project_id: int) -> Path | None:
+        """Create a recoverable snapshot, then atomically delete a Project.
+
+        The snapshot is retained next to the database after a successful delete
+        so the operation has a concrete recovery point. Missing Projects are a
+        no-op. Active Runs or unexpired processing leases fail before snapshot
+        creation and therefore cannot cause a deletion side effect.
+        """
+        summary = self.get_project_deletion_summary(project_id)
+        if summary is None:
+            return None
+        if summary.running_runs or summary.active_processing_leases:
+            raise ProjectDeletionBlockedError(summary)
+
+        backup_path = self._deletion_backup_path(project_id)
+        create_consistent_snapshot(self._db_path, backup_path)
+        deleted = self._repository.delete_project(
+            project_id,
+            now=datetime.now().isoformat(),
+        )
+        if deleted:
+            return backup_path
+
+        current = self.get_project_deletion_summary(project_id)
+        if current is not None and (
+            current.running_runs or current.active_processing_leases
+        ):
+            raise ProjectDeletionBlockedError(current)
+        return None
+
+    def _deletion_backup_path(self, project_id: int) -> Path:
+        """Return a unique, discoverable path for a Project delete snapshot."""
+        timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+        stem = self._db_path.stem
+        candidate = self._db_path.with_name(
+            f"{stem}.project-delete-{project_id}-{timestamp}.db.bak",
+        )
+        suffix = 1
+        while candidate.exists():
+            candidate = self._db_path.with_name(
+                f"{stem}.project-delete-{project_id}-{timestamp}-{suffix}.db.bak",
+            )
+            suffix += 1
+        return candidate
 
     def close(self) -> None:
         """Close the service and release resources."""

@@ -44,7 +44,7 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 
 ### V02-T02 — Project 生命周期与六格式 GUI
 
-- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P0 用户数据；High；in_progress（M01 当前）。依赖 V02-T01，已由 `609d529960b7d47654def7a4d4b3a21fe19257b9` 满足。
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P0 用户数据；High；in_progress（M02 当前）。依赖 V02-T01 与 V02-T02-M01，已由 `93d5e3ccb8e4fd4f4e08ed941c6dfd4d8bd35dbe` 满足。
 - **Reality Audit：** SPLIT——六格式 UI 是既有服务接线；Project 删除是高风险数据操作，分别实现后做联合 Gate。
 - **目标：** GUI 暴露 TXT/JSON/SRT/ASS/SSA/VTT 导入/翻译/保真导出，并提供可恢复的 Project 删除。
 - **非目标：** 不接 `.aiproject`/开放目录 GUI；不改变 format metadata/保真契约；不迁移为一 Project 一库。
@@ -55,7 +55,10 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 - **完成条件：** 数据完整性、高风险独立 Review、全量质量命令和视觉 Gate 通过。
 - **M01 Reality Check：** 2026-08-23 **FIT**——V02-T01 的 shell、i18n、worker seam 与 DPI/语言视觉基础已 checkpoint；既有 `ImportService.import_file` 与六种 fidelity Exporter 可直接复用。M01 只接 UI/测试，不改 Project/format metadata/schema/migration/删除契约或新增依赖。
 - **M01 当前范围/验收：** `ProjectPage` 六格式导入与 `TranslationPage` 按 `SourceDocument.format` 六格式导出；六格式 fake-endpoint 导入→翻译→保真导出旅程、扩展名/失败不覆盖、异常/关闭、旧 UI/worker/全量质量、中文/英文/DPI GUI smoke 和独立 Review；不提前进入 M02 删除服务/备份或 M03 运行保护。
-- **M01 完成证据：** 新增 acceptance **12 passed**（六格式 fake-endpoint 成功旅程与六格式失败目标保留）；指定旧 UI/worker/关闭/自动旅程 **29 passed**；无 system-site-packages 的 `D:\TransRealm-v02-t02-m01-lock-venv-20260823` 按 `requirements.lock` 重建，`pip check` clean，全量 pytest **1356 passed, 5 skipped**；Ruff clean；mypy src **81 source files clean**；原生 Windows Qt 中英文 × 100%/150% Project/Translation Tab 可见/关闭 PASS，代表性截图无重叠/截断；资源/秘密/路径/范围检查 clean；共享解释器的 `packaging==25.0` 漂移及继承系统包诊断 venv 的宿主冲突均未改锁文件或共享环境；首轮 Review 的问题已修正，最终独立 Review **APPROVE**，无 BLOCKER/SHOULD-FIX，checkpoint 待创建。
+- **M01 完成证据：** 新增 acceptance **12 passed**（六格式 fake-endpoint 成功旅程与六格式失败目标保留）；指定旧 UI/worker/关闭/自动旅程 **29 passed**；无 system-site-packages 的 `D:\TransRealm-v02-t02-m01-lock-venv-20260823` 按 `requirements.lock` 重建，`pip check` clean，全量 pytest **1356 passed, 5 skipped**；Ruff clean；mypy src **81 source files clean**；原生 Windows Qt 中英文 × 100%/150% Project/Translation Tab 可见/关闭 PASS，代表性截图无重叠/截断；资源/秘密/路径/范围检查 clean；共享解释器的 `packaging==25.0` 漂移及继承系统包诊断 venv 的宿主冲突均未改锁文件或共享环境；首轮 Review 的问题已修正，最终独立 Review **APPROVE**，无 BLOCKER/SHOULD-FIX；M01 checkpoint 为 `93d5e3ccb8e4fd4f4e08ed941c6dfd4d8bd35dbe`。
+- **M02 Reality Check：** 2026-08-23 **FIT**——复用 `ProjectService`/`ProjectRepository`、SQLite backup API、既有 FK CASCADE 和 transaction seam；M02 只实现 Project 删除服务/仓库最小能力及备份/故障/完整性测试，不改 schema/migration/Project 数据格式/UI，不触碰外部文件或真实用户数据。无 ADAPT/REPLAN。
+- **M02 当前范围/验收：** 备份失败、运行中 Run/有效 processing lease、事务故障均零删除；成功删除只影响目标 Project 及 FK CASCADE 从属行，其他 Project/全局配置保留；备份可打开恢复；新增 M02 测试、旧回归、全量质量和独立 Review 通过。删除 UI/摘要/确认交互与 M03 运行保护留后续。
+- **M02 完成证据：** 新增 `tests/test_v02_t02_m02.py` **7 passed**；指定 Project/Profile/Glossary/翻译旧回归 **83 passed**；锁定无 system-site-packages 环境全量 pytest **1363 passed, 5 skipped**；Ruff clean；mypy src **81 source files clean**；pip check clean；M01 原生 Windows Qt 中英文/DPI GUI 证据继续有效，M02 未新增 UI；资源/秘密/外部文件/范围检查 clean；最终独立 Review **APPROVE**，无 BLOCKER/SHOULD-FIX，checkpoint 待创建。
 
 ### V02-T03 — Connection/Profile 管理体验
 

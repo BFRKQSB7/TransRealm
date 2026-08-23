@@ -966,7 +966,7 @@ Task重新规划
 ## 17. v0.3 计划决策：`DEC-V03-PROJECT-STORAGE`
 
 - **状态：** proposed；不是已裁决实现方案，v0.2 不触发。
-- **门禁复核（2026-08-23）：** 当前 `pending_decision: none`，明确保留本节点，不作提前架构裁决。现有推荐只作为待比较方向；不得跳过“保留全局库并单 Project 克隆/ID 重映射”“一 Project 一库”“全局索引库 + Project 库”三案的现场取证、兼容性、安全和迁移/回滚成本比较。默认仍在 V02-T05 完成后进入 V03-T00；当前开发恢复点为 `V02-T02-M01`。
+- **门禁复核（2026-08-23）：** 当前 `pending_decision: none`，明确保留本节点，不作提前架构裁决。现有推荐只作为待比较方向；不得跳过“保留全局库并单 Project 克隆/ID 重映射”“一 Project 一库”“全局索引库 + Project 库”三案的现场取证、兼容性、安全和迁移/回滚成本比较。默认仍在 V02-T05 完成后进入 V03-T00；当前开发恢复点为 `V02-T02-M02`。
 - **触发点：** V02-T05 完成后进入 V03-T00，或用户明确要求提前进行 Project 工作区重构。
 - **问题：** 统一全局多 Project SQLite、单 Project 容器、应用级配置、受管工作区、外部开放目录、`.aiproject` 导入和旧库迁移。
 - **推荐：** 一次一个活动 `ProjectSession` 对应一个 Project SQLite；受管工作区与开放目录共享 Project 契约；`.aiproject` 是传输快照，导入后安装为可写工作区；界面语言/最近 Project 等应用配置独立保存；凭据继续只保存引用。
@@ -983,7 +983,7 @@ Task重新规划
 
 ## 19. v0.2 UI M02 实施门禁：`V02-T01-M02`
 
-- **状态：** completed；M02 checkpoint 为 `165c87e4377d7e1ace119991df3e5ddc541de61c`，当前恢复指针已推进至 `V02-T02-M01`；`pending_decision: none`。
+- **状态：** completed；M02 checkpoint 为 `165c87e4377d7e1ace119991df3e5ddc541de61c`，当前恢复指针已推进至 `V02-T02-M02`；`pending_decision: none`。
 - **Reality Check：** 2026-08-23 **FIT**。M01 page seam、锁定环境和授权范围满足 M02；实现只落在 `src/transrealm/ui/**`、M02 测试和必要状态/契约 Markdown，无 REPLAN。
 - **实现边界：** 主窗口新增 header/三 Tab scroll shell、light token/QSS、surface palette；`MainShell` 保留已发现的旧 `QTabWidget` 查询/导航入口；Application/Domain/Infrastructure、SQLite/migration、worker 线程边界、页面业务行为均未改变；按钮前景色也纳入 token。
 - **门禁证据：** M02 新增测试 3 passed；受影响旧回归 134 passed；全量 pytest 1341 passed/5 skipped；Ruff clean；mypy 80 source files clean；pip check clean；原生 Windows Qt 100%/150% 可见与关闭 smoke PASS；原生 150% 截图与离屏 100%/150% 目标截图完成人工视觉检查；UI boundary/秘密/本机路径扫描和 `git diff --check` 通过。未构建候选、未操作真实模型或用户数据。
@@ -1014,13 +1014,22 @@ Task重新规划
 
 ## 22. v0.2 Project M01 Reality Check：`V02-T02-M01`
 
-- **状态：** completed；恢复基线/rollback=`609d529960b7d47654def7a4d4b3a21fe19257b9`；当前 branch=`master`；`pending_decision: none`；checkpoint 待创建。
+- **状态：** completed；恢复基线/rollback=`93d5e3ccb8e4fd4f4e08ed941c6dfd4d8bd35dbe`；当前 branch=`master`；`pending_decision: none`；checkpoint=`93d5e3ccb8e4fd4f4e08ed941c6dfd4d8bd35dbe`；当前恢复指针已推进至 `V02-T02-M02`。
 - **判定：** **FIT**（2026-08-23）。V02-T01 已 checkpoint，提供三 Tab/scroll shell、worker 线程边界、中英文/DPI 视觉和 i18n seam；现场 `ImportService.import_file` 已由 Parser Registry 支持 TXT/JSON/SRT/ASS/SSA/VTT，`application/exporter.py` 已有对应六种 fidelity Exporter。M01 只接 UI，不改 Application/Domain/Infrastructure、schema/migration、format metadata、Project 数据格式、删除契约或运行依赖。
 - **目标边界：** `ProjectPage` 提供六格式导入入口，`TranslationPage` 按 `SourceDocument.format` 分派六格式保真导出，保留扩展名并在失败时不覆盖目标；通过既有 fake-endpoint 旅程验证导入→翻译→导出。M02 的删除服务/一致性备份和 M03 的运行保护不在当前范围；`.aiproject`/开放目录 GUI 仍由 V03 决策门禁隔离。
 - **允许路径：** `src/transrealm/ui/**`、V02-T02 M01 测试和必要状态/契约 Markdown；不引入新依赖，不运行真实端点，不读取或修改真实用户数据。
 - **验收：** 六格式各完成 GUI/fake-endpoint 导入→翻译→保真导出旅程；成功路径保留对应扩展名和既有 fidelity carrier，失败不覆盖既有目标；异常/关闭可操作；旧 UI/worker/关闭回归、全量质量、中文/英文/DPI GUI smoke、资源/秘密/范围检查和独立 Review 通过。
 - **实施取舍：** 复用 `ImportService.import_file` 与六个既有 Exporter，通过 UI 层的格式注册表/分派保持单一映射；不新增第二套导入器、Exporter 或数据库访问，动态文件对话框仅作为程序化入口的薄包装。
-- **完成证据：** 新增 `tests/test_v02_t02_m01.py` **12 passed**（六格式成功与六格式失败目标保留）；指定旧 UI/worker/关闭/自动旅程回归 **29 passed**；无 system-site-packages 的 `D:\TransRealm-v02-t02-m01-lock-venv-20260823` 按 `requirements.lock` 重建，`pip check` clean，全量 pytest **1356 passed, 5 skipped**；Ruff clean；mypy src **81 source files no issues**。共享解释器的 `packaging==25.0` 与锁定 `26.2` 漂移已定位；继承系统包的诊断 venv 的 `agent-utilities` 冲突不属于锁环境，未改共享环境或锁文件。原生 Windows Qt 中英文 × 100%/150% Project/Translation Tab 可见/关闭 PASS，导入/导出按钮已人工检查无重叠/截断；资源/秘密/路径/范围检查 clean；首轮独立 Review 指出的文档漂移与失败覆盖缺口已修正，最终独立 Review **APPROVE**，无 BLOCKER/SHOULD-FIX，M01 checkpoint 待创建。
+- **完成证据：** 新增 `tests/test_v02_t02_m01.py` **12 passed**（六格式成功与六格式失败目标保留）；指定旧 UI/worker/关闭/自动旅程回归 **29 passed**；无 system-site-packages 的 `D:\TransRealm-v02-t02-m01-lock-venv-20260823` 按 `requirements.lock` 重建，`pip check` clean，全量 pytest **1356 passed, 5 skipped**；Ruff clean；mypy src **81 source files no issues**。共享解释器的 `packaging==25.0` 与锁定 `26.2` 漂移已定位；继承系统包的诊断 venv 的 `agent-utilities` 冲突不属于锁环境，未改共享环境或锁文件。原生 Windows Qt 中英文 × 100%/150% Project/Translation Tab 可见/关闭 PASS，导入/导出按钮已人工检查无重叠/截断；资源/秘密/路径/范围检查 clean；首轮独立 Review 指出的文档漂移与失败覆盖缺口已修正，最终独立 Review **APPROVE**，无 BLOCKER/SHOULD-FIX；M01 checkpoint=`93d5e3ccb8e4fd4f4e08ed941c6dfd4d8bd35dbe`。
+
+## 23. v0.2 Project M02 Reality Check：`V02-T02-M02`
+
+- **状态：** completed；恢复基线/rollback=`93d5e3ccb8e4fd4f4e08ed941c6dfd4d8bd35dbe`；当前 branch=`master`；`pending_decision: none`；checkpoint 待创建。
+- **判定：** **FIT**（2026-08-23）。现有 `ProjectService`/`ProjectRepository` CRUD、SQLite backup API 的 `create_consistent_snapshot`、FK CASCADE 和 transaction seam 已满足最小实现前提；Run status 与 segment processing lease 可只读检查。无需 migration、Project 数据格式变更、UI、真实端点或真实用户数据操作。
+- **目标边界：** 仅补可恢复 Project 删除的 Application/Repository 最小能力与 M02 测试：备份失败/运行中 Run/有效 processing lease/事务故障均零删除；成功删除只影响目标 Project 及其从属数据，其他 Project/全局配置保留；备份可打开恢复；外部源文件、导出、`.aiproject`、开放目录不触碰。M03 的 UI 摘要/确认和运行保护交互不在本 M02。
+- **允许路径：** `src/transrealm/application/project_service.py`、`src/transrealm/infrastructure/repositories/project_repository.py`、必要的既有 backup seam（若仅复用则不改）、`tests/test_v02_t02_m02.py` 和必要状态/契约 Markdown；若发现必须 migration 或改变已批准数据格式，须 REPLAN。
+- **下一步：** M02 验收样例、最小服务实现、旧回归、全量质量和范围检查已完成；独立 Review 通过后仅暂存 V02-T02-M02 allowed paths 创建本地 checkpoint，随后推进至 V02-T02-M03，不提前进入 M04 联合 Gate 或任何发布动作。
+- **完成证据：** 新增 `tests/test_v02_t02_m02.py` **7 passed**；指定 Project/Profile/Glossary/翻译旧回归 **83 passed**；锁定无 system-site-packages 环境全量 pytest **1363 passed, 5 skipped**；Ruff clean；mypy src **81 source files no issues**；pip check clean；M01 原生 Windows Qt 中英文/DPI GUI 证据继续有效，M02 未新增 UI；资源/秘密/外部文件/范围检查 clean；最终独立 Review **APPROVE**，无 BLOCKER/SHOULD-FIX，M02 checkpoint 待创建。
 
 ---
 
