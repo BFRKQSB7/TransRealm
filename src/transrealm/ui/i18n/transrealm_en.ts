@@ -14,9 +14,30 @@
     <message><source>Connections</source><translation>Connections</translation></message>
     <message><source>Add Connection</source><translation>Add Connection</translation></message>
     <message><source>Delete Selected Connection</source><translation>Delete Selected Connection</translation></message>
+    <message><source>Edit Selected Connection</source><translation>Edit Selected Connection</translation></message>
+    <message><source>Save Connection</source><translation>Save Connection</translation></message>
+    <message><source>Cancel Connection Edit</source><translation>Cancel Connection Edit</translation></message>
+    <message><source>Timeout (seconds)</source><translation>Timeout (seconds)</translation></message>
+    <message><source>Max retries</source><translation>Max retries</translation></message>
+    <message><source>Retry delay (seconds)</source><translation>Retry delay (seconds)</translation></message>
     <message><source>Profiles</source><translation>Profiles</translation></message>
     <message><source>Add Profile</source><translation>Add Profile</translation></message>
     <message><source>Delete Selected Profile</source><translation>Delete Selected Profile</translation></message>
+    <message><source>Edit Selected Profile</source><translation>Edit Selected Profile</translation></message>
+    <message><source>Save Profile</source><translation>Save Profile</translation></message>
+    <message><source>Cancel Profile Edit</source><translation>Cancel Profile Edit</translation></message>
+    <message><source>Advanced Profile Settings</source><translation>Advanced Profile Settings</translation></message>
+    <message><source>Template version</source><translation>Template version</translation></message>
+    <message><source>Output protocol</source><translation>Output protocol</translation></message>
+    <message><source>Context budget</source><translation>Context budget</translation></message>
+    <message><source>Reserved output</source><translation>Reserved output</translation></message>
+    <message><source>Reserved prompt</source><translation>Reserved prompt</translation></message>
+    <message><source>Default params (JSON)</source><translation>Default params (JSON)</translation></message>
+    <message><source>Capability context</source><translation>Capability context</translation></message>
+    <message><source>Capability output</source><translation>Capability output</translation></message>
+    <message><source>Supports streaming</source><translation>Supports streaming</translation></message>
+    <message><source>Supports structured output</source><translation>Supports structured output</translation></message>
+    <message><source>Supported parameters</source><translation>Supported parameters</translation></message>
     <message><source>Name</source><translation>Name</translation></message>
     <message><source>Endpoint</source><translation>Endpoint</translation></message>
     <message><source>Credential ref</source><translation>Credential ref</translation></message>

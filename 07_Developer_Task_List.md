@@ -68,13 +68,16 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 
 ### V02-T03 — Connection/Profile 管理体验
 
-- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P1 用户可见；Medium；pending。依赖 V02-T01，默认在 V02-T02 后串行执行。
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P1 用户可见；Medium；in_progress（M01 当前）。依赖 V02-T01、V02-T02，已由 `e2560bff53e90f4094dcc97a00c5fc32ae7d7e5b` 满足。
 - **Reality Audit：** REFINE——保留现有领域/安全校验，补齐编辑、分组和可操作反馈，不新建配置系统。
 - **目标：** Connection/Profile 新建、编辑、删除、引用保护和重开恢复；普通字段默认简洁，高级 capability/参数折叠显示。
 - **非目标：** 不保存原始 API Key、不自动调用真实端点、不增加原生多厂商 API、代理 schema 或模型下载器。
 - **硬约束：** 凭据仅 `env:`/`wincred:`；历史 Attempt snapshot 不改；删除 RESTRICT；测试连接只由用户触发，自动矩阵使用 fake server。
 - **验收：** endpoint/timeout/retry/model/default params/capability 修改后重开一致；非法值不落库；提示不泄密；中英文和视觉矩阵通过。
 - **完成条件：** 配置 CRUD、秘密边界、旧 Profile/Run 兼容、全量质量和 GUI Gate 通过。
+- **Reality Check：** 2026-08-23 **FIT**——既有 Connection/Profile service、repository 和 schema 已提供全字段 update、JSON capability/default/context 持久化、凭据 reference 校验与删除保护；Settings 页已有 worker seam、创建/删除/凭据提示，缺编辑表单与高级字段折叠。M01 只补 UI/测试/i18n，不改 Application/Domain/Infrastructure、schema/migration、历史 Attempt snapshot、真实端点或依赖。无 ADAPT/REPLAN。
+- **M01 当前范围：** Connection/Profile 编辑与重开回显最小闭环：Connection 的 endpoint/timeout/retry/credential reference，Profile 的 model/connection 与 template/output/context/default params/capability 高级字段；高级字段默认折叠；非法值不落库、凭据只存 `env:`/`wincred:` reference、删除 RESTRICT、测试连接仅用户触发；不提前进入下一 Milestone 的分组/可操作反馈扩展。
+- **M01 完成证据（2026-08-23）：** 新增 `tests/test_v02_t03_m01.py` **4 passed**；Connection/Profile 定向旧回归 + 新验收 **157 passed**；锁定环境全量 pytest **1370 passed, 5 skipped**；Ruff clean；mypy src **81 source files no issues**；pip check clean；Windows Qt 隔离数据根目录 English/zh_CN × 100%/150% 及高级展开状态无重叠/截断，关闭收敛 PASS；超预算 context、非法 endpoint 与原始 credential 均不落库/不泄密；未改 service/repository/domain/schema/migration/依赖，未调用真实端点或操作真实用户数据。独立只读 Review 首轮 SHOULD-FIX 已修复（保存前校验 `reserved_output + reserved_prompt <= total` 并补不落库测试），复核 **APPROVE**，无 BLOCKER/SHOULD-FIX/MINOR。M01 checkpoint 待创建，Task 仍为 `in_progress`。
 
 ### V02-T04 — Translation/Workbench 体验
 

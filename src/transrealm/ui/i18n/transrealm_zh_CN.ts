@@ -14,9 +14,30 @@
     <message><source>Connections</source><translation>连接</translation></message>
     <message><source>Add Connection</source><translation>添加连接</translation></message>
     <message><source>Delete Selected Connection</source><translation>删除选中连接</translation></message>
+    <message><source>Edit Selected Connection</source><translation>编辑选中连接</translation></message>
+    <message><source>Save Connection</source><translation>保存连接</translation></message>
+    <message><source>Cancel Connection Edit</source><translation>取消编辑连接</translation></message>
+    <message><source>Timeout (seconds)</source><translation>超时（秒）</translation></message>
+    <message><source>Max retries</source><translation>最大重试次数</translation></message>
+    <message><source>Retry delay (seconds)</source><translation>重试延迟（秒）</translation></message>
     <message><source>Profiles</source><translation>配置</translation></message>
     <message><source>Add Profile</source><translation>添加配置</translation></message>
     <message><source>Delete Selected Profile</source><translation>删除选中配置</translation></message>
+    <message><source>Edit Selected Profile</source><translation>编辑选中配置</translation></message>
+    <message><source>Save Profile</source><translation>保存配置</translation></message>
+    <message><source>Cancel Profile Edit</source><translation>取消编辑配置</translation></message>
+    <message><source>Advanced Profile Settings</source><translation>高级配置设置</translation></message>
+    <message><source>Template version</source><translation>模板版本</translation></message>
+    <message><source>Output protocol</source><translation>输出协议</translation></message>
+    <message><source>Context budget</source><translation>上下文预算</translation></message>
+    <message><source>Reserved output</source><translation>预留输出</translation></message>
+    <message><source>Reserved prompt</source><translation>预留提示</translation></message>
+    <message><source>Default params (JSON)</source><translation>默认参数（JSON）</translation></message>
+    <message><source>Capability context</source><translation>能力上下文窗口</translation></message>
+    <message><source>Capability output</source><translation>能力输出上限</translation></message>
+    <message><source>Supports streaming</source><translation>支持流式</translation></message>
+    <message><source>Supports structured output</source><translation>支持结构化输出</translation></message>
+    <message><source>Supported parameters</source><translation>支持的参数</translation></message>
     <message><source>Name</source><translation>名称</translation></message>
     <message><source>Endpoint</source><translation>端点</translation></message>
     <message><source>Credential ref</source><translation>凭据引用</translation></message>

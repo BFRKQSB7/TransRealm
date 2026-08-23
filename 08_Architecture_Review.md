@@ -1048,6 +1048,15 @@ Task重新规划
 - **完成证据：** M01–M03 定向验收与指定旧回归 **57 passed**；锁定无 system-site-packages 环境全量 pytest **1366 passed, 5 skipped**；Ruff clean；mypy src **81 source files no issues**；pip check clean；原生 Windows Qt 中英文 × 100%/150% Settings/Project/Translation 代表性状态可见/关闭 PASS，Project 删除摘要/精确确认/placeholder 代表性截图无重叠或截断；资源/秘密/路径/allowed paths 与 `git diff --check` clean；未构建候选、未调用真实模型、未操作真实用户数据；独立只读 Review **APPROVE**，BLOCKER/SHOULD-FIX none。
 - **下一步：** 仅暂存 V02-T02-M04 allowed paths 创建本地 checkpoint；提交后复核作者、文件清单、HEAD、branch、状态指针和工作树，再推进至下一个依赖满足的 V02-T03-M01，不执行发布动作。
 
+## 26. v0.2 Connection/Profile M01 Reality Check：`V02-T03-M01`
+
+- **状态：** completed；恢复基线/rollback=`e2560bff53e90f4094dcc97a00c5fc32ae7d7e5b`；当前 branch=`master`；`pending_decision: none`；Reality Check **FIT**；checkpoint 待创建。
+- **目标边界：** 复用现有 Connection/Profile Application Service、Repository、凭据引用和 Settings/worker seam，形成配置 CRUD、重开一致性、非法值不落库与不泄密的首个可验证闭环；不保存原始 API Key、不自动调用真实端点、不新增原生多厂商 API、代理 schema 或模型下载器。
+- **现场结论：** `ProviderConnectionService.update_connection` 与 `ModelProfileService.update_profile` 已覆盖任务字段并经 domain 校验后持久化；`SettingsPage` 当前只暴露简化创建/删除表面，所有 service 调用已通过 `ServiceWorker`；`004`/`005`/`006` 无需迁移，凭据 reference 与历史 Attempt 保护已有测试。
+- **M01 allowed paths：** `src/transrealm/ui/settings_page.py`、必要的 `src/transrealm/ui/i18n/**` 资源、`tests/test_v02_t03_m01.py`、必要状态/契约 Markdown；不改 service/repository/domain/schema/migration/依赖/真实用户数据。
+- **完成证据：** 新增 `tests/test_v02_t03_m01.py` **4 passed**；指定旧回归 + 新验收 **157 passed**；锁定环境全量 pytest **1370 passed, 5 skipped**；Ruff clean；mypy src **81 source files no issues**；pip check clean；Windows Qt 隔离数据根目录 English/zh_CN × 100%/150% 及高级展开状态无重叠/截断，关闭收敛 PASS；资源、秘密、路径和 `git diff --check` clean。独立只读 Review 首轮 **REQUEST-CHANGES**（1 SHOULD-FIX：context budget 总额不变量），已在 UI 保存前校验并新增不落库测试；复核最终 **APPROVE**，BLOCKER/SHOULD-FIX/MINOR none。
+- **下一步：** 仅暂存 V02-T03-M01 allowed paths 创建本地 checkpoint；提交后复核作者、文件清单、HEAD、branch、状态指针和工作树，再推进下一个依赖满足的 V02-T03 Milestone，不执行发布动作。
+
 ---
 
 # 文档结束
