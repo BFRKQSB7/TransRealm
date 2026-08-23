@@ -86,7 +86,7 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 
 ### V02-T04 — Translation/Workbench 体验
 
-- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P1 核心体验；Medium；in_progress（M01 已完成，checkpoint 待记录）。依赖 V02-T02、V02-T03；V02-T03 checkpoint=`17b865be808aba935e5118a56eea9338512de84c`。
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P1 核心体验；Medium；in_progress（M02 当前，M01 已完成）。依赖 V02-T02、V02-T03；V02-T03 checkpoint=`17b865be808aba935e5118a56eea9338512de84c`。
 - **Reality Audit：** REFINE——复用既有 Run/Attempt/Revision 服务，重组交互；不复制 orchestrator/状态机。
 - **目标：** Auto 最短旅程；Workbench 提供 Segment 状态过滤、源文/译文双栏、Revision 历史/current 切换、锁定、失败详情和受控重试。
 - **非目标：** 不做多候选、QC Engine、节点式 Workflow、RAG/TM 或新重试语义。
@@ -97,7 +97,10 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 - **M01 Reality Check（2026-08-23）：** **FIT**——既有 TranslationPage/TranslationWorker、ProjectService/TranslationRunService 已提供 Auto 的 project/document/active Profile/进度/取消/导出 seam；M01 只补 Translation UI/测试/必要 i18n 的 Auto 总览层级与反馈，不改 service/domain/schema/migration、Run/Attempt/Revision/重试/锁定契约、真实端点或依赖。无 ADAPT/REPLAN。
 - **M01 当前范围/验收：** Auto 模式清晰呈现 active Profile/配置引导、文档、Translate/Cancel/Export、进度和成功/失败/取消状态；Workbench 列表/筛选、Revision/history/lock/retry 和恢复/长文本留给后续 M02–M04；大量 Segment 不阻塞，关闭/取消/缺配置可恢复，中英文/DPI、旧状态机回归、全量质量、GUI 与独立 Review 必须通过。
 - **M01 完成证据：** 新增 `tests/test_v02_t04_m01.py` **2 passed**；T04 指定旧状态机/GUI 回归 **114 passed**；全量 pytest **1373 passed, 5 skipped**；Ruff clean；mypy src **81 source files no issues**；pip check clean；Windows Qt 隔离 English/zh_CN × 100%/150% Translation 截图与关闭 smoke PASS，无截断/重叠；未改 service/repository/domain/schema/migration/依赖，未调用真实端点或操作真实用户数据；独立只读 Review 首轮要求修正两处过时状态文档事实，已同步并复核 **APPROVE**，无 BLOCKER/SHOULD-FIX/NICE-TO-HAVE。
-- **M01 checkpoint：** 门禁已通过，checkpoint commit 待创建；随后自动进入 M02 Reality Check。
+- **M01 checkpoint：** `6680516afbae2b716b25567b588721b529d0a4b9`（`feat(ui): add auto translation overview`），作者 `BFRKQSB7 <226671264+BFRKQSB7@users.noreply.github.com>`；9 个文件均在 M01 allowed paths，未 push/merge/tag/Release。
+- **M02 Reality Check（2026-08-23）：** **FIT**——M01 已将 Auto 主旅程与 Workbench 容器边界 checkpoint；现有 `TranslationRunService.list_segment_progress` 已提供按文档读取 Segment/Attempt/Revision 摘要的只读 seam，`TranslationPage` 已有 Workbench `QListWidget` 和内存中的 `SegmentProgress` 列表。M02 只补 Workbench 列表的状态筛选与源文/当前译文可读层级及验收证据，不改 service/domain/schema/migration、Revision/history/lock/retry 语义、真实端点或依赖。无 ADAPT/REPLAN。
+- **M02 当前范围/验收：** Workbench 显示 Segment 状态过滤、源文与当前译文摘要，筛选前后选中项/现有编辑行为不静默丢失；Auto 模式不受影响；Revision/history/lock/retry 留给 M03；大量 Segment 不阻塞，中英文/DPI、旧状态机回归、全量质量、GUI 与独立 Review 必须通过。
+- **M02 完成证据（2026-08-24）：** 新增 `tests/test_v02_t04_m02.py` **2 passed**；指定旧 Workbench/状态机 + M01/M02 回归 **88 passed**；锁定环境全量 pytest **1375 passed, 5 skipped**；Ruff clean；mypy src **81 source files no issues**；pip check clean；Windows Qt 隔离 Workbench English/zh_CN × 100%/150% 顶部与滚动到底部截图、筛选/源文/当前译文可达、关闭 PASS，无重叠/截断；未改 service/repository/domain/schema/migration/依赖，未调用真实端点或操作真实用户数据；独立只读 Review **APPROVE**，无 BLOCKER/SHOULD-FIX；checkpoint 待创建。
 
 ### V02-T05 — v0.2 Release Candidate Gate
 

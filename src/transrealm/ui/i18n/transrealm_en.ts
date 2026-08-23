@@ -9,6 +9,15 @@
     <message><source>Project</source><translation>Project</translation></message>
     <message><source>Translation</source><translation>Translation</translation></message>
     <message><source>Auto overview</source><translation>Auto overview</translation></message>
+    <message><source>Filter status:</source><translation>Filter status:</translation></message>
+    <message><source>All statuses</source><translation>All statuses</translation></message>
+    <message><source>Pending</source><translation>Pending</translation></message>
+    <message><source>Processing</source><translation>Processing</translation></message>
+    <message><source>Completed</source><translation>Completed</translation></message>
+    <message><source>Failed</source><translation>Failed</translation></message>
+    <message><source>No segment selected.</source><translation>No segment selected.</translation></message>
+    <message><source>Source</source><translation>Source</translation></message>
+    <message><source>Current translation</source><translation>Current translation</translation></message>
     <message><source>Language</source><translation>Language</translation></message>
     <message><source>English</source><translation>English</translation></message>
     <message><source>简体中文</source><translation>简体中文</translation></message>

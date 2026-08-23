@@ -13,7 +13,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QSignalBlocker, Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -105,6 +105,7 @@ class TranslationPage(WorkerPage):
         self._prompt_editor: WorkbenchPromptEditor | None = None
         self._revision_editor: WorkbenchRevisionEditor | None = None
         self._workbench_progress: list[SegmentProgress] = []
+        self._selected_workbench_id: int | None = None
 
         layout = QVBoxLayout(self)
         overview_section = QGroupBox("Auto overview", self)
@@ -163,6 +164,23 @@ class TranslationPage(WorkerPage):
         self._workbench_info = QLabel("", self._workbench_container)
         self._workbench_info.setWordWrap(True)
         workbench_layout.addWidget(self._workbench_info)
+        filter_row = QHBoxLayout()
+        filter_row.addWidget(QLabel("Filter status:", self._workbench_container))
+        self._workbench_filter = QComboBox(self._workbench_container)
+        self._workbench_filter.setObjectName("workbench-status-filter")
+        self._workbench_filter.addItem("All statuses", "all")
+        self._workbench_filter.addItem("Pending", "pending")
+        self._workbench_filter.addItem("Processing", "processing")
+        self._workbench_filter.addItem("Completed", "completed")
+        self._workbench_filter.addItem("Failed", "failed")
+        self._workbench_filter.setProperty("transrealm_i18n_static_items", True)
+        filter_row.addWidget(self._workbench_filter)
+        workbench_layout.addLayout(filter_row)
+        self._segment_detail = QLabel("No segment selected.", self._workbench_container)
+        self._segment_detail.setObjectName("segment-detail")
+        self._segment_detail.setProperty("transrealm_i18n_dynamic", True)
+        self._segment_detail.setWordWrap(True)
+        workbench_layout.addWidget(self._segment_detail)
         self._param_host = QWidget(self._workbench_container)
         self._param_layout = QVBoxLayout(self._param_host)
         self._param_layout.setContentsMargins(0, 0, 0, 0)
@@ -192,6 +210,7 @@ class TranslationPage(WorkerPage):
         self._set_active_profile.clicked.connect(self._on_request_project_setup)
         self._mode_switch.activated.connect(self._on_mode_switch)
         self._document_combo.activated.connect(self._on_document_selected)
+        self._workbench_filter.currentIndexChanged.connect(self._on_workbench_filter_changed)
         self._segment_progress.itemSelectionChanged.connect(self._on_segment_selected)
 
         translation_worker.progress.connect(self._on_progress)
@@ -200,6 +219,7 @@ class TranslationPage(WorkerPage):
         translation_worker.config_missing.connect(self._on_config_missing)
         translation_worker.finished.connect(self._on_finished)
         translation_worker.failed.connect(self._on_failed)
+        self._i18n.language_changed.connect(self._on_language_changed)
         self._i18n.bind_tree(self)
 
     def set_project(self, project_id: int) -> None:
@@ -621,30 +641,25 @@ class TranslationPage(WorkerPage):
 
         self._workbench_container.show()
         self._workbench_progress = items
-        self._segment_progress.clear()
-        for item in items:
-            label = f"{item.stable_key}: {item.status}"
-            if item.current_revision_id is not None:
-                label += f" (rev {item.current_revision_id})"
-            if item.attempt_status is not None:
-                label += f" · attempt {item.attempt_status}"
-                if item.attempt_error:
-                    label += f": {item.attempt_error}"
-            self._segment_progress.addItem(label)
-        if previous_id is not None:
-            for index, item in enumerate(items):
-                if item.segment_id == previous_id:
-                    self._segment_progress.setCurrentRow(index)
-                    break
-        selected = self._selected_segment_item()
-        if selected is not None:
+        self._selected_workbench_id = previous_id
+        self._render_workbench_list()
+        self._restore_workbench_selection()
+        selected = next(
+            (item for item in items if item.segment_id == previous_id),
+            None,
+        )
+        visible_ids = {item.segment_id for item in self._visible_workbench_progress()}
+        if selected is not None and selected.segment_id in visible_ids:
             keep_draft = selected.segment_id == previous_id
             self._rebuild_revision_editor(
                 selected,
                 initial=revision_draft if keep_draft else None,
             )
-        else:
+        elif previous_id is None:
             self._clear_revision_editor()
+            self._update_segment_detail(None)
+        else:
+            self._update_segment_detail(selected)
 
         if not isinstance(active_profile, ModelProfile):
             self._workbench_info.setText("")
@@ -678,6 +693,88 @@ class TranslationPage(WorkerPage):
         # Prompt override editor (P1-T03-M03): read-only preset + editable copy.
         prompt_draft = self._prompt_editor.text() if self._prompt_editor is not None else None
         self._rebuild_prompt_editor(override, initial=prompt_draft)
+
+    def _visible_workbench_progress(self) -> list[SegmentProgress]:
+        selected_status = self._workbench_filter.currentData()
+        if selected_status in (None, "all"):
+            return list(self._workbench_progress)
+        return [item for item in self._workbench_progress if item.status == selected_status]
+
+    def _render_workbench_list(self) -> None:
+        visible = self._visible_workbench_progress()
+        blocker = QSignalBlocker(self._segment_progress)
+        try:
+            self._segment_progress.clear()
+            for item in visible:
+                status = item.status
+                if self._i18n.current_language != "en":
+                    status = self._i18n.tr(item.status.capitalize())
+                label = f"{item.stable_key}: {status}"
+                if item.current_revision_id is not None:
+                    label += f" (rev {item.current_revision_id})"
+                if item.attempt_status is not None:
+                    label += f" · attempt {item.attempt_status}"
+                    if item.attempt_error:
+                        label += f": {item.attempt_error}"
+                self._segment_progress.addItem(label)
+            if self._selected_workbench_id is not None:
+                for index, item in enumerate(visible):
+                    if item.segment_id == self._selected_workbench_id:
+                        self._segment_progress.setCurrentRow(index)
+                        break
+        finally:
+            del blocker
+
+    def _on_workbench_filter_changed(self, _index: int) -> None:
+        selected_id = self._selected_workbench_id
+        if selected_id is None:
+            selected_id = self._selected_segment_id()
+        draft = self._revision_editor.translation() if self._revision_editor is not None else None
+        self._selected_workbench_id = selected_id
+        self._render_workbench_list()
+        self._selected_workbench_id = selected_id
+        self._restore_workbench_selection()
+        selected = self._selected_segment_item()
+        visible_ids = {item.segment_id for item in self._visible_workbench_progress()}
+        if selected is None:
+            self._clear_revision_editor()
+            self._update_segment_detail(None)
+        elif selected.segment_id in visible_ids:
+            self._update_segment_detail(selected)
+            self._rebuild_revision_editor(selected, initial=draft)
+        else:
+            # Keep the editor and its draft visible while a filter temporarily
+            # hides the selected segment; clearing the filter restores it.
+            self._update_segment_detail(selected)
+
+    def _update_segment_detail(self, item: SegmentProgress | None) -> None:
+        if item is None:
+            self._segment_detail.setText(self._i18n.tr("No segment selected."))
+            return
+        current = item.revision_text if item.revision_text is not None else "(none)"
+        self._segment_detail.setText(
+            f"{self._i18n.tr('Source')}: {item.source_text}\n"
+            f"{self._i18n.tr('Current translation')}: {current}",
+        )
+
+    def _restore_workbench_selection(self) -> None:
+        if self._selected_workbench_id is None:
+            return
+        visible = self._visible_workbench_progress()
+        for index, item in enumerate(visible):
+            if item.segment_id == self._selected_workbench_id:
+                blocker = QSignalBlocker(self._segment_progress)
+                try:
+                    self._segment_progress.setCurrentRow(index)
+                finally:
+                    del blocker
+                return
+
+    def _on_language_changed(self, _language: str) -> None:
+        self._render_workbench_list()
+        self._restore_workbench_selection()
+        selected = self._selected_segment_item() if self._selected_workbench_id else None
+        self._update_segment_detail(selected)
 
     def _rebuild_param_editor(
         self,
@@ -757,9 +854,19 @@ class TranslationPage(WorkerPage):
 
     def _selected_segment_item(self) -> SegmentProgress | None:
         row = self._segment_progress.currentRow()
-        if row < 0 or row >= len(self._workbench_progress):
+        visible = self._visible_workbench_progress()
+        if 0 <= row < len(visible):
+            return visible[row]
+        if self._selected_workbench_id is None:
             return None
-        return self._workbench_progress[row]
+        return next(
+            (
+                item
+                for item in self._workbench_progress
+                if item.segment_id == self._selected_workbench_id
+            ),
+            None,
+        )
 
     def _selected_segment_id(self) -> int | None:
         item = self._selected_segment_item()
@@ -769,8 +876,10 @@ class TranslationPage(WorkerPage):
         """Show the manual translation editor for the newly selected segment."""
         selected = self._selected_segment_item()
         if selected is None:
-            self._clear_revision_editor()
+            self._update_segment_detail(None)
             return
+        self._selected_workbench_id = selected.segment_id
+        self._update_segment_detail(selected)
         self._rebuild_revision_editor(selected)
 
     def _rebuild_revision_editor(

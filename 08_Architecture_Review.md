@@ -1069,13 +1069,23 @@ Task重新规划
 
 ## 28. v0.2 Translation/Workbench M01 Reality Check：`V02-T04-M01`
 
-- **状态：** verification；恢复基线/rollback=`17b865be808aba935e5118a56eea9338512de84c`；当前 branch=`master`；`pending_decision: none`；Reality Check **FIT**；全部门禁通过，checkpoint 待创建。
+- **状态：** completed；恢复基线/rollback=`17b865be808aba935e5118a56eea9338512de84c`；当前 branch=`master`；`pending_decision: none`；Reality Check **FIT**；checkpoint=`6680516afbae2b716b25567b588721b529d0a4b9`。
 - **目标边界：** 形成 Auto 模式最短旅程的总览层级：项目/文档、active Profile 或配置引导、Translate/Cancel/Export、进度与成功/失败/取消状态可见且可恢复；Workbench 列表/筛选、Revision/history/lock/retry 和恢复/长文本 Gate 留给 M02–M04。
 - **现场结论：** `TranslationPage` 已通过 `ServiceWorker`/`TranslationWorker` 复用 Project/Run/Profile seam，Auto/配置缺失/取消/进度/导出行为已存在；M01 仅需 UI 分组/层级与测试/GUI 证据，不改 Application/Domain/Infrastructure、schema/migration、Run/Attempt/Revision/重试/锁定契约或依赖。
 - **M01 allowed paths：** `src/transrealm/ui/translation_page.py`、必要的 `src/transrealm/ui/i18n/**` 资源、`tests/test_v02_t04_m01.py`、必要状态/契约 Markdown；不改 service/repository/domain/schema/migration/依赖/真实用户数据。
 - **验收与硬约束：** Auto 模式不提前展开 Workbench 内容；大量 Segment 不阻塞，取消/关闭/缺配置可解释，失败状态不吞；中英文/100%/150% GUI 无截断/重叠；新增 M01 测试、T04 相关旧状态机回归、全量质量和独立只读 Review 通过；自动旅程仅使用 fake adapter，不调用真实端点。
 - **完成证据：** `tests/test_v02_t04_m01.py` 2 passed；T04 指定旧回归 114 passed；全量 pytest 1373 passed、5 skipped；Ruff clean；mypy src 81 source files clean；pip check clean；Windows Qt 隔离 English/zh_CN × 100%/150% GUI 截图无截断/重叠且进程关闭；未改 service/repository/domain/schema/migration/依赖，未调用真实端点或操作真实用户数据；独立只读 Review 首轮指出的两处过时状态事实已修正，复核 **APPROVE**，无 BLOCKER/SHOULD-FIX/NICE-TO-HAVE。
-- **下一步：** 创建仅含 V02-T04-M01 的本地 checkpoint；提交后推进至依赖满足的 M02，不提前实现后续 M03/M04 或发布动作。
+- **下一步：** 已创建 M01 checkpoint；当前推进至依赖满足的 M02，不提前实现后续 M03/M04 或发布动作。
+
+## 29. v0.2 Translation/Workbench M02 Reality Check：`V02-T04-M02`
+
+- **状态：** in_progress；恢复基线/rollback=`6680516afbae2b716b25567b588721b529d0a4b9`；当前 branch=`master`；`pending_decision: none`；Reality Check **FIT**。
+- **目标边界：** 在既有 Workbench surface 内补齐 Segment 列表的状态筛选与源文/当前译文可读层级；Auto 模式保持不变，Revision/history/lock/retry 和恢复/长文本留给 M03–M04。
+- **现场结论：** `TranslationRunService.list_segment_progress` 已提供 Segment/Attempt/Revision 摘要，`TranslationPage` 已经在 Workbench 展示 `QListWidget`；缺口仅为 UI 过滤控件、源文/译文摘要和筛选后的稳定选择/编辑体验。M02 不改 service/domain/schema/migration、Run/Attempt/Revision/重试/锁定契约或依赖。
+- **M02 allowed paths：** `src/transrealm/ui/translation_page.py`、必要的 `src/transrealm/ui/i18n/**` 资源、`tests/test_v02_t04_m02.py`、必要状态/契约 Markdown；不触碰真实端点或真实用户数据。
+- **验收与硬约束：** 状态筛选结果准确、All 可恢复；源文与当前译文在列表/详情中可读；筛选不静默丢失当前选择或已有编辑草稿；Auto 与既有取消/关闭/状态机行为不变；中英文/100%/150% GUI 无截断/重叠；新增 M02 测试、T04 旧回归、全量质量和独立只读 Review 通过。
+- **完成证据：** 新增 `tests/test_v02_t04_m02.py` **2 passed**；指定旧 Workbench/状态机 + M01/M02 回归 **88 passed**；全量 pytest **1375 passed、5 skipped**；Ruff clean；mypy src **81 source files no issues**；pip check clean；Windows Qt 隔离 Workbench English/zh_CN × 100%/150% 顶部与滚动到底部截图、筛选/源文/当前译文可达、关闭 PASS，无重叠/截断；未改 service/repository/domain/schema/migration/依赖，未调用真实端点或操作真实用户数据；独立只读 Review **APPROVE**，无 BLOCKER/SHOULD-FIX；checkpoint 待创建。
+- **下一步：** 独立 Review 已通过，创建仅含 V02-T04-M02 的本地 checkpoint；不提前进入 M03 Revision/history/lock/retry。
 
 ---
 

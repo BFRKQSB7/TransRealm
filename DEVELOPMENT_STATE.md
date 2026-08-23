@@ -5,20 +5,20 @@ protocol_version: 2
 current_phase: Phase 1.5A
 current_release: v0.2.0
 current_task: V02-T04
-current_milestone: V02-T04-M01
+current_milestone: V02-T04-M02
 state: verification
-last_updated: 2026-08-23
-baseline_commit: 17b865be808aba935e5118a56eea9338512de84c
+last_updated: 2026-08-24
+baseline_commit: 6680516afbae2b716b25567b588721b529d0a4b9
 baseline_integrity: committed_clean_planning_baseline
-worktree_disposition: v02_t04_m01_verified_checkpoint_pending
-gate_status: m01_all_gates_passed
+worktree_disposition: v02_t04_m02_verified_review_pending
+gate_status: m02_all_gates_passed
 plan_alignment: fit
 review_status: independent_review_approved
-rollback_ref: 17b865be808aba935e5118a56eea9338512de84c
+rollback_ref: 6680516afbae2b716b25567b588721b529d0a4b9
 pending_decision: none
 decision_prompt: none
 decision_result: DEC-V02-T01-M01-GATE-BASELINE_approved
-resume_milestone: V02-T04-M01
+resume_milestone: V02-T04-M02
 authorization_scope: V02-T04_allowed_paths
 code_authorized: true
 branch_authorized: false
@@ -75,23 +75,23 @@ external_actions_authorized: false
 
 ### v0.2 当前事实与授权（2026-08-23）
 
-  - **Git 事实：** `master` 当前 HEAD=`17b865be808aba935e5118a56eea9338512de84c`（V02-T03-M02 checkpoint），V02-T01 M01/M02/M03/M04 checkpoint 分别为 `f4283870e6fa7b46d2090ec56ed7f4a9d3ecc8f9`、`165c87e4377d7e1ace119991df3e5ddc541de61c`、`dbf31da1ad6668389cf0e453f70b93d461204a4b`、`609d529960b7d47654def7a4d4b3a21fe19257b9`，V02-T02-M01 checkpoint 为 `93d5e3ccb8e4fd4f4e08ed941c6dfd4d8bd35dbe`、M02 为 `537512f56523e0ff8efa5e392d07ddb109ad3740`、M03 为 `bf13d0f85a3b5f2c0cff188e71cf4789e35b9638`、M04 为 `e2560bff53e90f4094dcc97a00c5fc32ae7d7e5b`，均未 push；当前工作树仅包含 V02-T04-M01 allowed paths 的实现、验收测试和必要状态/契约 Markdown，checkpoint 尚未创建。没有创建或切换分支；tag `v0.1.0` 指向 commit `7bf26be6cc4c5a17933d27ae4e1d781d15b2c06c`。
+  - **Git 事实：** `master` 当前 HEAD=`6680516afbae2b716b25567b588721b529d0a4b9`（V02-T04-M01 checkpoint），V02-T01 M01/M02/M03/M04 checkpoint 分别为 `f4283870e6fa7b46d2090ec56ed7f4a9d3ecc8f9`、`165c87e4377d7e1ace119991df3e5ddc541de61c`、`dbf31da1ad6668389cf0e453f70b93d461204a4b`、`609d529960b7d47654def7a4d4b3a21fe19257b9`，V02-T02-M01 checkpoint 为 `93d5e3ccb8e4fd4f4e08ed941c6dfd4d8bd35dbe`、M02 为 `537512f56523e0ff8efa5e392d07ddb109ad3740`、M03 为 `bf13d0f85a3b5f2c0cff188e71cf4789e35b9638`、M04 为 `e2560bff53e90f4094dcc97a00c5fc32ae7d7e5b`，均未 push；当前工作树包含 V02-T04-M02 的 Translation UI、i18n、验收测试和必要状态/契约 Markdown 改动，尚未创建 M02 checkpoint。没有创建或切换分支；tag `v0.1.0` 指向 commit `7bf26be6cc4c5a17933d27ae4e1d781d15b2c06c`。
 - **发布事实：** v0.1.0 已发布；其后 master 包含 CI 与状态文档修复。最后归档质量证据为 pytest 1339 passed（1 skipped）、Ruff clean、mypy clean；本次 Markdown-only 规划没有复跑会写缓存的测试，不把历史数字表述为本次执行结果。
 - **用户裁决：** 2026-08-22 用户确认 v0.2/v0.3 无人值守方案。2026-08-23 用户撤销创建、切换或删除分支的权限，但保留本地里程碑提交权限：只能在用户当前分支上，于 Milestone 全部门禁通过后暂存范围内文件并创建一个本地 checkpoint commit。当前代码 Task 已获授权；本轮用户另行批准 `DEC-V02-T01-M01-GATE-BASELINE` 并授权自主同步 Markdown，但决策 Agent 仍不得借此实现、构建、提交或发布。本地提交授权不包含 push、merge、tag、Release、远程资源、真实/付费模型调用或真实用户数据操作。
 - **路线裁决：** Phase 2 的 RAG/TM/Character Data 暂停；先完成 Phase 1.5A/v0.2 的 UI 重构、中英文、六格式 GUI、安全删除、Connection/Profile 编辑和 Workbench 体验。`.aiproject`/开放目录 GUI 延后至 v0.3 的 `DEC-V03-PROJECT-STORAGE`。
-- **决策门禁复核（2026-08-23）：** `pending_decision` 保持 `none`，`DEC-V03-PROJECT-STORAGE` 明确保留至 V02-T05 完成后的 V03-T00；除非用户明确要求提前进行 Project 工作区重构，否则不得把“一次一个活动 ProjectSession + 一 Project 一 SQLite”推荐方向写成已裁决方案。正式裁决仍须比较“全局库 + 单 Project 克隆/ID 重映射”“一 Project 一库”“全局索引库 + Project 库”三案，并交付兼容性、安全、迁移/回滚、portable/data-dir、Application/UI seam 和验收矩阵。当前恢复点为 `V02-T04-M01`。
-- **工作树处置：** 当前仅允许 V02-T04-M01 的 Translation UI Auto 总览、验收测试和必要状态/契约 Markdown；复用既有 Project/Run/Attempt/Revision Application Service、TranslationWorker 和 fake adapter seam，不改 schema/migration、历史 Attempt/Revision 语义、重试/锁定契约、真实端点/用户数据或新依赖。
+- **决策门禁复核（2026-08-23）：** `pending_decision` 保持 `none`，`DEC-V03-PROJECT-STORAGE` 明确保留至 V02-T05 完成后的 V03-T00；除非用户明确要求提前进行 Project 工作区重构，否则不得把“一次一个活动 ProjectSession + 一 Project 一 SQLite”推荐方向写成已裁决方案。正式裁决仍须比较“全局库 + 单 Project 克隆/ID 重映射”“一 Project 一库”“全局索引库 + Project 库”三案，并交付兼容性、安全、迁移/回滚、portable/data-dir、Application/UI seam 和验收矩阵。当前恢复点为 `V02-T04-M02`。
+- **工作树处置：** 当前仅允许 V02-T04-M02 的 Translation UI Workbench 列表/筛选、验收测试和必要状态/契约 Markdown；复用既有 Project/Run/Attempt/Revision Application Service、TranslationWorker 和 fake adapter seam，不改 schema/migration、历史 Attempt/Revision 语义、重试/锁定契约、真实端点/用户数据或新依赖。
 
 ### 当前 Task
 
 - **Task：** V02-T04 — Translation/Workbench 体验。
-- **状态：** `verification`；`code_authorized: true`。依赖 V02-T02 checkpoint `e2560bff53e90f4094dcc97a00c5fc32ae7d7e5b` 与 V02-T03 completed checkpoint `17b865be808aba935e5118a56eea9338512de84c` 已满足；M01 实现与全部门禁已完成，checkpoint 待创建。
+- **状态：** `verification`；`code_authorized: true`。依赖 V02-T02 checkpoint `e2560bff53e90f4094dcc97a00c5fc32ae7d7e5b`、V02-T03 checkpoint `17b865be808aba935e5118a56eea9338512de84c` 与 V02-T04-M01 checkpoint `6680516afbae2b716b25567b588721b529d0a4b9` 已满足；M02 实现与非 Review 门禁已完成，独立 Review 待确认。
 - **完整定义：** `07_Developer_Task_List.md` §0 `V02-T04`。
 - **V02-T03 完成：** M01 checkpoint=`1ecca03e6187f157c9a1051dbcc78abc43869590`，M02 checkpoint=`17b865be808aba935e5118a56eea9338512de84c`；CRUD、重开、秘密边界、引用保护、分组/反馈、旧回归、全量质量、GUI 与独立 Review 均通过，Task 已 completed。
 - **前置治理：** V02-T00 文档规划已在当前分支形成 planning checkpoint `9c0be23e6e598939b1a672e8bed4958e7ce2cbaf`；用户禁止创建或切换分支，但允许在当前分支按 Milestone 形成本地 checkpoint。
 - **M01 Reality Check：** 2026-08-23 判定 **FIT**——既有 TranslationPage/TranslationWorker、ProjectService/TranslationRunService 的 worker seam 已覆盖 Auto 模式所需的项目、文档、active Profile、进度、取消和导出状态；现有页面已有自动旅程和可恢复配置引导，缺口是 Auto 主旅程的分组/总览层级与验收证据。M01 只补 Translation UI/测试/必要 i18n，不改 Application/Domain/Infrastructure、schema/migration、Run/Attempt/Revision/重试契约、真实端点或依赖，无 ADAPT/REPLAN。
 - **M01 当前范围/验收：** Auto 总览只呈现项目文档、active Profile/配置引导、Translate/Cancel/Export、进度与可解释状态；Workbench 列表/筛选、Revision/history/lock/retry 和恢复/长文本 Gate 留给后续 M02–M04；大量 Segment 不阻塞，关闭/取消/缺配置可恢复，中英文/DPI、旧状态机回归、全量质量、GUI 与独立 Review 必须通过。
-- **M01 完成证据：** 新增 `tests/test_v02_t04_m01.py` **2 passed**；T04 指定旧状态机/GUI 回归 **114 passed**；全量 pytest **1373 passed, 5 skipped**；Ruff clean；mypy src **81 source files no issues**；pip check clean；Windows Qt 隔离 English/zh_CN × 100%/150% Translation 截图与关闭 smoke PASS，无截断/重叠；未改 service/repository/domain/schema/migration/依赖，未调用真实端点或操作真实用户数据；独立 Review **APPROVE**，无 BLOCKER/SHOULD-FIX/NICE-TO-HAVE。
+- **M01 完成证据：** 新增 `tests/test_v02_t04_m01.py` **2 passed**；T04 指定旧状态机/GUI 回归 **114 passed**；全量 pytest **1373 passed, 5 skipped**；Ruff clean；mypy src **81 source files no issues**；pip check clean；Windows Qt 隔离 English/zh_CN × 100%/150% Translation 截图与关闭 smoke PASS，无截断/重叠；未改 service/repository/domain/schema/migration/依赖，未调用真实端点或操作真实用户数据；独立 Review **APPROVE**，无 BLOCKER/SHOULD-FIX/NICE-TO-HAVE；checkpoint=`6680516afbae2b716b25567b588721b529d0a4b9`。
 - **M02 Reality Check：** 2026-08-23 判定 **FIT**——`ProjectService`/`ProjectRepository` 已提供 Project CRUD 与单连接事务 seam；现有 `create_consistent_snapshot` 使用 SQLite backup API 生成可重开一致性快照；`projects` 下属 source document、segment、run、attempt、revision、glossary 等关联已由既有 FK CASCADE 覆盖，Run 状态与 segment processing lease 可只读检查。M02 仅需补 Project 删除服务/仓库最小能力、备份/故障/完整性测试和状态文档；不需要 migration、Project 数据格式、UI、真实端点或用户数据操作，无 ADAPT/REPLAN。
 - **M02 范围与验收：** 删除前备份失败不得删除；运行中 Run/有效 processing lease 拒绝；单事务删除成功且其他 Project/全局配置不受影响；事务故障回滚并保留可打开备份；外部源文件/导出/`.aiproject`/开放目录不触碰；新增 M02 测试、指定旧回归、全量质量命令和独立只读 Review。M03 再负责删除 UI/确认/摘要展示与运行保护交互，不在本 M02 实现。
 - **M02 完成证据：** `ProjectService.get_project_deletion_summary/delete_project` 复用 SQLite backup API 生成并保留 `*.project-delete-*.db.bak`，`ProjectRepository.delete_project` 用 `BEGIN IMMEDIATE` 重查运行中 Run/有效 lease 后单事务级联删除；新增 `tests/test_v02_t02_m02.py` **7 passed**；指定 Project/Profile/Glossary/翻译旧回归 **83 passed**；无 system-site-packages 的 `D:\TransRealm-v02-t02-m01-lock-venv-20260823` 全量 pytest **1363 passed, 5 skipped**；Ruff、mypy src 81 files、pip check clean。M01 GUI 证据继续有效，M02 未新增 UI；资源/秘密/外部文件/范围检查 clean；最终独立 Review **APPROVE**，无 BLOCKER/SHOULD-FIX；M02 checkpoint=`537512f56523e0ff8efa5e392d07ddb109ad3740`。
@@ -116,11 +116,11 @@ external_actions_authorized: false
 
 ### 当前 Milestone Reality Check
 
-- **Milestone：** V02-T04-M01 — Auto 总览。
-- **当前结论：** **FIT**（2026-08-23）。V02-T03 已由 `17b865be808aba935e5118a56eea9338512de84c` checkpoint；既有 TranslationPage/TranslationWorker、ProjectService/TranslationRunService 已覆盖 Auto 的 project/document/active-profile/translation progress/cancel/export seam，且已在 P1-T03 既有回归中验证；当前缺口仅是 Auto 主旅程的总览层级和独立 V02 证据。M01 只做 Translation UI/测试/必要 i18n 的可逆布局与反馈整理，不改 service/domain/schema/migration、Run/Attempt/Revision/重试/锁定语义、真实端点或依赖，无 ADAPT/REPLAN。
-- **M01 allowed paths：** `src/transrealm/ui/translation_page.py`、必要的 `src/transrealm/ui/i18n/**` 资源、`tests/test_v02_t04_m01.py`、必要状态/契约 Markdown；禁止 Application/Domain/Infrastructure/schema/migration/依赖/真实用户数据。
-- **M01 验收：** Auto 模式清晰呈现 active Profile/配置引导、文档、Translate/Cancel/Export、进度和成功/失败/取消状态；Workbench 内容在 Auto 中不提前展开；pytest-qt 旧状态机回归、全量质量、Windows Qt 中英文/100%/150% 可见/关闭与独立 Review 通过。
-- **M01 门禁结果：** 已完成最小 Auto overview 分组、状态 banner 和 en/zh_CN i18n；所有功能、异常、范围、秘密、关闭和视觉证据已通过；独立 Review 复核 **APPROVE**。当前仅待创建本地 checkpoint，未 push/merge/tag/Release。
+- **Milestone：** V02-T04-M02 — Workbench 列表/筛选。
+- **当前结论：** **FIT**（2026-08-23）。M01 checkpoint=`6680516afbae2b716b25567b588721b529d0a4b9`；`TranslationRunService.list_segment_progress` 已提供按文档读取 Segment/Attempt/Revision 摘要的只读 seam，`TranslationPage` 已有 Workbench `QListWidget` 与内存中的 `SegmentProgress` 列表。M02 只做列表状态筛选与源文/当前译文可读层级，不改 service/domain/schema/migration、Revision/history/lock/retry 语义、真实端点或依赖，无 ADAPT/REPLAN。
+- **M02 allowed paths：** `src/transrealm/ui/translation_page.py`、必要的 `src/transrealm/ui/i18n/**` 资源、`tests/test_v02_t04_m02.py`、必要状态/契约 Markdown；禁止 Application/Domain/Infrastructure/schema/migration/依赖/真实用户数据。
+- **M02 验收：** Workbench 显示 Segment 状态过滤、源文与当前译文摘要，筛选前后选中项/现有编辑行为不静默丢失；Auto 模式不受影响；Revision/history/lock/retry 留给 M03；大量 Segment 不阻塞，pytest-qt 旧状态机回归、全量质量、Windows Qt 中英文/100%/150% 可见/关闭与独立 Review 必须通过。
+- **M02 完成证据：** 新增 `tests/test_v02_t04_m02.py` **2 passed**；指定旧 Workbench/状态机 + M01/M02 回归 **88 passed**；锁定环境全量 pytest **1375 passed, 5 skipped**；Ruff clean；mypy src **81 source files no issues**；pip check clean；Windows Qt 隔离 Workbench English/zh_CN × 100%/150% 顶部与滚动到底部截图、筛选/源文/当前译文可达、关闭 PASS，无重叠/截断；未改 service/repository/domain/schema/migration/依赖，未调用真实端点或操作真实用户数据；独立只读 Review **APPROVE**，无 BLOCKER/SHOULD-FIX；checkpoint 待创建。
 
 ### 已完成小目标
 

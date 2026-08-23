@@ -9,6 +9,15 @@
     <message><source>Project</source><translation>项目</translation></message>
     <message><source>Translation</source><translation>翻译</translation></message>
     <message><source>Auto overview</source><translation>自动总览</translation></message>
+    <message><source>Filter status:</source><translation>筛选状态：</translation></message>
+    <message><source>All statuses</source><translation>全部状态</translation></message>
+    <message><source>Pending</source><translation>待处理</translation></message>
+    <message><source>Processing</source><translation>处理中</translation></message>
+    <message><source>Completed</source><translation>已完成</translation></message>
+    <message><source>Failed</source><translation>失败</translation></message>
+    <message><source>No segment selected.</source><translation>未选择片段。</translation></message>
+    <message><source>Source</source><translation>源文</translation></message>
+    <message><source>Current translation</source><translation>当前译文</translation></message>
     <message><source>Language</source><translation>语言</translation></message>
     <message><source>English</source><translation>英语</translation></message>
     <message><source>简体中文</source><translation>简体中文</translation></message>
