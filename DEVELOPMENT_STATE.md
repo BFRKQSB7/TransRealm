@@ -5,20 +5,20 @@ protocol_version: 2
 current_phase: Phase 1.5A
 current_release: v0.2.0
 current_task: V02-T01
-current_milestone: V02-T01-M03
+current_milestone: V02-T01-M04
 state: completed
 last_updated: 2026-08-23
-baseline_commit: 165c87e4377d7e1ace119991df3e5ddc541de61c
+baseline_commit: dbf31da1ad6668389cf0e453f70b93d461204a4b
 baseline_integrity: committed_clean_planning_baseline
-worktree_disposition: v02_t01_m03_verified_checkpoint_pending
-gate_status: m03_all_gates_passed
+worktree_disposition: v02_t01_m04_verified_checkpoint_pending
+gate_status: m04_all_gates_passed
 plan_alignment: fit
 review_status: independent_review_approved
-rollback_ref: 165c87e4377d7e1ace119991df3e5ddc541de61c
+rollback_ref: dbf31da1ad6668389cf0e453f70b93d461204a4b
 pending_decision: none
 decision_prompt: none
 decision_result: DEC-V02-T01-M01-GATE-BASELINE_approved
-resume_milestone: V02-T01-M03
+resume_milestone: V02-T01-M04
 authorization_scope: V02-T01_allowed_paths
 code_authorized: true
 branch_authorized: false
@@ -75,17 +75,17 @@ external_actions_authorized: false
 
 ### v0.2 当前事实与授权（2026-08-23）
 
-- **Git 事实：** Reality Check 时 `master` 与 `origin/master` 在 `1542291ca43dd17c874b18d3c109ec34b49ae463` 同步；随后已在当前 `master` 创建 planning checkpoint `9c0be23e6e598939b1a672e8bed4958e7ce2cbaf` 和 M01 checkpoint `f4283870e6fa7b46d2090ec56ed7f4a9d3ecc8f9`，均未 push。当前 HEAD 仍为 M01 checkpoint，M02 代码与状态同步正在工作树中；没有创建或切换分支；tag `v0.1.0` 指向 commit `7bf26be6cc4c5a17933d27ae4e1d781d15b2c06c`。
+- **Git 事实：** `master` 当前 HEAD=`dbf31da1ad6668389cf0e453f70b93d461204a4b`（M03 checkpoint），M01/M02/M03 checkpoint 分别为 `f4283870e6fa7b46d2090ec56ed7f4a9d3ecc8f9`、`165c87e4377d7e1ace119991df3e5ddc541de61c`、`dbf31da1ad6668389cf0e453f70b93d461204a4b`，均未 push；当前工作树只有 M04 状态/契约 Markdown 同步，M04 checkpoint 尚待创建。没有创建或切换分支；tag `v0.1.0` 指向 commit `7bf26be6cc4c5a17933d27ae4e1d781d15b2c06c`。
 - **发布事实：** v0.1.0 已发布；其后 master 包含 CI 与状态文档修复。最后归档质量证据为 pytest 1339 passed（1 skipped）、Ruff clean、mypy clean；本次 Markdown-only 规划没有复跑会写缓存的测试，不把历史数字表述为本次执行结果。
 - **用户裁决：** 2026-08-22 用户确认 v0.2/v0.3 无人值守方案。2026-08-23 用户撤销创建、切换或删除分支的权限，但保留本地里程碑提交权限：只能在用户当前分支上，于 Milestone 全部门禁通过后暂存范围内文件并创建一个本地 checkpoint commit。当前代码 Task 已获授权；本轮用户另行批准 `DEC-V02-T01-M01-GATE-BASELINE` 并授权自主同步 Markdown，但决策 Agent 仍不得借此实现、构建、提交或发布。本地提交授权不包含 push、merge、tag、Release、远程资源、真实/付费模型调用或真实用户数据操作。
 - **路线裁决：** Phase 2 的 RAG/TM/Character Data 暂停；先完成 Phase 1.5A/v0.2 的 UI 重构、中英文、六格式 GUI、安全删除、Connection/Profile 编辑和 Workbench 体验。`.aiproject`/开放目录 GUI 延后至 v0.3 的 `DEC-V03-PROJECT-STORAGE`。
-- **决策门禁复核（2026-08-23）：** `pending_decision` 保持 `none`，`DEC-V03-PROJECT-STORAGE` 明确保留至 V02-T05 完成后的 V03-T00；除非用户明确要求提前进行 Project 工作区重构，否则不得把“一次一个活动 ProjectSession + 一 Project 一 SQLite”推荐方向写成已裁决方案。正式裁决仍须比较“全局库 + 单 Project 克隆/ID 重映射”“一 Project 一库”“全局索引库 + Project 库”三案，并交付兼容性、安全、迁移/回滚、portable/data-dir、Application/UI seam 和验收矩阵。当前恢复点为 `V02-T01-M03`。
-- **工作树处置：** 当前仅允许 V02-T01 M03 的 `src/transrealm/ui/**`、`.ts/.qm` 翻译资源、`scripts/build_release.py` 的必要资源收集/冻结守卫、M03 测试和必要状态/契约 Markdown；禁止修改或删除其他 `scripts/`、配置、artifact、用户数据库、备份、源文件与导出。M03 未通过全部门禁前不得提交。
+- **决策门禁复核（2026-08-23）：** `pending_decision` 保持 `none`，`DEC-V03-PROJECT-STORAGE` 明确保留至 V02-T05 完成后的 V03-T00；除非用户明确要求提前进行 Project 工作区重构，否则不得把“一次一个活动 ProjectSession + 一 Project 一 SQLite”推荐方向写成已裁决方案。正式裁决仍须比较“全局库 + 单 Project 克隆/ID 重映射”“一 Project 一库”“全局索引库 + Project 库”三案，并交付兼容性、安全、迁移/回滚、portable/data-dir、Application/UI seam 和验收矩阵。当前恢复点为 `V02-T01-M04`。
+- **工作树处置：** 当前仅允许 V02-T01 M04 的必要状态/契约 Markdown；M04 不改源码、测试、脚本、配置、artifact、用户数据库、备份、源文件或导出。M04 未通过独立 Review 与 checkpoint 前不得提交。
 
 ### 当前 Task
 
 - **Task：** V02-T01 — UI 基础、视觉系统与中英文。
-- **状态：** `verification`；`code_authorized: true`。M01 checkpoint 为 `f4283870`，M02 checkpoint 为 `165c87e4`；M03 为当前恢复点，M04 尚未开始，因此 Task 保持 `verification`。
+- **状态：** `verification`；`code_authorized: true`。M01/M02/M03 已完成并 checkpoint；M04 为当前恢复点，正在执行最终验证与独立 Review，因此 Task 保持 `verification`。
 - **完整定义：** `07_Developer_Task_List.md` §0 `V02-T01`。
 - **前置治理：** V02-T00 文档规划已在当前分支形成 planning checkpoint `9c0be23e6e598939b1a672e8bed4958e7ce2cbaf`；用户禁止创建或切换分支，但允许在当前分支按 Milestone 形成本地 checkpoint。
 - **M01 Reality Check（历史）：** 2026-08-23 判定 **FIT**——页面职责拆分现场与 `07` M01 一致，无 Project/数据库/公共契约/依赖冲突。
@@ -125,21 +125,32 @@ external_actions_authorized: false
 - **M02 checkpoint preflight（2026-08-23）：** HEAD=`f4283870e6fa7b46d2090ec56ed7f4a9d3ecc8f9`，branch=`master`，staged 为空；unstaged tracked 为 `07_Developer_Task_List.md`、`08_Architecture_Review.md`、`DEVELOPMENT_STATE.md`、`src/transrealm/ui/main_window.py`，untracked 为 `src/transrealm/ui/theme.py`、`tests/test_v02_t01_m02.py`，均属 M02 allowed paths 与本轮改动；base/rollback 均为 `f4283870`；authorization=`V02-T01_allowed_paths`，code/local commit=true，branch/external=false；锁定环境 `pip check` clean，验收/Review 已通过，无 pending decision。FIT（无 ADAPT/REPLAN）。
 - **checkpoint 后复核：** HEAD=`165c87e4377d7e1ace119991df3e5ddc541de61c`，作者 `BFRKQSB7 <226671264+BFRKQSB7@users.noreply.github.com>`，文件清单仅含 M02 代码/测试与必要文档；branch=`master`，commit 后工作树干净，未 push/merge/tag/Release。
 
-### 当前小目标
+### 已完成小目标
 
 - **Milestone：** V02-T01-M03 — Qt i18n、运行时切换、持久化与打包资源。
-- **状态：** `in_progress`；Reality Check **FIT**（2026-08-23），无 ADAPT/REPLAN，`pending_decision: none`。
-- **恢复基线：** M02 checkpoint `165c87e4377d7e1ace119991df3e5ddc541de61c`；`rollback_ref` 同值；当前分支 `master`，不得创建/切换/删除分支。
+- **状态：** `completed`；Reality Check **FIT**（2026-08-23），无 ADAPT/REPLAN，全部门禁通过；checkpoint `dbf31da1ad6668389cf0e453f70b93d461204a4b` 已创建。
+- **恢复基线：** M03 checkpoint `dbf31da1ad6668389cf0e453f70b93d461204a4b`；`rollback_ref` 同值；当前分支 `master`，不得创建/切换/删除分支；checkpoint 后工作树仅有本次状态指针推进。
 - **Reality Check 证据：** M02 主壳/page seam 与 M03 目标兼容；现场无 `QTranslator`、`QSettings` 或 i18n 资源目录，PySide6 6.11.1 提供 `lrelease` 与 Qt 原生 i18n/settings 能力；现有 PyInstaller 脚本只收集 migrations，翻译资源收集属于已批准的必要打包路径；无需新运行依赖、schema、Project 数据格式、Application/Domain/Infrastructure、业务服务或 worker 线程边界变化。计划与现场一致，判定 FIT。
 - **M03 实施证据：** 新增 `LanguageManager`（Qt `QTranslator` + `QSettings`，非法语言回退英文）、en/zh_CN `.ts/.qm` 资源、Settings 语言选择器、shell/page/static widget 运行时重翻译与动态 Workbench editor 绑定；PyInstaller 脚本增加 i18n `--add-data` 与冻结 `.qm` 数量守卫；未改 schema、Project 数据格式、业务服务或 worker 线程边界。
 - **M03 测试/GUI/资源证据：** `tests/test_v02_t01_m03.py` **3 passed**；M02+M03+既有 UI/worker/关闭回归 **137 passed**；最终全量 pytest **1344 passed, 5 skipped**；Ruff clean；mypy **81 source files no issues**；`pip check` clean。原生 Windows Qt 运行时 English→简体中文即时切换、重启持久化 `zh_CN`、100% 中文截图与 150% 英文截图均通过人工检查，窗口可见/关闭正常；`.ts/.qm` 资源生成并由资源/构建脚本测试守卫；UI boundary/秘密/本机绝对路径扫描与 `git diff --check` 通过。
-- **M03 Review 状态：** 独立只读 Review 最终为 `APPROVE`，无 BLOCKER/SHOULD-FIX/MINOR；M03 全部门禁通过，checkpoint 尚待创建。
+- **M03 Review 状态：** 独立只读 Review 最终为 `APPROVE`，无 BLOCKER/SHOULD-FIX/MINOR；M03 全部门禁通过，checkpoint `dbf31da1ad6668389cf0e453f70b93d461204a4b` 已创建。
 - **M03 checkpoint preflight（2026-08-23）：** HEAD=`165c87e4377d7e1ace119991df3e5ddc541de61c`，branch=`master`，staged 为空；tracked M03 改动为 `07_Developer_Task_List.md`、`08_Architecture_Review.md`、`DEVELOPMENT_STATE.md`、`scripts/build_release.py`、`src/transrealm/ui/main_window.py`、`settings_page.py`、`translation_page.py`、`workbench.py`，untracked 为 `src/transrealm/ui/i18n.py`、四个 `.ts/.qm` 资源和 `tests/test_v02_t01_m03.py`，均属 M03 allowed paths 与本轮改动；base/rollback 均为 `165c87e4`；authorization=`V02-T01_allowed_paths`，code/local commit=true，branch/external=false；锁定环境 `pip check` clean，验收/Review 已通过，无 pending decision。FIT（无 ADAPT/REPLAN）。
-- **下一步：** 在当前分支复核 HEAD/branch/staged/unstaged/untracked、base/rollback/授权/依赖/验收事实后，仅暂存 M03 allowed paths 并创建本地 checkpoint；提交后推进 `resume_milestone` 至 M04。
-- **目标：** 在 M02 主壳/token 基础上加入 Qt 翻译资源、运行时语言切换、应用配置持久化和冻结包资源收集；缺失翻译英文回退，语言切换不改变业务数据和 Run。
-- **范围假设：** 只触碰 `src/transrealm/ui/**`、必要 `.ts`/编译资源与打包收集、`tests/test_v02_t01_m03.py` 和必要状态/契约 Markdown；不改 Application/Domain/Infrastructure/schema/Project 数据格式/翻译状态机，不引入第三方 i18n 或运行依赖，不提前进入 M04 全量视觉 Gate。
-- **验收入口：** 中文/英文运行时切换、非法/缺失语言安全回退、重启持久化、主要 M02 shell/page 文本覆盖、资源进入冻结包路径；旧 UI/worker/关闭回归、全量 pytest/Ruff/mypy、实际 GUI smoke、资源/秘密/范围检查和独立只读 Review 通过；不构建发布候选。
-- **下一步：** 先核验 `07`/`03`/`08` 的 M03 契约、现有打包收集 seam 和依赖，再从最小语言资源 + 设置持久化垂直切片开始；若现场需要改变公开契约/数据格式/依赖或 release 范围才触发 REPLAN/停止。
+- **checkpoint 后复核：** HEAD=`dbf31da1ad6668389cf0e453f70b93d461204a4b`，作者 `BFRKQSB7 <226671264+BFRKQSB7@users.noreply.github.com>`，文件清单仅含 M03 UI/i18n、资源、必要构建收集、测试与文档；branch=`master`，commit 后工作树干净，未 push/merge/tag/Release。
+
+### 当前小目标
+
+- **Milestone：** V02-T01-M04 — 全量回归、截图矩阵与独立 Review。
+- **状态：** `completed`；Reality Check **FIT**（2026-08-23），无 ADAPT/REPLAN，全部 M04 门禁通过；`pending_decision: none`；checkpoint 待创建。
+- **恢复基线：** M03 checkpoint `dbf31da1ad6668389cf0e453f70b93d461204a4b`；`rollback_ref` 同值；当前分支 `master`，不得创建/切换/删除分支。
+- **Reality Check 证据：** M01/M02/M03 checkpoint 均已验证作者、文件清单、干净状态和可回滚引用；锁定环境/资源可重建；M04 仅执行最终回归、GUI 状态/DPI/语言截图矩阵、资源/安全/范围检查与独立 Review，不引入产品行为、新依赖、数据格式或 release 动作，判定 FIT。
+- **M04 矩阵证据：** 原生 Windows Qt 已覆盖 Settings 的英文/中文 × 100%/150%，Project/Translation 空状态的英文/中文代表性组合，以及 Translation 的 error、running-disabled、focus、Workbench 场景；已补足 error/running/focus/Workbench 的英文/中文 × 100%/150% 截图。100%/150% 窗口均可见并正常关闭，150% 原生截图物理尺寸 `2565×1411`（桌面可用区约束），代表性截图人工检查无重叠/文本截断，滚动内容可达。M04 记录的是状态与语言/DPI 的可复核代表性组合，不把每个状态与每种语言/DPI 的全组合伪称为已覆盖；统一视觉门禁由 M02/M03 的结构/交互/GUI 证据与本次 M04 状态矩阵共同承担。证据位于 `%TEMP%\transrealm-v02-t01-m04-*.png`，未进入仓库。
+- **M04 最终质量证据：** 锁定环境最终全量 pytest **1344 passed, 5 skipped**，Ruff clean，mypy **81 source files no issues**，`pip check` clean；5 skip 为 Windows symlink `WinError 1314` 1 项及候选/manifest 未构建 4 项，均为适用性 skip；资源、UI boundary、秘密/本机路径和 allowed paths 检查 clean；未构建候选、未调用真实模型、未操作真实用户数据。
+- **M04 Review 状态：** 首轮独立只读 Review 为 `REJECT`，已修正其指出的事实区矛盾与覆盖表述；第二轮独立只读 Review 为 `APPROVE`，无 BLOCKER/SHOULD-FIX/MINOR。新增 error/running/focus/Workbench 的中英文 × 100%/150% 临时截图已人工检查通过。
+- **目标：** 对 M01–M03 的 UI、i18n、主壳、Settings/Project/Translation/Workbench、错误/空状态/运行中禁用/焦点层级执行最终 v0.2 Task Gate；补齐固定中英文/DPI 截图矩阵和独立 Review，不新增产品行为。
+- **范围假设：** 只触碰必要 V02-T01 测试、GUI/资源验证和状态/契约 Markdown；不提前构建候选、不改 schema/Project 数据格式/业务服务/worker 线程边界，不进入 V02-T02 或下一 release。
+- **验收入口：** 锁定环境全量 pytest/Ruff/mypy/pip check；M01–M03 定向回归；Windows Qt 中文/英文 1280×720@100 与 1920×1080@150 首屏/三 Tab/空/错误/运行中 disabled/focus/Workbench 代表性状态截图与关闭 smoke；翻译资源/秘密/范围检查；独立只读 Review 通过；无未覆盖项被伪报通过。
+- **M04 checkpoint preflight（2026-08-23）：** HEAD=`dbf31da1ad6668389cf0e453f70b93d461204a4b`，branch=`master`，staged 为空；unstaged tracked 仅为 `07_Developer_Task_List.md`、`08_Architecture_Review.md`、`DEVELOPMENT_STATE.md`，无 untracked；三文件均属 M04 allowed paths 与本轮状态/契约同步；base/rollback 均为 `dbf31da1ad6668389cf0e453f70b93d461204a4b`；authorization=`V02-T01_allowed_paths`，code/local commit=true，branch/external=false；锁定环境 `pip check` clean，最终全量/定向回归、Ruff、mypy、GUI/DPI/语言/状态/关闭、资源/安全/范围检查和第二轮独立 Review 均通过，无 pending decision。FIT（无 ADAPT/REPLAN）。
+- **下一步：** 仅暂存上述三份 M04 状态/契约 Markdown 并创建本地 checkpoint；提交后核验作者、文件清单和工作树，再将指针推进至依赖已满足的 `V02-T02-M01`，不签发/推送/合并/打 tag。
 
 ### 历史环境检查（P0/P1）
 

@@ -992,10 +992,18 @@ Task重新规划
 
 ## 20. v0.2 UI M03 Reality Check：`V02-T01-M03`
 
-- **状态：** completed；恢复基线/rollback=`165c87e4377d7e1ace119991df3e5ddc541de61c`；当前 branch=`master`；`pending_decision: none`；checkpoint 尚待创建。
+- **状态：** completed；M03 checkpoint=`dbf31da1ad6668389cf0e453f70b93d461204a4b`；当前恢复指针已推进至 `V02-T01-M04`；`pending_decision: none`。
 - **判定：** **FIT**（2026-08-23）。M02 主壳/page seam 与 M03 目标一致；现场无 `QTranslator`、`QSettings` 或 i18n 资源目录，PySide6 6.11.1 已提供 Qt 原生 i18n/settings 与 `lrelease`；现有 PyInstaller 只收集 migrations，翻译资源收集可在已批准必要打包路径内补齐。
 - **边界：** 使用 Qt 自带能力和仓库内 `.ts/.qm` 资源；不引入第三方 i18n/运行依赖，不改 schema/Project 数据格式/Application/Domain/Infrastructure/业务服务/worker 线程边界，不提前执行 M04 发布候选或全量视觉 Gate。无 ADAPT/REPLAN。
 - **实施与门禁证据：** `LanguageManager`、en/zh_CN `.ts/.qm`、Settings 语言选择器、运行时重翻译/QSettings 持久化、动态 Workbench editor 绑定和 PyInstaller i18n 收集/冻结守卫已实现；新增测试 3 passed，受影响回归 137 passed，全量 pytest 1344 passed/5 skipped，Ruff/mypy/pip check clean；原生 Windows Qt English→中文切换与重启持久化、100%/150% 截图、关闭 smoke PASS；边界/秘密/路径检查 clean。独立 Review `APPROVE`，无 BLOCKER/SHOULD-FIX/MINOR。
+- **Checkpoint：** `dbf31da1ad6668389cf0e453f70b93d461204a4b`，作者 `BFRKQSB7 <226671264+BFRKQSB7@users.noreply.github.com>`，仅含 M03 UI/i18n、资源、必要构建收集、测试与文档；未 push/merge/tag/Release。
+
+## 21. v0.2 UI M04 Reality Check：`V02-T01-M04`
+
+- **状态：** completed；恢复基线/rollback=`dbf31da1ad6668389cf0e453f70b93d461204a4b`；当前 branch=`master`；`pending_decision: none`；M04 checkpoint 待创建。
+- **判定：** **FIT**（2026-08-23）。M01–M03 checkpoint、锁定依赖、i18n 资源和既有 GUI 证据均已具备；M04 是验证/证据收束 Milestone，不增加产品行为、数据格式、依赖或 release 动作。
+- **目标边界：** 最终执行中英文/DPI/状态截图矩阵、全量质量和关闭/资源/秘密/范围检查，并交独立只读 Review；未覆盖项如 Windows AV 扫描、候选冻结启动等属于后续候选 Gate，不在本 M04 伪报通过，也不触发下一 release 工作。
+- **最终证据：** 原生 Windows Qt 已覆盖 Settings 的英文/中文 × 100%/150%，Project/Translation 空状态代表性组合，以及 Translation error/running-disabled/focus/Workbench 的英文/中文 × 100%/150% 补证；100%/150% 可见/关闭 PASS，代表性截图已人工检查无重叠/文本截断且滚动内容可达。这里记录的是可复核代表性组合，不把每个状态的语言/DPI 全组合伪称为已覆盖；最终全量 pytest 1344 passed/5 skipped、Ruff/mypy/pip check clean；资源/秘密/路径/范围检查 clean；首轮 Review 指出的问题已修正，第二轮独立 Review `APPROVE`，无 BLOCKER/SHOULD-FIX/MINOR；M04 checkpoint 待创建。
 - **否决：** dirty 现场重建候选（不可复现且可假绿）；把 lock 降为本机版本（掩盖漂移）；豁免全量失败（降低门禁）；把发布链修复混入页面拆分（范围和回滚边界失真）。
 - **兼容性/安全：** 无 API、UI、schema、Project、凭据或用户数据变化；旧 artifact 原样保留。v0.2 候选发布前必须增加 `git_dirty=false` 与 version/目标 commit/hash 一致性门禁；该安全加固不阻塞 M01 源码 checkpoint，但阻塞候选签发。
 - **迁移/回滚：** 无数据 migration。隔离环境可废弃重建；artifact 归档以 hash 验证并可移回原路径。禁止删除 artifact 或覆盖既有用户数据。
