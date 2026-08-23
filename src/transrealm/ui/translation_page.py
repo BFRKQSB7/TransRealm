@@ -49,6 +49,7 @@ from transrealm.domain.project import MODE_AUTO, MODE_WORKBENCH, Project
 from transrealm.domain.prompt_override import PromptOverride
 from transrealm.domain.provider_connection import ProviderConnection
 from transrealm.domain.segment import SourceDocument
+from transrealm.ui.i18n import LanguageManager
 from transrealm.ui.page_base import WorkerPage
 from transrealm.ui.workbench import (
     WorkbenchParamEditor,
@@ -77,11 +78,13 @@ class TranslationPage(WorkerPage):
         translation_worker: TranslationWorker,
         db_path: Path,
         app_version: str,
+        i18n: LanguageManager | None = None,
     ) -> None:
         super().__init__(worker)
         self._translation_worker = translation_worker
         self._db_path = db_path
         self._app_version = app_version
+        self._i18n = i18n or LanguageManager(parent=self)
         self._project_id: int | None = None
         self._document_id: int | None = None
         self._document_name = ""
@@ -107,6 +110,7 @@ class TranslationPage(WorkerPage):
         self._mode_switch = QComboBox(self)
         self._mode_switch.addItem("Auto", MODE_AUTO)
         self._mode_switch.addItem("Workbench", MODE_WORKBENCH)
+        self._mode_switch.setProperty("transrealm_i18n_static_items", True)
         mode_row.addWidget(self._mode_switch)
         layout.addLayout(mode_row)
 
@@ -180,6 +184,7 @@ class TranslationPage(WorkerPage):
         translation_worker.config_missing.connect(self._on_config_missing)
         translation_worker.finished.connect(self._on_finished)
         translation_worker.failed.connect(self._on_failed)
+        self._i18n.bind_tree(self)
 
     def set_project(self, project_id: int) -> None:
         """Record the active project id and refresh its mode/profile status."""
@@ -652,6 +657,7 @@ class TranslationPage(WorkerPage):
         )
         self._param_editor = editor
         self._param_layout.addWidget(editor)
+        self._i18n.bind_tree(editor)
 
     def _clear_param_editor(self) -> None:
         while self._param_layout.count():
@@ -699,6 +705,7 @@ class TranslationPage(WorkerPage):
         editor.clear_requested.connect(self._on_clear_override)
         self._prompt_editor = editor
         self._prompt_layout.addWidget(editor)
+        self._i18n.bind_tree(editor)
 
     def _clear_prompt_editor(self) -> None:
         while self._prompt_layout.count():
@@ -752,6 +759,7 @@ class TranslationPage(WorkerPage):
         editor.unlock_requested.connect(self._on_unlock_revision)
         self._revision_editor = editor
         self._revision_layout.addWidget(editor)
+        self._i18n.bind_tree(editor)
 
     def _clear_revision_editor(self) -> None:
         while self._revision_layout.count():

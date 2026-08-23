@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QThread
+from PySide6.QtCore import QSettings, Qt, QThread
 from PySide6.QtGui import QCloseEvent, QColor, QPalette
 from PySide6.QtWidgets import (
     QFrame,
@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from transrealm.adapters.protocol import ModelAdapter
+from transrealm.ui.i18n import LanguageManager
 from transrealm.ui.project_page import ProjectPage
 from transrealm.ui.settings_page import SettingsPage
 from transrealm.ui.theme import LIGHT_TOKENS, build_stylesheet
@@ -102,10 +103,12 @@ class MainWindow(QMainWindow):
         *,
         app_version: str,
         adapter_factory: Callable[[int], ModelAdapter] | None = None,
+        settings: QSettings | None = None,
     ) -> None:
         super().__init__()
+        self._i18n = LanguageManager(settings=settings, parent=self)
         self.setObjectName("main-window")
-        self.setWindowTitle("TransRealm")
+        self.setWindowTitle(self._i18n.tr("TransRealm"))
         self.setMinimumSize(960, 600)
         self.resize(1180, 720)
         self.setStyleSheet(build_stylesheet())
@@ -130,6 +133,7 @@ class MainWindow(QMainWindow):
             self._service_worker,
             db_path=db_path,
             app_version=app_version,
+            i18n=self._i18n,
         )
         self._project = ProjectPage(
             self._service_worker,
@@ -141,6 +145,7 @@ class MainWindow(QMainWindow):
             translation_worker=self._translation_worker,
             db_path=db_path,
             app_version=app_version,
+            i18n=self._i18n,
         )
 
         shell = MainShell(self)
@@ -178,6 +183,8 @@ class MainWindow(QMainWindow):
         shell.bind_tabs(tabs)
         self._tabs = tabs
         self.setCentralWidget(shell)
+        self._i18n.language_changed.connect(self._on_language_changed)
+        self._i18n.bind_tree(self)
 
         self._project.project_ready.connect(self._translation.set_project)
         self._project.project_settings_changed.connect(self._translation.set_project)
@@ -188,6 +195,12 @@ class MainWindow(QMainWindow):
 
         self._settings.refresh()
         self._project.refresh()
+
+    def _on_language_changed(self, language: str) -> None:
+        """Rebind newly-created workbench widgets after a language switch."""
+        del language
+        self.setWindowTitle(self._i18n.tr("TransRealm"))
+        self._i18n.bind_tree(self)
 
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
         if self._shutdown_workers():

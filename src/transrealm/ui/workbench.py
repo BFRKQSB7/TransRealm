@@ -148,6 +148,7 @@ class WorkbenchPromptEditor(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
 
         self._status = QLabel("", self)
+        self._status.setProperty("transrealm_i18n_dynamic", True)
         self._status.setWordWrap(True)
         layout.addWidget(self._status)
 
@@ -232,10 +233,12 @@ class WorkbenchRevisionEditor(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
 
         self._source_label = QLabel(self)
+        self._source_label.setProperty("transrealm_i18n_dynamic", True)
         self._source_label.setWordWrap(True)
         layout.addWidget(self._source_label)
 
         self._status = QLabel(self)
+        self._status.setProperty("transrealm_i18n_dynamic", True)
         self._status.setWordWrap(True)
         layout.addWidget(self._status)
 

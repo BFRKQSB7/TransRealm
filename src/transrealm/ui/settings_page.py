@@ -49,6 +49,7 @@ from transrealm.domain.project import MODE_AUTO, MODE_WORKBENCH, Project
 from transrealm.domain.prompt_override import PromptOverride
 from transrealm.domain.provider_connection import ProviderConnection
 from transrealm.domain.segment import SourceDocument
+from transrealm.ui.i18n import LanguageManager
 from transrealm.ui.page_base import WorkerPage
 from transrealm.ui.workbench import (
     WorkbenchParamEditor,
@@ -72,15 +73,35 @@ class SettingsPage(WorkerPage):
     reference does not resolve on this machine.
     """
 
-    def __init__(self, worker: ServiceWorker, *, db_path: Path, app_version: str) -> None:
+    def __init__(
+        self,
+        worker: ServiceWorker,
+        *,
+        db_path: Path,
+        app_version: str,
+        i18n: LanguageManager | None = None,
+    ) -> None:
         super().__init__(worker)
         self._db_path = db_path
         self._app_version = app_version
+        self._i18n = i18n or LanguageManager(parent=self)
 
         layout = QVBoxLayout(self)
 
         self._status = QLabel("", self)
         layout.addWidget(self._status)
+
+        language_form = QFormLayout()
+        self._language_combo = QComboBox(self)
+        self._language_combo.setObjectName("language-selector")
+        self._language_combo.addItem("English", "en")
+        self._language_combo.addItem("简体中文", "zh_CN")
+        self._language_combo.setProperty("transrealm_i18n_static_items", True)
+        language_index = self._language_combo.findData(self._i18n.current_language)
+        if language_index >= 0:
+            self._language_combo.setCurrentIndex(language_index)
+        language_form.addRow("Language", self._language_combo)
+        layout.addLayout(language_form)
 
         connection_form = QFormLayout()
         self._conn_name = QLineEdit(self)
@@ -124,6 +145,19 @@ class SettingsPage(WorkerPage):
         self._add_profile.clicked.connect(self._on_add_profile)
         self._delete_connection.clicked.connect(self._on_delete_connection)
         self._delete_profile.clicked.connect(self._on_delete_profile)
+        self._language_combo.currentIndexChanged.connect(self._on_language_changed)
+        self._i18n.language_changed.connect(self._sync_language_selection)
+        self._i18n.bind_tree(self)
+
+    def _on_language_changed(self, index: int) -> None:
+        language = self._language_combo.itemData(index)
+        if isinstance(language, str):
+            self._i18n.set_language(language)
+
+    def _sync_language_selection(self, language: str) -> None:
+        index = self._language_combo.findData(language)
+        if index >= 0 and index != self._language_combo.currentIndex():
+            self._language_combo.setCurrentIndex(index)
 
     def refresh(self) -> None:
         """Reload connections, profiles and credential availability."""

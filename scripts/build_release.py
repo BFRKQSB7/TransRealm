@@ -29,6 +29,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 SRC = REPO / "src"
 MIGRATIONS = SRC / "transrealm" / "migrations"
+I18N = SRC / "transrealm" / "ui" / "i18n"
 PYPROJECT = REPO / "pyproject.toml"
 LOCK = REPO / "requirements.lock"
 RUN_PY = REPO / "run.py"
@@ -79,7 +80,7 @@ def _bundle_dir(bundle: Path) -> Path:
 
 
 def _validate_bundle(bundle: Path) -> dict[str, object]:
-    """Verify the frozen bundle has the entry, migrations and Qt platform plugin."""
+    """Verify the frozen bundle has migrations, i18n resources and Qt plugins."""
     exe = bundle / f"{BUNDLE_NAME}.exe"
     if not exe.is_file():
         raise SystemExit(f"Frozen entry exe missing: {exe}")
@@ -92,6 +93,17 @@ def _validate_bundle(bundle: Path) -> dict[str, object]:
             f"Frozen migrations {len(frozen_migrations)} != source "
             f"{len(source_migrations)}; --add-data likely missing.",
         )
+    frozen_translations = sorted(
+        path for path in bundle.rglob("*.qm") if "i18n" in path.parts
+    )
+    source_translations = sorted(I18N.glob("*.qm"))
+    frozen_translation_names = sorted(path.name for path in frozen_translations)
+    source_translation_names = sorted(path.name for path in source_translations)
+    if frozen_translation_names != source_translation_names:
+        raise SystemExit(
+            f"Frozen translations {frozen_translation_names} != source "
+            f"{source_translation_names}; --add-data likely missing.",
+        )
     platform_plugins = sorted(bundle.rglob("qwindows.dll"))
     if not platform_plugins:
         raise SystemExit("Qt platform plugin platforms/qwindows.dll missing from bundle.")
@@ -99,6 +111,7 @@ def _validate_bundle(bundle: Path) -> dict[str, object]:
         "exe": str(exe.relative_to(bundle.parent)),
         "migration_files": len(frozen_migrations),
         "migration_ids": [p.name for p in frozen_migrations],
+        "translation_files": frozen_translation_names,
         "qt_plugins": {
             "platforms_qwindows": str(platform_plugins[0].relative_to(bundle)),
             "plugin_root": str(platform_plugins[0].parent.parent.relative_to(bundle)),
@@ -130,6 +143,7 @@ def _build(output: Path, work: Path) -> Path:
         "--workpath", str(work),
         "--specpath", str(work),
         "--add-data", f"{MIGRATIONS.resolve()}{os.pathsep}transrealm/migrations",
+        "--add-data", f"{I18N.resolve()}{os.pathsep}transrealm/ui/i18n",
         str(RUN_PY.resolve()),
     ]
     pyinstaller_main(argv)

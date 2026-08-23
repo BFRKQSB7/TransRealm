@@ -966,7 +966,7 @@ Task重新规划
 ## 17. v0.3 计划决策：`DEC-V03-PROJECT-STORAGE`
 
 - **状态：** proposed；不是已裁决实现方案，v0.2 不触发。
-- **门禁复核（2026-08-23）：** 当前 `pending_decision: none`，明确保留本节点，不作提前架构裁决。现有推荐只作为待比较方向；不得跳过“保留全局库并单 Project 克隆/ID 重映射”“一 Project 一库”“全局索引库 + Project 库”三案的现场取证、兼容性、安全和迁移/回滚成本比较。默认仍在 V02-T05 完成后进入 V03-T00；当前开发恢复点为 `V02-T01-M02`。
+- **门禁复核（2026-08-23）：** 当前 `pending_decision: none`，明确保留本节点，不作提前架构裁决。现有推荐只作为待比较方向；不得跳过“保留全局库并单 Project 克隆/ID 重映射”“一 Project 一库”“全局索引库 + Project 库”三案的现场取证、兼容性、安全和迁移/回滚成本比较。默认仍在 V02-T05 完成后进入 V03-T00；当前开发恢复点为 `V02-T01-M03`。
 - **触发点：** V02-T05 完成后进入 V03-T00，或用户明确要求提前进行 Project 工作区重构。
 - **问题：** 统一全局多 Project SQLite、单 Project 容器、应用级配置、受管工作区、外部开放目录、`.aiproject` 导入和旧库迁移。
 - **推荐：** 一次一个活动 `ProjectSession` 对应一个 Project SQLite；受管工作区与开放目录共享 Project 契约；`.aiproject` 是传输快照，导入后安装为可写工作区；界面语言/最近 Project 等应用配置独立保存；凭据继续只保存引用。
@@ -983,11 +983,19 @@ Task重新规划
 
 ## 19. v0.2 UI M02 实施门禁：`V02-T01-M02`
 
-- **状态：** completed；当前 HEAD 为 M01 checkpoint `f4283870e6fa7b46d2090ec56ed7f4a9d3ecc8f9`，M02 改动尚未 checkpoint；`pending_decision: none`。
+- **状态：** completed；M02 checkpoint 为 `165c87e4377d7e1ace119991df3e5ddc541de61c`，当前恢复指针已推进至 `V02-T01-M03`；`pending_decision: none`。
 - **Reality Check：** 2026-08-23 **FIT**。M01 page seam、锁定环境和授权范围满足 M02；实现只落在 `src/transrealm/ui/**`、M02 测试和必要状态/契约 Markdown，无 REPLAN。
 - **实现边界：** 主窗口新增 header/三 Tab scroll shell、light token/QSS、surface palette；`MainShell` 保留已发现的旧 `QTabWidget` 查询/导航入口；Application/Domain/Infrastructure、SQLite/migration、worker 线程边界、页面业务行为均未改变；按钮前景色也纳入 token。
 - **门禁证据：** M02 新增测试 3 passed；受影响旧回归 134 passed；全量 pytest 1341 passed/5 skipped；Ruff clean；mypy 80 source files clean；pip check clean；原生 Windows Qt 100%/150% 可见与关闭 smoke PASS；原生 150% 截图与离屏 100%/150% 目标截图完成人工视觉检查；UI boundary/秘密/本机路径扫描和 `git diff --check` 通过。未构建候选、未操作真实模型或用户数据。
 - **Review 处理：** 首次独立只读 Review 因证据尚未同步到状态文档给出 `REJECT`，并提出未发现的 `centralWidget()` 扩展调用风险；已同步 GUI 证据、补齐已发现旧 tab API 兼容代理并纳入测试。最终复审为 `APPROVE-WITH-MINORS`，无 BLOCKER/SHOULD-FIX；MINOR 的“工作树干净”文案已修正。M02 可创建仅含自身范围文件的本地 checkpoint。
+- **Checkpoint：** `165c87e4377d7e1ace119991df3e5ddc541de61c`，作者 `BFRKQSB7 <226671264+BFRKQSB7@users.noreply.github.com>`，仅含 M02 代码/测试与必要文档；未 push/merge/tag/Release。
+
+## 20. v0.2 UI M03 Reality Check：`V02-T01-M03`
+
+- **状态：** completed；恢复基线/rollback=`165c87e4377d7e1ace119991df3e5ddc541de61c`；当前 branch=`master`；`pending_decision: none`；checkpoint 尚待创建。
+- **判定：** **FIT**（2026-08-23）。M02 主壳/page seam 与 M03 目标一致；现场无 `QTranslator`、`QSettings` 或 i18n 资源目录，PySide6 6.11.1 已提供 Qt 原生 i18n/settings 与 `lrelease`；现有 PyInstaller 只收集 migrations，翻译资源收集可在已批准必要打包路径内补齐。
+- **边界：** 使用 Qt 自带能力和仓库内 `.ts/.qm` 资源；不引入第三方 i18n/运行依赖，不改 schema/Project 数据格式/Application/Domain/Infrastructure/业务服务/worker 线程边界，不提前执行 M04 发布候选或全量视觉 Gate。无 ADAPT/REPLAN。
+- **实施与门禁证据：** `LanguageManager`、en/zh_CN `.ts/.qm`、Settings 语言选择器、运行时重翻译/QSettings 持久化、动态 Workbench editor 绑定和 PyInstaller i18n 收集/冻结守卫已实现；新增测试 3 passed，受影响回归 137 passed，全量 pytest 1344 passed/5 skipped，Ruff/mypy/pip check clean；原生 Windows Qt English→中文切换与重启持久化、100%/150% 截图、关闭 smoke PASS；边界/秘密/路径检查 clean。独立 Review `APPROVE`，无 BLOCKER/SHOULD-FIX/MINOR。
 - **否决：** dirty 现场重建候选（不可复现且可假绿）；把 lock 降为本机版本（掩盖漂移）；豁免全量失败（降低门禁）；把发布链修复混入页面拆分（范围和回滚边界失真）。
 - **兼容性/安全：** 无 API、UI、schema、Project、凭据或用户数据变化；旧 artifact 原样保留。v0.2 候选发布前必须增加 `git_dirty=false` 与 version/目标 commit/hash 一致性门禁；该安全加固不阻塞 M01 源码 checkpoint，但阻塞候选签发。
 - **迁移/回滚：** 无数据 migration。隔离环境可废弃重建；artifact 归档以 hash 验证并可移回原路径。禁止删除 artifact 或覆盖既有用户数据。
