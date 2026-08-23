@@ -8,6 +8,7 @@
     <message><source>Settings</source><translation>Settings</translation></message>
     <message><source>Project</source><translation>Project</translation></message>
     <message><source>Translation</source><translation>Translation</translation></message>
+    <message><source>Auto overview</source><translation>Auto overview</translation></message>
     <message><source>Language</source><translation>Language</translation></message>
     <message><source>English</source><translation>English</translation></message>
     <message><source>简体中文</source><translation>简体中文</translation></message>

@@ -1059,13 +1059,23 @@ Task重新规划
 
 ## 27. v0.2 Connection/Profile M02 Reality Check：`V02-T03-M02`
 
-- **状态：** completed；恢复基线/rollback=`1ecca03e6187f157c9a1051dbcc78abc43869590`；当前 branch=`master`；`pending_decision: none`；Reality Check **FIT**；checkpoint 待创建。
+- **状态：** completed；恢复基线/rollback=`1ecca03e6187f157c9a1051dbcc78abc43869590`；当前 branch=`master`；`pending_decision: none`；Reality Check **FIT**；checkpoint=`17b865be808aba935e5118a56eea9338512de84c`。
 - **目标边界：** 在已 checkpoint 的 Settings UI 内补齐 Connections/Profiles 分组与可操作反馈，复用既有 service/worker 错误与 credential availability 语义；高级 Profile 字段保持默认折叠。
 - **现场结论：** `SettingsPage` 目前把 Connection/Profile 表单、列表、删除和 credential status 纵向铺开，成功状态与错误状态共用一个 QLabel，服务层已提供引用保护删除异常、校验异常和缺失凭据 hint；缺口是分组层级、集中状态 banner 和可操作反馈的 UI/验收证据。
 - **M02 allowed paths：** `src/transrealm/ui/settings_page.py`、必要的 `src/transrealm/ui/i18n/**` 资源、`tests/test_v02_t03_m02.py`、必要状态/契约 Markdown；不改 service/repository/domain/schema/migration/依赖/真实用户数据。
 - **验收与硬约束：** 分组和状态反馈在中英文/100%/150% 下无截断/重叠；成功/校验失败/引用保护/缺 credential reference 均有可定位下一动作的提示；不泄露原始 API Key，不改变删除 RESTRICT、`env:`/`wincred:` reference、历史 Attempt snapshot、测试连接只用户触发和真实端点禁用边界；新增 M02 测试、指定旧回归、全量质量和独立只读 Review 通过。
 - **完成证据：** 新增 `tests/test_v02_t03_m02.py` **1 passed**；指定旧回归 + M01/M02/UI/i18n 回归 **164 passed**；锁定环境全量 pytest **1371 passed, 5 skipped**；Ruff clean；mypy src **81 source files no issues**；pip check clean；Windows Qt 隔离临时 DB English/zh_CN × 100%/150% 与高级展开截图无截断/重叠、进程关闭 PASS；资源/秘密/路径与 `git diff --check` clean；未改 i18n/service/repository/domain/schema/migration/依赖，未调用真实端点或操作真实用户数据。独立 Review 首轮 **REQUEST-CHANGES**（1 SHOULD-FIX：删除成功未更新 status banner），已补成功反馈与回归测试；复核最终 **APPROVE**，BLOCKER/SHOULD-FIX/MINOR none。
-- **下一步：** 仅暂存 V02-T03-M02 allowed paths 创建本地 checkpoint；提交后复核作者、文件清单、HEAD、branch、状态指针和工作树，再推进下一个依赖满足的 V02-T03 Milestone，不执行发布动作。
+- **checkpoint：** 已创建 `17b865be808aba935e5118a56eea9338512de84c`（`feat(ui): group connection profile settings`），作者 `BFRKQSB7 <226671264+BFRKQSB7@users.noreply.github.com>`；5 个文件均在 M02 allowed paths，提交后 `master` 工作树干净，未 push/merge/tag/Release；当前推进至 V02-T04-M01。
+
+## 28. v0.2 Translation/Workbench M01 Reality Check：`V02-T04-M01`
+
+- **状态：** verification；恢复基线/rollback=`17b865be808aba935e5118a56eea9338512de84c`；当前 branch=`master`；`pending_decision: none`；Reality Check **FIT**；全部门禁通过，checkpoint 待创建。
+- **目标边界：** 形成 Auto 模式最短旅程的总览层级：项目/文档、active Profile 或配置引导、Translate/Cancel/Export、进度与成功/失败/取消状态可见且可恢复；Workbench 列表/筛选、Revision/history/lock/retry 和恢复/长文本 Gate 留给 M02–M04。
+- **现场结论：** `TranslationPage` 已通过 `ServiceWorker`/`TranslationWorker` 复用 Project/Run/Profile seam，Auto/配置缺失/取消/进度/导出行为已存在；M01 仅需 UI 分组/层级与测试/GUI 证据，不改 Application/Domain/Infrastructure、schema/migration、Run/Attempt/Revision/重试/锁定契约或依赖。
+- **M01 allowed paths：** `src/transrealm/ui/translation_page.py`、必要的 `src/transrealm/ui/i18n/**` 资源、`tests/test_v02_t04_m01.py`、必要状态/契约 Markdown；不改 service/repository/domain/schema/migration/依赖/真实用户数据。
+- **验收与硬约束：** Auto 模式不提前展开 Workbench 内容；大量 Segment 不阻塞，取消/关闭/缺配置可解释，失败状态不吞；中英文/100%/150% GUI 无截断/重叠；新增 M01 测试、T04 相关旧状态机回归、全量质量和独立只读 Review 通过；自动旅程仅使用 fake adapter，不调用真实端点。
+- **完成证据：** `tests/test_v02_t04_m01.py` 2 passed；T04 指定旧回归 114 passed；全量 pytest 1373 passed、5 skipped；Ruff clean；mypy src 81 source files clean；pip check clean；Windows Qt 隔离 English/zh_CN × 100%/150% GUI 截图无截断/重叠且进程关闭；未改 service/repository/domain/schema/migration/依赖，未调用真实端点或操作真实用户数据；独立只读 Review 首轮指出的两处过时状态事实已修正，复核 **APPROVE**，无 BLOCKER/SHOULD-FIX/NICE-TO-HAVE。
+- **下一步：** 创建仅含 V02-T04-M01 的本地 checkpoint；提交后推进至依赖满足的 M02，不提前实现后续 M03/M04 或发布动作。
 
 ---
 

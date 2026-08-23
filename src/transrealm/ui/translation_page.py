@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
     QFormLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -106,13 +107,18 @@ class TranslationPage(WorkerPage):
         self._workbench_progress: list[SegmentProgress] = []
 
         layout = QVBoxLayout(self)
+        overview_section = QGroupBox("Auto overview", self)
+        overview_section.setObjectName("auto-overview-section")
+        overview_layout = QVBoxLayout(overview_section)
         self._status = QLabel("No document imported.", self)
-        layout.addWidget(self._status)
+        self._status.setObjectName("status-banner")
+        self._status.setWordWrap(True)
+        overview_layout.addWidget(self._status)
 
         self._mode_label = QLabel("Mode: auto", self)
-        layout.addWidget(self._mode_label)
+        overview_layout.addWidget(self._mode_label)
         self._active_profile_label = QLabel("", self)
-        layout.addWidget(self._active_profile_label)
+        overview_layout.addWidget(self._active_profile_label)
 
         mode_row = QHBoxLayout()
         mode_row.addWidget(QLabel("Interaction mode:", self))
@@ -121,13 +127,13 @@ class TranslationPage(WorkerPage):
         self._mode_switch.addItem("Workbench", MODE_WORKBENCH)
         self._mode_switch.setProperty("transrealm_i18n_static_items", True)
         mode_row.addWidget(self._mode_switch)
-        layout.addLayout(mode_row)
+        overview_layout.addLayout(mode_row)
 
         doc_row = QHBoxLayout()
         doc_row.addWidget(QLabel("Document:", self))
         self._document_combo = QComboBox(self)
         doc_row.addWidget(self._document_combo)
-        layout.addLayout(doc_row)
+        overview_layout.addLayout(doc_row)
 
         form = QFormLayout()
         self._translate = QPushButton("Translate", self)
@@ -137,16 +143,16 @@ class TranslationPage(WorkerPage):
         form.addRow(self._translate)
         form.addRow(self._cancel)
         form.addRow(self._export)
-        layout.addLayout(form)
+        overview_layout.addLayout(form)
 
         self._config_missing_label = QLabel("", self)
         self._config_missing_label.setWordWrap(True)
         self._config_missing_label.hide()
-        layout.addWidget(self._config_missing_label)
+        overview_layout.addWidget(self._config_missing_label)
 
         self._set_active_profile = QPushButton("Set active profile…", self)
         self._set_active_profile.hide()
-        layout.addWidget(self._set_active_profile)
+        overview_layout.addWidget(self._set_active_profile)
 
         # Workbench surface (P1-T03-M02): real Segment/Attempt progress, the
         # active Profile's capability, and a parameter editor presenting only
@@ -172,12 +178,13 @@ class TranslationPage(WorkerPage):
         self._revision_layout.setContentsMargins(0, 0, 0, 0)
         workbench_layout.addWidget(self._revision_host)
         self._workbench_container.hide()
+        layout.addWidget(overview_section)
         layout.addWidget(self._workbench_container)
 
         self._progress = QProgressBar(self)
         self._progress.setRange(0, 0)
         self._progress.setValue(0)
-        layout.addWidget(self._progress)
+        overview_layout.addWidget(self._progress)
 
         self._translate.clicked.connect(self._on_translate)
         self._cancel.clicked.connect(self._on_cancel)

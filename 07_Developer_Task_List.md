@@ -68,7 +68,7 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 
 ### V02-T03 — Connection/Profile 管理体验
 
-- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P1 用户可见；Medium；in_progress（M02 当前）。依赖 V02-T01、V02-T02，已由 `e2560bff53e90f4094dcc97a00c5fc32ae7d7e5b` 满足；M01 checkpoint=`1ecca03e6187f157c9a1051dbcc78abc43869590`。
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P1 用户可见；Medium；completed。依赖 V02-T01、V02-T02，已由 `e2560bff53e90f4094dcc97a00c5fc32ae7d7e5b` 满足；M01 checkpoint=`1ecca03e6187f157c9a1051dbcc78abc43869590`，M02 checkpoint=`17b865be808aba935e5118a56eea9338512de84c`。
 - **Reality Audit：** REFINE——保留现有领域/安全校验，补齐编辑、分组和可操作反馈，不新建配置系统。
 - **目标：** Connection/Profile 新建、编辑、删除、引用保护和重开恢复；普通字段默认简洁，高级 capability/参数折叠显示。
 - **非目标：** 不保存原始 API Key、不自动调用真实端点、不增加原生多厂商 API、代理 schema 或模型下载器。
@@ -81,11 +81,12 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 - **M01 checkpoint：** `1ecca03e6187f157c9a1051dbcc78abc43869590`，作者 `BFRKQSB7 <226671264+BFRKQSB7@users.noreply.github.com>`，9 个文件均在 allowed paths，未 push/merge/tag/Release；当前进入 M02。
 - **M02 当前范围：** 在 Settings UI 内以 Connections/Profiles 分组重组现有控件，并把成功、校验失败、引用保护删除失败、缺少 credential reference 的既有结果呈现为可定位下一动作的状态反馈；高级 Profile 设置仍默认折叠。只改 Settings UI、必要 i18n、M02 测试和状态/契约 Markdown；不改 service/repository/domain/schema/migration/依赖、删除/校验/凭据语义、历史 Attempt snapshot、真实端点或真实用户数据。
 - **M02 Reality Check（2026-08-23）：** **FIT**——现有 service/worker seam 已提供结果与错误语义，`SettingsPage` 仅缺结构化分组和集中反馈展示；可在 UI 层最小重组，不需要新抽象、迁移、依赖或公共契约变更。无 ADAPT/REPLAN。
-- **M02 完成证据（2026-08-23）：** Settings UI 已以 Connections/Profiles 分组重组现有控件，集中 status banner 呈现新增/编辑/删除成功、校验失败、引用保护和缺 credential reference 的下一动作；删除成功分别显示 Connection/Profile deleted，Profile advanced 仍默认折叠。新增 `tests/test_v02_t03_m02.py` **1 passed**；指定旧回归 + M01/M02/UI/i18n 回归 **164 passed**；锁定环境全量 pytest **1371 passed, 5 skipped**；Ruff/mypy/pip check/git diff check clean；Windows Qt 隔离临时 DB English/zh_CN × 100%/150% 与高级展开截图无重叠/截断、进程关闭 PASS；未改 i18n/service/repository/domain/schema/migration/依赖，未调用真实端点或操作真实用户数据。独立 Review 首轮 SHOULD-FIX（删除成功未更新 status banner）已修复并复核 **APPROVE**，无 BLOCKER/SHOULD-FIX/MINOR。M02 checkpoint 待创建，Task 仍为 `in_progress`。
+- **M02 完成证据（2026-08-23）：** Settings UI 已以 Connections/Profiles 分组重组现有控件，集中 status banner 呈现新增/编辑/删除成功、校验失败、引用保护和缺 credential reference 的下一动作；删除成功分别显示 Connection/Profile deleted，Profile advanced 仍默认折叠。新增 `tests/test_v02_t03_m02.py` **1 passed**；指定旧回归 + M01/M02/UI/i18n 回归 **164 passed**；锁定环境全量 pytest **1371 passed, 5 skipped**；Ruff/mypy/pip check/git diff check clean；Windows Qt 隔离临时 DB English/zh_CN × 100%/150% 与高级展开截图无重叠/截断、进程关闭 PASS；未改 i18n/service/repository/domain/schema/migration/依赖，未调用真实端点或操作真实用户数据。独立 Review 首轮 SHOULD-FIX（删除成功未更新 status banner）已修复并复核 **APPROVE**，无 BLOCKER/SHOULD-FIX/MINOR。M02 checkpoint=`17b865be808aba935e5118a56eea9338512de84c`。
+- **Task 完成证据：** M01/M02 已分别 checkpoint，Connection/Profile CRUD、重开一致性、引用保护/秘密边界、普通/高级字段层级、可操作反馈、中英文/DPI GUI、旧 Profile/Run 兼容和全量质量门禁均通过；V02-T03 Task 标记 `completed`，对外发布动作仍不在授权范围。
 
 ### V02-T04 — Translation/Workbench 体验
 
-- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P1 核心体验；Medium；pending。依赖 V02-T02、V02-T03。
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P1 核心体验；Medium；in_progress（M01 已完成，checkpoint 待记录）。依赖 V02-T02、V02-T03；V02-T03 checkpoint=`17b865be808aba935e5118a56eea9338512de84c`。
 - **Reality Audit：** REFINE——复用既有 Run/Attempt/Revision 服务，重组交互；不复制 orchestrator/状态机。
 - **目标：** Auto 最短旅程；Workbench 提供 Segment 状态过滤、源文/译文双栏、Revision 历史/current 切换、锁定、失败详情和受控重试。
 - **非目标：** 不做多候选、QC Engine、节点式 Workflow、RAG/TM 或新重试语义。
@@ -93,6 +94,10 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 - **异常/视觉验收：** 大量 Segment 不阻塞；取消/关闭/断网/timeout/retry/重启可解释；未保存草稿不静默丢失；各状态和双栏层级在中英文/DPI 下清晰。
 - **Milestone：** M01 Auto 总览；M02 Workbench 列表/筛选；M03 Revision/history/lock/retry；M04 恢复/长文本/视觉 Gate。
 - **完成条件：** 核心旅程、旧状态机回归、全量质量和独立视觉/行为 Review 通过。
+- **M01 Reality Check（2026-08-23）：** **FIT**——既有 TranslationPage/TranslationWorker、ProjectService/TranslationRunService 已提供 Auto 的 project/document/active Profile/进度/取消/导出 seam；M01 只补 Translation UI/测试/必要 i18n 的 Auto 总览层级与反馈，不改 service/domain/schema/migration、Run/Attempt/Revision/重试/锁定契约、真实端点或依赖。无 ADAPT/REPLAN。
+- **M01 当前范围/验收：** Auto 模式清晰呈现 active Profile/配置引导、文档、Translate/Cancel/Export、进度和成功/失败/取消状态；Workbench 列表/筛选、Revision/history/lock/retry 和恢复/长文本留给后续 M02–M04；大量 Segment 不阻塞，关闭/取消/缺配置可恢复，中英文/DPI、旧状态机回归、全量质量、GUI 与独立 Review 必须通过。
+- **M01 完成证据：** 新增 `tests/test_v02_t04_m01.py` **2 passed**；T04 指定旧状态机/GUI 回归 **114 passed**；全量 pytest **1373 passed, 5 skipped**；Ruff clean；mypy src **81 source files no issues**；pip check clean；Windows Qt 隔离 English/zh_CN × 100%/150% Translation 截图与关闭 smoke PASS，无截断/重叠；未改 service/repository/domain/schema/migration/依赖，未调用真实端点或操作真实用户数据；独立只读 Review 首轮要求修正两处过时状态文档事实，已同步并复核 **APPROVE**，无 BLOCKER/SHOULD-FIX/NICE-TO-HAVE。
+- **M01 checkpoint：** 门禁已通过，checkpoint commit 待创建；随后自动进入 M02 Reality Check。
 
 ### V02-T05 — v0.2 Release Candidate Gate
 

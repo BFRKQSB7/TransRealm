@@ -8,6 +8,7 @@
     <message><source>Settings</source><translation>设置</translation></message>
     <message><source>Project</source><translation>项目</translation></message>
     <message><source>Translation</source><translation>翻译</translation></message>
+    <message><source>Auto overview</source><translation>自动总览</translation></message>
     <message><source>Language</source><translation>语言</translation></message>
     <message><source>English</source><translation>英语</translation></message>
     <message><source>简体中文</source><translation>简体中文</translation></message>
