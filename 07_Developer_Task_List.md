@@ -1,6 +1,89 @@
 # 译境 / TransRealm
 
-# Developer Task List V4
+# Developer Task List V5
+
+## 0. v0.2 / v0.3 当前批准任务
+
+v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成前不启动 Phase 2 的 RAG、TM 或 Character Data。v0.3 只在 `DEC-V03-PROJECT-STORAGE` 裁决后实施 Project 工作区与容器 GUI。
+
+无人值守代码阶段禁止创建、切换或删除分支，始终保持在用户当前分支；按 Milestone 形成可恢复本地 checkpoint，但本地 commit、push、merge、tag、Release 均按 `DEVELOPMENT_STATE.md` 的显式授权执行。自动测试只使用临时数据库和本地 fake endpoint，不得读取或修改真实 `~/.transrealm`、仓库内 `x.db`、用户源文件或付费模型。
+
+统一视觉门禁：中文/英文；1280×720@100% 与 1920×1080@150%；主壳、Settings、Project、Auto、Workbench、空状态、错误状态和运行中禁用状态。结构断言、实际交互、截图和独立视觉 Review 缺一不可；不得用逐像素相等作为跨 Qt 版本的唯一门禁。
+
+### V02-T00 — v0.2 事实基线与计划冻结
+
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0 planning；P0 Governance；Low；completed（2026-08-22，Markdown-only）。
+- **base_commit：** `1542291ca43dd17c874b18d3c109ec34b49ae463`。
+- **Reality Audit：** REFINE——v0.1 功能和发布事实保留；旧 state frontmatter 的 `3ef991d`/dirty/P1-T05 当前指针失真，必须重置。
+- **目标：** 冻结 v0.2/v0.3 范围、依赖、视觉门禁、授权边界和下一 Task；使唯一交接入口与 Git 事实一致。
+- **非目标：** 不改源码、测试、脚本、配置、依赖或 artifact；不运行会写缓存的质量命令；不创建、切换或删除分支，不创建外部资源；本地 planning checkpoint 仅按当前状态授权执行。
+- **allowed_paths：** `01`、`02`、`03`、`06`、`07`、`08`、`09`、`DEVELOPMENT_STATE.md`。
+- **完成条件：** 权威文档一致声明 v0.2 优先、V02-T01 保持 `proposed`/代码未授权、`DEC-V03-PROJECT-STORAGE` 延后至 v0.3；Git diff 仅为 Markdown。
+
+### V02-T01 — UI 基础、视觉系统与中英文
+
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P1 用户可见；Medium；proposed（代码未授权，规划文档尚未形成可执行 commit）。
+- **base_commit：** `1542291` + 本次 Markdown 计划；代码开工前以实际 planning commit 重写完整 hash。
+- **Reality Audit：** SPLIT——页面拆分、主题、主壳、i18n 和视觉 Gate 分成垂直 Milestone，避免一次性重写 UI。
+- **目标：** 保持 Application/Domain/Infrastructure 契约，建立清晰、可维护、可本地化的桌面层和一致视觉语言。
+- **非目标：** 不改 schema、Project/容器格式、翻译状态机、Prompt、模型协议；不引入第三方 UI 框架、暗色主题或动画系统。
+- **现场：** `MainWindow` 720×560 默认 Qt 三 Tab；`ui/pages.py` 约 1,600 行；英文硬编码；无 `QTranslator`/语言持久化。
+- **硬约束：** UI 只调用 Application Service；worker/SQLite 线程边界不变；拆分后保留兼容 re-export；语言切换不改变业务数据和 Run；英文为缺失翻译回退；翻译资源进入冻结包。
+- **修改范围上限：** `src/transrealm/ui/**`、必要 UI 资源和打包收集、V02-T01 测试、受影响文档；无 migration/新运行依赖。
+- **兼容性基线：** P0-T08、P1-T03、P1-T04 UI/worker/关闭恢复测试和现有程序化页面入口。
+- **异常/视觉验收：** 缺资源/非法语言值安全回退；150% DPI 无截断；错误不吞；冻结场景矩阵、Tab/焦点、disabled/focus/error 状态通过独立视觉 Review。
+- **Milestone：** M01 页面职责拆分且行为不变；M02 主壳/导航/token/浅色主题；M03 Qt i18n/运行时切换/持久化/打包；M04 全量回归、截图矩阵和独立 Review。
+- **完成条件：** 旧 UI 回归、全量 pytest/Ruff/mypy、视觉 Gate 和文档同步全部通过。
+
+### V02-T02 — Project 生命周期与六格式 GUI
+
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P0 用户数据；High；pending。依赖 V02-T01。
+- **Reality Audit：** SPLIT——六格式 UI 是既有服务接线；Project 删除是高风险数据操作，分别实现后做联合 Gate。
+- **目标：** GUI 暴露 TXT/JSON/SRT/ASS/SSA/VTT 导入/翻译/保真导出，并提供可恢复的 Project 删除。
+- **非目标：** 不接 `.aiproject`/开放目录 GUI；不改变 format metadata/保真契约；不迁移为一 Project 一库。
+- **硬约束：** 按 SourceDocument.format 分派且保留扩展名；失败不覆盖目标。删除前一致性备份；运行中 Run/有效 processing lease 拒绝；显示从属摘要并输入 Project 名确认；单事务删除；不删除外部文件。
+- **修改范围上限：** Project/Import/Export Application Service、Project Repository 最小删除能力、UI、测试和文档；若需要 migration 则 REPLAN。
+- **安全/异常验收：** 备份失败、取消、并发运行、事务故障均零删除；其他 Project/全局配置不受影响；备份可恢复。六格式分别完成 GUI fake-endpoint 旅程和 P1-T01 保真矩阵。
+- **Milestone：** M01 六格式通用 GUI；M02 删除服务/备份/故障测试；M03 删除 UI/运行保护；M04 联合 GUI/视觉/回归 Review。
+- **完成条件：** 数据完整性、高风险独立 Review、全量质量命令和视觉 Gate 通过。
+
+### V02-T03 — Connection/Profile 管理体验
+
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P1 用户可见；Medium；pending。依赖 V02-T01，默认在 V02-T02 后串行执行。
+- **Reality Audit：** REFINE——保留现有领域/安全校验，补齐编辑、分组和可操作反馈，不新建配置系统。
+- **目标：** Connection/Profile 新建、编辑、删除、引用保护和重开恢复；普通字段默认简洁，高级 capability/参数折叠显示。
+- **非目标：** 不保存原始 API Key、不自动调用真实端点、不增加原生多厂商 API、代理 schema 或模型下载器。
+- **硬约束：** 凭据仅 `env:`/`wincred:`；历史 Attempt snapshot 不改；删除 RESTRICT；测试连接只由用户触发，自动矩阵使用 fake server。
+- **验收：** endpoint/timeout/retry/model/default params/capability 修改后重开一致；非法值不落库；提示不泄密；中英文和视觉矩阵通过。
+- **完成条件：** 配置 CRUD、秘密边界、旧 Profile/Run 兼容、全量质量和 GUI Gate 通过。
+
+### V02-T04 — Translation/Workbench 体验
+
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P1 核心体验；Medium；pending。依赖 V02-T02、V02-T03。
+- **Reality Audit：** REFINE——复用既有 Run/Attempt/Revision 服务，重组交互；不复制 orchestrator/状态机。
+- **目标：** Auto 最短旅程；Workbench 提供 Segment 状态过滤、源文/译文双栏、Revision 历史/current 切换、锁定、失败详情和受控重试。
+- **非目标：** 不做多候选、QC Engine、节点式 Workflow、RAG/TM 或新重试语义。
+- **硬约束：** 人工/locked current 不被自动覆盖；运行中切换继续拒绝；Revision 不覆盖；重试沿用 retryable/fencing；UI 不查库。
+- **异常/视觉验收：** 大量 Segment 不阻塞；取消/关闭/断网/timeout/retry/重启可解释；未保存草稿不静默丢失；各状态和双栏层级在中英文/DPI 下清晰。
+- **Milestone：** M01 Auto 总览；M02 Workbench 列表/筛选；M03 Revision/history/lock/retry；M04 恢复/长文本/视觉 Gate。
+- **完成条件：** 核心旅程、旧状态机回归、全量质量和独立视觉/行为 Review 通过。
+
+### V02-T05 — v0.2 Release Candidate Gate
+
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P0 Release-blocking；High；pending。依赖 V02-T01 至 T04。
+- **Reality Audit：** REFINE——复用 P1-T05 并增加视觉/i18n/六格式 GUI/删除恢复门禁。
+- **目标：** 形成可定位、可恢复、可人工签核的 Windows 11 v0.2 候选。
+- **硬约束：** 从 clean commit 构建，manifest `git_dirty=false` 且 commit==HEAD；中英文资源、Qt 插件和 migration 全收集；自动旅程仅 fake endpoint；未经授权不 push/tag/Release。
+- **Gate：** 全量 pytest/Ruff/mypy、candidate hygiene、六格式冻结 GUI、删除备份恢复、Connection/Profile、Auto/Workbench、中英文+DPI 截图、旧 v0.1 数据升级、zip/manifest/hash、干净 Windows 启动/关闭/清理、独立 Review。
+- **完成条件：** release-blocking 项全部布尔通过、证据归档且无 P0/P1；AV、真实端点、正式发布缺外部环境时保持未通过或提交用户明确裁决。
+
+### V03-T00 — `DEC-V03-PROJECT-STORAGE` 决策门禁
+
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5B / v0.3.0 planning；P0 Architecture；High；proposed。默认依赖 V02-T05，只做决策与文档。
+- **问题：** GUI 全局 SQLite 可含多个 Project，而开放目录/`.aiproject` 要求数据库内恰有一个 Project；必须统一 ProjectSession、应用配置、受管目录、导入语义和旧库迁移。
+- **不可变约束：** 不丢数据；旧库先备份并保留只读恢复点；六格式载体、Revision/current/lock、Attempt、Profile/Connection 和秘密边界不退化；不原地编辑 `.aiproject`；不静默删除外部文件。
+- **推荐方向：** 一次一个活动 ProjectSession + 一 Project 一 SQLite 工作区；应用级语言/最近 Project 独立保存；`.aiproject` 导入可写工作区；旧库按关联闭包拆分并逐库验证。
+- **完成条件：** 输出唯一推荐/否决理由、迁移/回滚、portable/data-dir、Application/UI seam 和验收矩阵；裁决后才创建 V03-T01，未裁决不得写容器 GUI/旧库拆分代码。
 
 ## 1. Task规范
 
@@ -24,7 +107,7 @@
 
 任务单模板与风险/例外规则以 `09_Unattended_Development_Governance.md` 为准；本文件不记录即时工作树、测试数量或当前指针。
 
-状态使用 `pending / in_progress / blocked / verification / completed`；Milestone 的 `ready` 和 Reality Check 结论只记录在 `DEVELOPMENT_STATE.md`。一个 Task 只完成一组内聚的用户能力，不把后续功能顺手扩入当前 Task。
+状态使用 `proposed / pending / in_progress / blocked / verification / completed`；`proposed` 表示方案已记录但尚未取得执行授权或可复现基线，不得自动开工。Milestone 的 `ready` 和 Reality Check 结论只记录在 `DEVELOPMENT_STATE.md`。一个 Task 只完成一组内聚的用户能力，不把后续功能顺手扩入当前 Task。
 
 ### 1.1 执行解释规则
 
@@ -42,7 +125,7 @@
 
 `07` 定义稳定 Task，`DEVELOPMENT_STATE.md` 定义当前正在执行的小目标和恢复检查点。
 
-Agent 收到 `DEVELOPMENT_STATE.md` 后，无真实阻塞时自动读取当前 Task、加载指定文档并开始，不需要再次请求开工授权。每个 Milestone 在写测试或代码前必须按 `06_AI_Development_Guide.md` 完成 Reality Check，并在状态文件记录 `FIT`、`ADAPT` 或 `REPLAN`。
+Agent 收到 `DEVELOPMENT_STATE.md` 后，只有当前状态为 `ready`/`in_progress`/`verification`、`code_authorized: true` 且授权范围覆盖目标文件时，才自动读取当前 Task、加载指定文档并开始。`proposed`、`code_authorized: false` 或仅授权 Markdown 时不得写测试、代码、脚本或配置。每个 Milestone 在写测试或代码前必须按 `06_AI_Development_Guide.md` 完成 Reality Check，并在状态文件记录 `FIT`、`ADAPT` 或 `REPLAN`。
 
 - `FIT`：直接执行。
 - `ADAPT`：硬约束和验收不变，执行 Agent 自主调整内部实现并记录证据。
@@ -82,6 +165,13 @@ P0-T01 Project/SQLite/Migration 基础
   -> P1-T04 Project Profile 选择与基础 Glossary
   -> P1-T03 自动模式与工作台模式
   -> P1-T05 V1.0 Release Candidate Gate
+  -> V02-T00 v0.2 事实基线与计划冻结
+  -> V02-T01 UI 基础与中英文
+  -> V02-T02 Project 生命周期与六格式 GUI
+  -> V02-T03 Connection/Profile 管理体验
+  -> V02-T04 Translation/Workbench 体验
+  -> V02-T05 v0.2 Release Candidate Gate
+  -> V03-T00 Project 存储决策门禁
 ```
 
 本文件预先定义已批准依赖链中的全部 Task 与垂直 Milestone。`07` 只负责稳定规划、范围、依赖和验收；`DEVELOPMENT_STATE.md` 是当前 Task、当前 Milestone、真实工作区、测试证据和恢复动作的唯一运行时来源。新增或调整未来规划不得自动推进运行指针；只有执行 Agent 验证依赖并实际开工时，才原子更新状态文件。
@@ -101,6 +191,7 @@ P0-T01 Project/SQLite/Migration 基础
 | DEC-P1-T04-GLOSSARY | P1-T04-M02 | Glossary scope、重复词冲突、priority 语义 | P1-T04-M02 |
 | DEC-P1-T03-OVERRIDE | P1-T03-M03 | Prompt Override 编辑边界、拒绝规则、父版本失效策略 | P1-T03-M03 |
 | DEC-P1-T05-RELEASE | P1-T05-M01/M04 | lockfile、支持环境、打包工具、Windows 架构范围 | P1-T05-M01 |
+| DEC-V03-PROJECT-STORAGE | V03-T00 | 全局多 Project DB 与一 Project 一容器的统一契约、旧库拆分、portable/data-dir | V03-T01（裁决后创建） |
 
 
 ## 5. 治理准入 Task

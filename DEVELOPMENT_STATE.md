@@ -2,23 +2,28 @@
 project: TransRealm
 file_role: agent-entrypoint-and-runtime-checkpoint
 protocol_version: 2
-current_phase: Phase 1
-current_release: V1.0
-current_task: P1-T05
-current_milestone: P1-T05-M05
-state: completed
-last_updated: 2026-08-08
-baseline_commit: 3ef991d
-baseline_integrity: committed_and_verified
-worktree_disposition: dirty_uncommitted
-gate_status: released
-plan_alignment: fitness_recorded
-review_status: P1-T05-M05_independent_review_approved
-rollback_ref: 3ef991d
+current_phase: Phase 1.5A
+current_release: v0.2.0-planning
+current_task: V02-T01
+current_milestone: V02-T01-M01
+state: proposed
+last_updated: 2026-08-22
+baseline_commit: 1542291ca43dd17c874b18d3c109ec34b49ae463
+baseline_integrity: committed_clean_synced_before_planning_docs
+worktree_disposition: markdown_planning_changes_uncommitted
+gate_status: architecture_plan_approved_code_not_authorized
+plan_alignment: pending_reality_check
+review_status: architecture_plan_user_approved
+rollback_ref: 1542291ca43dd17c874b18d3c109ec34b49ae463
 pending_decision: none
-decision_prompt: DEVELOPMENT_STATE.md#pending-decision
-decision_result: DECIDED方案2：采用”原始 bytes + 版本化 format metadata envelope + 格式专属定位信息”的保真底座；TXT 定位信息必须由 parser 生成并由 exporter 在替换前针对原始 bytes、hash、encoding/BOM/newline、span 边界和解码结果逐项验证。不得把所有格式强行压成一个通用 span 模型。旧 TXT Project 只做可升级迁移，不从 source_text 猜造原始 bytes；缺少可验证原始 bytes/metadata 时安全拒绝保真导出，用户提供并校验原文件后才允许显式补齐载体。
-resume_milestone: P1-T05-M05-completed
+decision_prompt: none
+decision_result: none_for_v02_DEC-V03-PROJECT-STORAGE_deferred
+resume_milestone: V02-T01-M01_after_explicit_code_authorization
+authorization_scope: markdown_only
+code_authorized: false
+branch_authorized: false
+local_commit_authorized: true
+external_actions_authorized: false
 ---
 
 # 译境 / TransRealm — Agent 自动开工与开发状态
@@ -68,11 +73,35 @@ resume_milestone: P1-T05-M05-completed
 
 ## 4. 当前开发现场
 
-### 当前环境检查
+### v0.2 当前事实与授权（2026-08-22）
+
+- **Git 事实：** 本次规划读取时 `master` 与 `origin/master` 同步，HEAD `1542291ca43dd17c874b18d3c109ec34b49ae463`，`git describe` 为 `v0.1.0-3-g1542291`，工作树干净；tag `v0.1.0` 指向 commit `7bf26be6cc4c5a17933d27ae4e1d781d15b2c06c`。本次仅修改权威 Markdown，尚未 commit。
+- **发布事实：** v0.1.0 已发布；其后 master 包含 CI 与状态文档修复。最后归档质量证据为 pytest 1339 passed（1 skipped）、Ruff clean、mypy clean；本次 Markdown-only 规划没有复跑会写缓存的测试，不把历史数字表述为本次执行结果。
+- **用户裁决：** 2026-08-22 用户确认 v0.2/v0.3 无人值守方案；当前仍仅授权修改项目 Markdown，明确“不要动代码”。2026-08-23 用户撤销创建、切换或删除分支的权限，但保留本地里程碑提交权限：只能在用户当前分支上，于 Milestone 全部门禁通过后暂存范围内文件并创建一个本地 checkpoint commit。本授权不包含源码、测试、脚本、配置或依赖修改，也不包含 push、merge、tag、Release、远程资源、真实/付费模型调用或真实用户数据操作。
+- **路线裁决：** Phase 2 的 RAG/TM/Character Data 暂停；先完成 Phase 1.5A/v0.2 的 UI 重构、中英文、六格式 GUI、安全删除、Connection/Profile 编辑和 Workbench 体验。`.aiproject`/开放目录 GUI 延后至 v0.3 的 `DEC-V03-PROJECT-STORAGE`。
+- **工作树处置：** 只保留本次 Markdown 规划改动；禁止修改或删除 `src/`、`tests/`、`scripts/`、配置、artifact、用户数据库、备份、源文件与导出。
+
+### 当前 Task
+
+- **Task：** V02-T01 — UI 基础、视觉系统与中英文。
+- **状态：** `proposed`，不是 `ready`；`code_authorized: false`。任何 Agent 不得写测试或代码，也不得把读取/规划解释为开工授权。
+- **完整定义：** `07_Developer_Task_List.md` §0 `V02-T01`。
+- **前置治理：** V02-T00 文档规划在本次完成；用户禁止创建或切换分支，但允许在当前分支按 Milestone 形成本地 checkpoint。这些 Markdown 尚未 checkpoint，因此 V02-T01 暂无干净可执行 base commit。
+- **解除条件：** 用户使用 `USER_GUIDE.md` 的“启动或继续当前代码 Task”提示词或以等价表述明确授权代码开发；随后保持在用户当前分支，核验实际 HEAD/工作树，把 planning checkpoint 完整 hash 写入本文件和 `07`，运行兼容性基线，再记录 FIT/ADAPT/REPLAN。
+
+### 当前小目标
+
+- **Milestone：** V02-T01-M01 — 页面职责拆分并保留兼容入口。
+- **状态：** `proposed` / 未激活。
+- **目标（获代码授权后）：** 先以行为不变为硬约束拆分 UI 页面，保留 `SettingsPage`/`ProjectPage`/`TranslationPage` 兼容 re-export，禁止同时改视觉、i18n 或业务服务；完成旧 UI/worker 回归和实际启动后才进入 M02。
+- **本次完成内容：** 仅同步 `01`/`02`/`03`/`06`/`07`/`08`/`09` 与本文件，冻结 v0.2 任务、视觉矩阵、删除边界、授权门禁和 v0.3 存储决策门禁。
+- **本次验证：** 只做 Markdown 范围、标题/引用和 Git diff 检查；未运行产品测试，未构建候选。
+
+### 历史环境检查（P0/P1）
 
 - 2026-07-28 检测时 Python 3.12 缺失，已阻塞；当前会话 `py -3.12 --version` 返回 Python 3.12.10，阻塞解除。
 
-### 当前计划治理状态
+### 既有计划治理规则（继续有效）
 
 - 已启用 `06_AI_Development_Guide.md` V4：规划 Agent 定义目标、边界和验收，执行 Agent 对代码现场和范围内最小实现负责。
 - 当前及未来 Milestone 开工前必须记录 `FIT`、`ADAPT` 或 `REPLAN`；没有 `REPLAN` 证据时不得仅因计划可能不完美而停工。
@@ -80,9 +109,9 @@ resume_milestone: P1-T05-M05-completed
 - 未来 Task 中的类名、Manager/Service、文件落点和局部算法默认是参考实现，除非权威文档明确标注为强制契约。
 - 无人开发的角色、风险、门禁、例外和发布/回滚规则以 `09_Unattended_Development_Governance.md` 为准。
 
-### 待决策节点
+### 已裁决历史节点：DEC-P1-T01-FOUNDATION（只作归档）
 
-- **pending_decision：** `DEC-P1-T01-FOUNDATION`
+- **历史 decision_id：** `DEC-P1-T01-FOUNDATION`（已裁决，frontmatter `pending_decision: none`）
 - **触发 Milestone：** P1-T01-M01
 - **问题：** 选择后续六种格式共用的 format metadata、原始 bytes/span 表示和旧 TXT Project 升级策略。该选择决定 no-op byte identity、Revision 只替换目标 span 和 P1-T02 Project 容器的基础，不能由开发 Agent 自行猜测。
 - **不可变约束：** 不重写 `001`–`007` migration；TXT no-op 必须字节一致；翻译仅改变目标 span；原编码/BOM/换行必须可恢复；metadata 与源内容版本同事务保存；缺失或错配安全失败；不实现其他格式或改变翻译状态机。
@@ -102,14 +131,16 @@ resume_milestone: P1-T05-M05-completed
 - **迁移/回滚条件：** 只追加新编号 migration，不修改 `001`–`007`；migration 必须在升级前一致性备份成功后执行，metadata/raw bytes 与既有 SourceDocument/Segment 版本同事务写入。发现唯一域冲突、bytes 缺失无法安全填充、checksum/结构校验失败时停止并保留原库与备份。回滚优先使用迁移前备份恢复；若已产生新格式但未发布，允许前向修复 migration，禁止删除用户数据、覆盖旧 Revision 或把 source_text 当 raw bytes。
 - **恢复 Milestone：** `P1-T01-M01`。开发恢复前必须重新核验当前代码现场与旧 TXT 升级路径，记录 `FIT`/`ADAPT`/`REPLAN`；只实施上述裁定，不重新讨论 format metadata/raw bytes/span 的基础选择。
 
+以下提示词是 2026-08-06 的原始历史记录，已失效：
+
 ```text
 请切换至决策 Agent。读取 D:\TransRealm\DEVELOPMENT_STATE.md 中的“待决策节点”。
 只评估，不写业务代码。基于不可变约束、现场证据和候选方案，输出唯一推荐或明确保留项；说明否决理由、要更新的权威文档、验收、迁移/回滚条件和恢复 Milestone。完成后把 decision_result 与开发恢复提示词写回 DEVELOPMENT_STATE.md，并提醒用户切回开发 Agent。
 ```
 
-### 切回开发 Agent
+### 历史恢复提示（已失效，不得用于 v0.2）
 
-决策完成前不要开始 P1-T01-M01。决策 Agent 写回 `decision_result` 后使用：
+以下文本只保留为 P1 交接记录；DEC-P1-T01-FOUNDATION 已完成，任何 Agent 都不得把它解释为当前恢复动作：
 
 ```text
 请切回开发 Agent。读取 D:\TransRealm\DEVELOPMENT_STATE.md 的 decision_result、resume_milestone 及更新后的权威文档。只实施已裁决范围；先重新完成 FIT/ADAPT/REPLAN，再继续目标 Milestone。不得重新讨论已裁决的产品/契约选择。
@@ -121,21 +152,21 @@ resume_milestone: P1-T05-M05-completed
 - **工作树处置：** 必须保留现有 staged、unstaged、untracked 与用户数据；禁止 `reset --hard`、`restore`、`checkout` 覆盖、`clean` 或递归删除。`x.db` 与备份数据库已由 `.gitignore` 忽略；`dist/`/`build/` 已由 `.gitignore` 忽略（M04 候选产物不入库）。
 - **基线状态：** 当前回滚 ref 为 `3ef991d`；pytest **1339 passed**（1 skipped 本环境无符号链接创建权限）、Ruff clean、mypy 131 source files no issues，Candidate hygiene passed。
 
-### 用户功能请求（待办，2026-08-08 记录）
+### 已纳入 v0.2 的用户功能请求（2026-08-08 提出，2026-08-22 批准）
 
-用户使用 V1.0 候选后提出两项后续需求（未排期，属未来 Task 候选，见 `02` V1.x 规划）：
+用户使用 v0.1.0 候选后提出的两项需求已纳入 V02-T01/V02-T02，不再是未排期候选：
 
 1. **删除项目：** GUI 需提供删除项目入口。当前 `ProjectService`/`ProjectRepository`/UI 均无 delete 实现（`grep` 确认无 `delete`/`remove`/`DELETE FROM projects`），P1-T05 范围未含删除能力。实现时需处理：删除 project 级联其 source_documents/segments/translation_runs/revisions/glossary 等数据（FK 关系）、避免删除正在运行/未完成翻译的项目、与开放目录/`.aiproject` 载体的一致性（删除本地项目后载体是否同步删除/失效需裁决）。
 2. **UI 语言切换（中文）：** 当前 UI 全英文硬编码字符串（`ui/pages.py`/`ui/main_window.py`/`ui/workbench.py`），无 `QTranslator`/`tr()`/i18n 基础设施。需引入 Qt i18n（`tr()` + `.qm` 翻译文件 + 语言切换入口 + 持久化），并把现有硬编码文案改为可翻译键。
 
-### 当前 Task
+### 已完成的上一 Task：P1-T05
 
 - **Task：** P1-T05 — V1.0 异常恢复与 Release Candidate Gate
 - **状态：** completed（M01–M05 completed，2026-08-08；对外发布仍等待用户单独授权——杀毒扫描需用户 AV 环境执行、冻结 GUI 最终手工 smoke 需用户授权发布时执行）
 - **完整定义：** `07_Developer_Task_List.md` 的"P1-T05"章节
 - **前置依赖：** P1-T03、P1-T04 及所有前序 Task 完成（已完成）；工作树先形成可恢复 Git 基线（**已满足**——本地基线 `3ef991d`，2026-08-08 经用户授权 commit，未 push）；发布候选版本、依赖和文档冻结（依赖/文档已由 M01 冻结，候选版本号 0.1.0 已由 M04 构建时定）。
 
-### 当前小目标
+### 已完成的上一小目标：P1-T05-M05
 
 - **Milestone：** P1-T05-M05 — 文档与最终 Sign-off
 - **状态：** completed（2026-08-08）

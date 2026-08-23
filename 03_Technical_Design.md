@@ -367,6 +367,26 @@ V1.0 保真基线：无翻译导出与导入 bytes 一致；翻译后只允许�
 
 SQLite 访问统一由 infrastructure/repository 层管理连接与事务。测试使用 pytest；Qt 交互测试可使用 pytest-qt，但领域、migration 和 Adapter 契约不依赖 GUI 测试。
 
+### 10.1 v0.2 UI 架构与视觉门禁
+
+v0.2 在不改变 Application/Domain/Infrastructure 依赖方向的前提下重构桌面层。现有 `ui/pages.py` 的页面职责应按 Settings、Project、Translation/Workbench 和可复用组件拆分；为兼容既有测试和调用方，可保留薄 re-export seam，但不得复制业务状态或让 UI 直接访问 Repository/SQLite。
+
+桌面信息架构采用单一浅色主题：左侧主导航、顶部当前 Project/文档上下文、中央任务工作区和统一状态/错误区域。视觉 token 至少统一颜色、字体层级、间距、圆角、边框、focus/disabled/error/success 状态；优先使用 Qt 自带能力和仓库内资源，不引入第三方 UI 框架。v0.2 不承担暗色主题。
+
+国际化使用 Qt i18n 边界：所有用户可见字符串可翻译；支持中文和英文运行时切换，语言选择持久化，缺失翻译回退英文。翻译资源必须进入 PyInstaller 候选并有构建守卫；语言切换不得改变 Project、Run、Revision 或模型请求语义。
+
+UI 完成不能只由 pytest-qt 判定。每个用户可见 Milestone 还必须在 Windows 11 实际启动并保存固定场景证据：中文/英文，1280×720@100% 与 1920×1080@150%，首屏、Settings、Project、Auto、Workbench、错误/空状态。通过条件包括无文本截断、重叠、不可达操作或错误层级，键盘 Tab/焦点顺序可用，主旅程无需理解 Prompt/RAG 内部概念。截图像素不作为跨 Qt 版本的脆弱 golden；由固定场景、结构断言和独立视觉 Review 共同裁决。
+
+Project 删除属于 High risk 用户数据操作：删除前创建 SQLite 一致性备份；运行中 Run 或有效 processing lease 存在时拒绝；显示从属数据摘要并要求明确确认；在单事务内删除 Project，依赖已批准 FK CASCADE；失败回滚且保留备份。删除不得触碰源文件、导出文件、外部 `.aiproject` 或开放目录。
+
+### 10.2 `DEC-V03-PROJECT-STORAGE` 决策边界
+
+当前桌面入口使用一个全局 SQLite 保存多个 Project，而 `export_database_archive`、开放目录和 `.aiproject` 容器要求数据库内恰有一个 Project。该差异在服务测试中可隔离，但无法安全地靠 GUI 按钮消除；v0.2 因此不接入容器 GUI。
+
+v0.3 开工前必须由决策 Agent 裁决：Project session 生命周期、应用级配置位置、受管工作区、外部开放目录、`.aiproject` 导入语义、旧全局库拆分以及 portable/data-dir 优先级。推荐方案是“一次一个活动 ProjectSession + 一 Project 一 SQLite 工作区”；`.aiproject` 是传输快照，导入后安装到可写工作区；最近 Project、界面语言等应用级配置独立保存；凭据仍仅使用 `env:`/`wincred:` 引用。
+
+旧库迁移必须先做一致性备份，按 Project 拆分并验证关联闭包、行数、Revision/current/lock、Profile/Connection 引用和六格式保真；全部新工作区验证成功前保留旧库只读恢复点。不得原地把多 Project 数据库声明为单 Project 容器，也不得自动删除旧库或外部文件。
+
 P0-T08 的 GUI 仅为核心 TXT 翻译闭环提供薄桌面入口；UI 只能调用 Application Service，解析、数据库和模型请求必须在可控 worker 中执行并返回 DTO。每个 worker/thread 拥有自己的 SQLite connection 生命周期，不跨线程传递 connection/cursor；关闭时先停止接收新工作，再通过 P0-T07 的取消/lease 语义收敛，不能以强杀线程伪装成功。P1-T04 先补齐 Project Profile 选择与基础 Glossary，P1-T03 再增加自动模式与工作台模式的默认策略、参数暴露和交互差异；两种模式继续复用同一状态机、Validator、Application Service 和 Revision 保护。运行中 Run 不因 UI 模式切换改变 Profile/Workflow/参数；用户必须选择继续当前 Run 或取消后以新配置创建后续 Run。
 
 P1-T03-M03 落地受控 Prompt Override（2026-08-08）：预设 Prompt 模板是应用常量（`application/preset_templates.py`：`general` v1.0.0 = 既有默认模板文本，`ALLOWED_PLACEHOLDERS` = renderer 的 current/context/output_schema/source_language/target_language），只读不可改。用户在工作台把预设拷贝编辑后保存为 Override（`prompt_overrides` 表 1:1 with profile，FK CASCADE，`012` migration），记录父预设版本。领域校验（`domain/prompt_override.py`，Qt-free）拒绝未知变量、非法 `$` 语法、空文本；渲染解析（`preset_templates.resolve_override_template`）在 `parent_template_version ≠ 当前预设版本` 时 fail-closed 拒绝（不 claim Attempt、不发送请求），并重校验持久化文本防 DB 篡改。`TranslationService.translate_segment` 有 override 时用它渲染并追加 `override_parent_version` 到 Attempt `context_summary`；无 override 用预设，行为不变。输出边界结构性不可移除：Output Contract wrapper 由 `PromptRenderer` 固定追加，格式保护/校验/安全限制是独立流水线阶段，任何 Override 文本都无法关闭。UI：`WorkbenchPromptEditor` 展示只读预设预览 + 可编辑拷贝 + Save/Clear（页面经 worker 线程调用 `ModelProfileService.set_prompt_override`/`clear_prompt_override`，草稿跨 refresh 保留）。模板只做占位符替换（`string.Template`），不执行任何模板代码。

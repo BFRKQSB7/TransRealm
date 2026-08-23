@@ -958,6 +958,20 @@ Task重新规划
 - 技术栈采用 Python 3.12 + PySide6 + SQLite；V1.0 正式支持 Windows 11，并以绿色版为主要发布形态。
 - 这些能力前置是为了保证 Segment 可恢复、跨模型一致和后续 RAG/TM 不重构核心链路，并不代表提前实现高级智能功能。
 - `DEC-P1-T01-FOUNDATION`（2026-08-06）：保真载体采用方案 2——持久化原始 bytes + 版本化 format metadata envelope（encoding/BOM/newline/parser&metadata version/source hash）+ 格式专属定位信息，TXT 用受验证的 byte span replacement mapping。理由：满足 TXT no-op byte identity、仅替换目标 span、原编码/BOM/换行可恢复，且不强迫多字节编码、换行归一化、格式结构各异的 JSON/字幕与 TXT 共享同一 span 模型。方案 1（统一原始 bytes + 每 Segment byte span 作为基础契约）否决：多字节编码、换行归一化、格式结构和跨 token 边界使统一 span 规则无法安全覆盖五类后续格式，易把“可定位”误化为“可替换”；各格式仍可在 envelope 内使用 spans。方案 3（重序列化格式对象）否决：会改变空白、转义、字段/标签或换行，无法满足 byte identity。边界保留：JSON path 用户可配置选择、各格式 metadata 最终字段、第三方 parser 依赖和 ASS/SSA parser 实现由各垂直 Milestone 在已批准 envelope/保真约束内用证据决定；旧 TXT 数据缺原始 bytes/可验证 metadata 时安全失败并保留旧 Project/目标文件，用户提供并校验原文件后才显式补齐。
+- v0.2 范围裁决（2026-08-22）：v0.1.0 的恢复、保真、Revision 和容器服务底座保留；在 Phase 2 前新增 Phase 1.5A，优先完成 UI 重构、中英文、六格式 GUI、安全删除、Connection/Profile 编辑和 Workbench 体验。理由：当前内核成熟度显著高于默认 Qt 三标签壳，继续堆 RAG/TM 会扩大“服务存在但用户不可达”的差距。
+- v0.2 UI 采用单一精致浅色主题、Qt 自有能力和仓库资源，不引入第三方 UI 框架或暗色主题；审美与可用性由固定中英文/DPI/分辨率场景、结构断言、实际交互和独立视觉 Review 联合验收，不使用脆弱的逐像素 golden 作为唯一门禁。
+- v0.2 Project 删除只作用于当前应用数据库：删除前一致性备份，运行中保护，明确确认，单事务级联，失败回滚；源文件、导出、`.aiproject` 和开放目录永不随本操作删除。该边界使删除能力可在当前全局数据库上先落地，不预先裁决 v0.3 存储模型。
+- `.aiproject`/开放目录 GUI 延后到 v0.3：当前桌面入口允许一个 SQLite 含多个 Project，而容器服务要求一库恰有一个 Project，直接接按钮会掩盖身份、导入合并和删除语义冲突。此项必须先经过 `DEC-V03-PROJECT-STORAGE`。
+
+## 17. v0.3 计划决策：`DEC-V03-PROJECT-STORAGE`
+
+- **状态：** proposed；不是已裁决实现方案，v0.2 不触发。
+- **触发点：** V02-T05 完成后进入 V03-T00，或用户明确要求提前进行 Project 工作区重构。
+- **问题：** 统一全局多 Project SQLite、单 Project 容器、应用级配置、受管工作区、外部开放目录、`.aiproject` 导入和旧库迁移。
+- **推荐：** 一次一个活动 `ProjectSession` 对应一个 Project SQLite；受管工作区与开放目录共享 Project 契约；`.aiproject` 是传输快照，导入后安装为可写工作区；界面语言/最近 Project 等应用配置独立保存；凭据继续只保存引用。
+- **必须比较的替代方案：** 保留全局库并实现单 Project 克隆/ID 重映射；一 Project 一库；全局索引库 + Project 库混合。不得仅因推荐已记录就跳过现场取证和迁移成本比较。
+- **不可变约束：** 旧库先一致性备份并保留只读恢复点；逐 Project 验证关联闭包、六格式载体、Revision/current/lock、Attempt、Profile/Connection 和秘密引用；全部新工作区验收前不删除或覆盖旧库；不原地编辑归档。
+- **裁决交付：** 唯一推荐与否决理由、数据/路径契约、旧库拆分算法与故障切点、portable/data-dir 优先级、Application/UI session seam、测试/回滚矩阵和恢复 Task。
 
 ---
 

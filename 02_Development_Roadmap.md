@@ -320,6 +320,38 @@ Segment ID。
 
 ---
 
+# Phase 1.5：桌面可用性与 Project 工作区（v0.2.x / v0.3.x）
+
+Phase 1 的可靠内核已由 v0.1.0 发布验证，但桌面 GUI 仍只暴露部分服务能力。Phase 1.5 在 Phase 2 智能能力之前补齐用户旅程，避免把 RAG/TM 建在不可用的交互壳上。
+
+## v0.2.0：界面与现有能力接通
+
+- 重构桌面壳、页面职责和视觉规范；
+- 中文/英文切换与持久化；
+- GUI 接通 TXT/JSON/SRT/ASS/SSA/VTT；
+- 安全删除 Project；
+- Connection/Profile 完整编辑；
+- Workbench Segment/Revision/锁定/失败恢复体验；
+- 中英文 + DPI/分辨率截图与冻结应用旅程门禁。
+
+v0.2.0 只消费现有 Application Service、状态机和 SQLite 契约；不引入第三方 UI 框架、不重写翻译编排、不增加第二套状态存储、不进入 RAG/TM。
+
+## v0.3.0：Project 工作区与容器 GUI
+
+开工前触发 `DEC-V03-PROJECT-STORAGE`，裁决当前“全局 SQLite 多 Project GUI”与“容器一库一个 Project”之间的契约差异。推荐方向是一个活动 `ProjectSession` 对应一个 Project SQLite，受管工作区与外部开放目录共享同一 Project 契约；`.aiproject` 作为传输快照导入可写工作区，不直接原地编辑压缩包。
+
+v0.3.0 负责：
+
+- 应用级配置/最近 Project 与 Project 数据分离；
+- 受管 Project 工作区、开放目录和 `.aiproject` 的创建、打开、pack/unpack、备份、恢复 GUI；
+- 旧 `~/.transrealm/project.sqlite` 多 Project 数据的备份、拆分迁移与可验证回滚；
+- 显式 portable/data-dir 选择和不可写目录提示。
+
+未完成该决策与迁移门禁前，不把容器服务直接接到现有三标签 GUI。
+
+
+---
+
 # Phase 2：专业翻译能力（V1.x）
 
 
@@ -800,6 +832,26 @@ GitHub公开版本。
 
 ---
 
+## v0.2.0
+
+定位：v0.1.0 可靠内核之上的桌面可用性版本。
+
+包含：UI 重构、中英文、六格式 GUI、安全删除 Project、Connection/Profile 编辑、Workbench Revision 体验和视觉/交互 Release Gate。
+
+不包含：Project 存储模型迁移、容器 GUI、RAG/TM/Character Data、暗色主题或插件。
+
+
+---
+
+## v0.3.0
+
+定位：Project 工作区与便携迁移版本。
+
+必须先完成 `DEC-V03-PROJECT-STORAGE`；包含一 Project 一工作区契约、容器 GUI、旧全局数据库迁移、portable/data-dir 与恢复演练。
+
+
+---
+
 ## V1.x
 
 
@@ -838,6 +890,8 @@ GitHub公开版本。
 |---|---|---|
 | Phase 0 | V0.x 技术内测 | Project/SQLite、TXT、Segment、Adapter/Profile、最小 Context 与输出校验 |
 | Phase 1 | V1.0 GitHub 公开 | JSON/字幕、恢复、`.aiproject`、多 Profile、基础 Glossary、发布验收 |
+| Phase 1.5A | v0.2.0 | UI 重构、中英文、六格式 GUI、安全删除、配置与 Workbench 可用性 |
+| Phase 1.5B | v0.3.0 | Project 工作区裁决、容器 GUI、旧库迁移、portable/data-dir |
 | Phase 2 | V1.x | Character Data、基础 TM、RAG、动态 Context Budget |
 | Phase 3 | V2.0 | 节点式 Workflow、多模型协作、候选译文、QC、插件 |
 | Phase 4 | V2.x 远期 | 模型管理、GPU 推荐和复杂格式按独立任务推进，不承担 V1.0 发布门禁 |
