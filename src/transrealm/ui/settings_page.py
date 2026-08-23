@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -96,6 +97,8 @@ class SettingsPage(WorkerPage):
         layout = QVBoxLayout(self)
 
         self._status = QLabel("", self)
+        self._status.setObjectName("status-banner")
+        self._status.setWordWrap(True)
         layout.addWidget(self._status)
 
         language_form = QFormLayout()
@@ -110,6 +113,9 @@ class SettingsPage(WorkerPage):
         language_form.addRow("Language", self._language_combo)
         layout.addLayout(language_form)
 
+        connection_section = QGroupBox("Connections", self)
+        connection_section.setObjectName("connections-section")
+        connection_layout = QVBoxLayout(connection_section)
         connection_form = QFormLayout()
         self._conn_name = QLineEdit(self)
         self._conn_endpoint = QLineEdit(self)
@@ -141,18 +147,20 @@ class SettingsPage(WorkerPage):
         connection_form.addRow(self._edit_connection)
         connection_form.addRow(self._save_connection)
         connection_form.addRow(self._cancel_connection)
-        layout.addLayout(connection_form)
-
-        layout.addWidget(QLabel("Connections", self))
+        connection_layout.addLayout(connection_form)
         self._connections_list = QListWidget(self)
-        layout.addWidget(self._connections_list)
+        connection_layout.addWidget(self._connections_list)
         self._delete_connection = QPushButton("Delete Selected Connection", self)
-        layout.addWidget(self._delete_connection)
+        connection_layout.addWidget(self._delete_connection)
 
         self._credential_status = QLabel("", self)
         self._credential_status.setWordWrap(True)
-        layout.addWidget(self._credential_status)
+        connection_layout.addWidget(self._credential_status)
+        layout.addWidget(connection_section)
 
+        profile_section = QGroupBox("Profiles", self)
+        profile_section.setObjectName("profiles-section")
+        profile_layout = QVBoxLayout(profile_section)
         profile_form = QFormLayout()
         self._profile_name = QLineEdit(self)
         self._profile_model = QLineEdit(self)
@@ -168,7 +176,7 @@ class SettingsPage(WorkerPage):
         profile_form.addRow(self._edit_profile)
         profile_form.addRow(self._save_profile)
         profile_form.addRow(self._cancel_profile)
-        layout.addLayout(profile_form)
+        profile_layout.addLayout(profile_form)
 
         self._profile_advanced_toggle = QToolButton(self)
         self._profile_advanced_toggle.setText("Advanced Profile Settings")
@@ -178,7 +186,7 @@ class SettingsPage(WorkerPage):
         self._profile_advanced_toggle.setToolButtonStyle(
             Qt.ToolButtonStyle.ToolButtonTextBesideIcon,
         )
-        layout.addWidget(self._profile_advanced_toggle)
+        profile_layout.addWidget(self._profile_advanced_toggle)
 
         self._profile_advanced = QWidget(self)
         advanced_form = QFormLayout(self._profile_advanced)
@@ -221,13 +229,13 @@ class SettingsPage(WorkerPage):
         advanced_form.addRow("Supports structured output", self._profile_supports_structured)
         advanced_form.addRow("Supported parameters", self._profile_supported_parameters)
         self._profile_advanced.setVisible(False)
-        layout.addWidget(self._profile_advanced)
+        profile_layout.addWidget(self._profile_advanced)
 
-        layout.addWidget(QLabel("Profiles", self))
         self._profiles_list = QListWidget(self)
-        layout.addWidget(self._profiles_list)
+        profile_layout.addWidget(self._profiles_list)
         self._delete_profile = QPushButton("Delete Selected Profile", self)
-        layout.addWidget(self._delete_profile)
+        profile_layout.addWidget(self._delete_profile)
+        layout.addWidget(profile_section)
 
         self._add_connection.clicked.connect(self._on_add_connection)
         self._edit_connection.clicked.connect(self._on_edit_connection)
@@ -632,7 +640,11 @@ class SettingsPage(WorkerPage):
         elif action == "update_profile":
             self._status.setText("Profile updated.")
             self.refresh()
-        elif action in {"delete_connection", "delete_profile"}:
+        elif action == "delete_connection":
+            self._status.setText("Connection deleted.")
+            self.refresh()
+        elif action == "delete_profile":
+            self._status.setText("Profile deleted.")
             self.refresh()
         else:
             self._handle_error(f"Unknown action: {action}")

@@ -5,20 +5,20 @@ protocol_version: 2
 current_phase: Phase 1.5A
 current_release: v0.2.0
 current_task: V02-T03
-current_milestone: V02-T03-M01
+current_milestone: V02-T03-M02
 state: completed
 last_updated: 2026-08-23
-baseline_commit: e2560bff53e90f4094dcc97a00c5fc32ae7d7e5b
+baseline_commit: 1ecca03e6187f157c9a1051dbcc78abc43869590
 baseline_integrity: committed_clean_planning_baseline
-worktree_disposition: v02_t03_m01_verified_checkpoint_pending
-gate_status: m01_all_gates_passed
+worktree_disposition: v02_t03_m02_verified_checkpoint_pending
+gate_status: m02_all_gates_passed
 plan_alignment: fit
 review_status: independent_review_approved
-rollback_ref: e2560bff53e90f4094dcc97a00c5fc32ae7d7e5b
+rollback_ref: 1ecca03e6187f157c9a1051dbcc78abc43869590
 pending_decision: none
 decision_prompt: none
 decision_result: DEC-V02-T01-M01-GATE-BASELINE_approved
-resume_milestone: V02-T03-M01
+resume_milestone: V02-T03-M02
 authorization_scope: V02-T03_allowed_paths
 code_authorized: true
 branch_authorized: false
@@ -75,7 +75,7 @@ external_actions_authorized: false
 
 ### v0.2 当前事实与授权（2026-08-23）
 
-  - **Git 事实：** `master` 当前 HEAD=`e2560bff53e90f4094dcc97a00c5fc32ae7d7e5b`（V02-T02-M04 checkpoint），V02-T01 M01/M02/M03/M04 checkpoint 分别为 `f4283870e6fa7b46d2090ec56ed7f4a9d3ecc8f9`、`165c87e4377d7e1ace119991df3e5ddc541de61c`、`dbf31da1ad6668389cf0e453f70b93d461204a4b`、`609d529960b7d47654def7a4d4b3a21fe19257b9`，V02-T02-M01 checkpoint 为 `93d5e3ccb8e4fd4f4e08ed941c6dfd4d8bd35dbe`、M02 为 `537512f56523e0ff8efa5e392d07ddb109ad3740`、M03 为 `bf13d0f85a3b5f2c0cff188e71cf4789e35b9638`、M04 为 `e2560bff53e90f4094dcc97a00c5fc32ae7d7e5b`，均未 push；当前工作树改动仅属于 V02-T03-M01 allowed paths：Settings UI、en/zh_CN i18n source/binary resources、M01 tests 与必要状态/契约 Markdown。没有创建或切换分支；tag `v0.1.0` 指向 commit `7bf26be6cc4c5a17933d27ae4e1d781d15b2c06c`。
+  - **Git 事实：** `master` 当前 HEAD=`1ecca03e6187f157c9a1051dbcc78abc43869590`（V02-T03-M01 checkpoint），V02-T01 M01/M02/M03/M04 checkpoint 分别为 `f4283870e6fa7b46d2090ec56ed7f4a9d3ecc8f9`、`165c87e4377d7e1ace119991df3e5ddc541de61c`、`dbf31da1ad6668389cf0e453f70b93d461204a4b`、`609d529960b7d47654def7a4d4b3a21fe19257b9`，V02-T02-M01 checkpoint 为 `93d5e3ccb8e4fd4f4e08ed941c6dfd4d8bd35dbe`、M02 为 `537512f56523e0ff8efa5e392d07ddb109ad3740`、M03 为 `bf13d0f85a3b5f2c0cff188e71cf4789e35b9638`、M04 为 `e2560bff53e90f4094dcc97a00c5fc32ae7d7e5b`，均未 push；当前工作树改动仅属于 V02-T03-M02 allowed paths：Settings UI、M02 测试与必要状态/契约 Markdown。没有创建或切换分支；tag `v0.1.0` 指向 commit `7bf26be6cc4c5a17933d27ae4e1d781d15b2c06c`。
 - **发布事实：** v0.1.0 已发布；其后 master 包含 CI 与状态文档修复。最后归档质量证据为 pytest 1339 passed（1 skipped）、Ruff clean、mypy clean；本次 Markdown-only 规划没有复跑会写缓存的测试，不把历史数字表述为本次执行结果。
 - **用户裁决：** 2026-08-22 用户确认 v0.2/v0.3 无人值守方案。2026-08-23 用户撤销创建、切换或删除分支的权限，但保留本地里程碑提交权限：只能在用户当前分支上，于 Milestone 全部门禁通过后暂存范围内文件并创建一个本地 checkpoint commit。当前代码 Task 已获授权；本轮用户另行批准 `DEC-V02-T01-M01-GATE-BASELINE` 并授权自主同步 Markdown，但决策 Agent 仍不得借此实现、构建、提交或发布。本地提交授权不包含 push、merge、tag、Release、远程资源、真实/付费模型调用或真实用户数据操作。
 - **路线裁决：** Phase 2 的 RAG/TM/Character Data 暂停；先完成 Phase 1.5A/v0.2 的 UI 重构、中英文、六格式 GUI、安全删除、Connection/Profile 编辑和 Workbench 体验。`.aiproject`/开放目录 GUI 延后至 v0.3 的 `DEC-V03-PROJECT-STORAGE`。
@@ -85,7 +85,7 @@ external_actions_authorized: false
 ### 当前 Task
 
 - **Task：** V02-T03 — Connection/Profile 管理体验。
-- **状态：** `in_progress`；`code_authorized: true`。依赖 V02-T02 checkpoint `e2560bff53e90f4094dcc97a00c5fc32ae7d7e5b` 已满足；M01 实现、回归、质量、GUI 与独立 Review 已通过，当前仅待创建 M01 checkpoint。
+- **状态：** `in_progress`；`code_authorized: true`。依赖 V02-T02 checkpoint `e2560bff53e90f4094dcc97a00c5fc32ae7d7e5b` 与 V02-T03-M01 checkpoint `1ecca03e6187f157c9a1051dbcc78abc43869590` 已满足；M02 实现、回归、质量、GUI 与独立 Review 已通过，当前仅待创建 M02 checkpoint。
 - **完整定义：** `07_Developer_Task_List.md` §0 `V02-T03`。
 - **前置治理：** V02-T00 文档规划已在当前分支形成 planning checkpoint `9c0be23e6e598939b1a672e8bed4958e7ce2cbaf`；用户禁止创建或切换分支，但允许在当前分支按 Milestone 形成本地 checkpoint。
 - **M01 Reality Check（历史）：** 2026-08-23 判定 **FIT**——既有 Connection/Profile service、repository、schema 与 Settings worker seam 覆盖 M01 目标，无 Project/数据库/公共契约/依赖冲突。
@@ -102,10 +102,14 @@ external_actions_authorized: false
 
 ### 当前 Milestone Reality Check
 
-- **Milestone：** V02-T03-M01 — Connection/Profile 管理体验的首个可验证切片；精确子范围待读取现场后锁定。
-- **当前结论：** **FIT**（2026-08-23）。既有 Connection/Profile service、repository 和 `004`/`005`/`006` schema 已提供全字段 update、JSON capability/default/context 持久化、凭据 reference 校验与 Connection/Profile 删除保护；Settings 页已有 worker 线程 seam、创建/删除/凭据提示，但缺编辑表单和高级字段折叠。M01 只补 Settings UI 的 Connection/Profile 编辑与重开回显、对应异常/不落库/不泄密验收和中英文资源，不改 Application/Domain/Infrastructure、schema/migration、历史 Attempt snapshot、真实端点或新依赖，无 ADAPT/REPLAN。
+- **Milestone：** V02-T03-M02 — Connection/Profile 分组与可操作反馈。
+- **当前结论：** **FIT**（2026-08-23）。M01 已 checkpoint；Settings 页现有 Connection/Profile 控件为单一长布局，错误/删除保护/凭据缺失均已由既有 worker/service seam 产生信息，但缺少清晰的 Connections/Profiles 分组、集中状态 banner 与面向操作的反馈验收。M02 仅重组 Settings UI、补充现有错误语义的可见/可操作呈现、补中英文资源与 pytest-qt/GUI 验收；不改 Application/Domain/Infrastructure、schema/migration、删除/校验/凭据语义、历史 Attempt snapshot、真实端点或新依赖，无 ADAPT/REPLAN。
+- **M02 范围与验收：** Connections 与 Profiles 使用明确分组，常用创建/编辑/删除入口及高级折叠层级清晰；成功、校验失败、引用保护删除失败和缺少 credential reference 的提示在当前语言下可定位下一动作，错误不泄密且不改变既有服务语义；中英文/100%/150% 代表性 GUI 无重叠/截断；新增 M02 测试、指定旧回归、全量质量、独立只读 Review 通过。
+- **M02 最终结果：** 上述范围全部通过；独立只读 Review 首轮发现“删除成功未更新 status banner” SHOULD-FIX，已补 Connection/Profile 成功状态与测试；复核最终 **APPROVE**，BLOCKER/SHOULD-FIX/MINOR none。
 - **M01 完成证据：** Connection 的 endpoint/timeout/retry/delay/credential reference 与 Profile 的 model/connection/template/output/context/default params/capability 已可编辑并重开回显；Profile 高级字段默认折叠；非法 endpoint、原始 credential 与超预算 context 均不落库且错误提示不泄密。新增 `tests/test_v02_t03_m01.py` **4 passed**；指定旧回归 + 新测试 **157 passed**；锁定环境全量 pytest **1370 passed, 5 skipped**；Ruff clean；mypy src **81 source files no issues**；pip check clean；Windows Qt 隔离数据根目录 English/zh_CN × 100%/150% 及高级展开截图无重叠/截断，进程可关闭；未调用真实端点、未操作真实用户数据。独立只读 Review 首轮发现预算不变量 SHOULD-FIX，已补保存前校验和不落库测试；复核最终 **APPROVE**，BLOCKER/SHOULD-FIX/MINOR none。
-- **M01 checkpoint 前状态：** 所有门禁通过，`HEAD`/base/rollback=`e2560bff53e90f4094dcc97a00c5fc32ae7d7e5b`，branch=`master`，仅 M01 allowed paths staged 前工作树改动；下一步只暂存并创建 M01 本地 checkpoint，提交后复核作者/文件清单/状态指针/工作树，再推进下一个依赖满足的 Milestone。
+- **M01 checkpoint：** 已创建 `1ecca03e6187f157c9a1051dbcc78abc43869590`（`feat(ui): add connection profile editing`），作者 `BFRKQSB7 <226671264+BFRKQSB7@users.noreply.github.com>`；9 个文件均在 M01 allowed paths，未 push/merge/tag/Release；提交后 `master` 工作树干净。
+- **M02 完成证据：** Settings UI 已用 Connections/Profiles QGroupBox 分组，集中 status banner 保留成功/失败反馈；缺 credential reference 显示环境变量/Windows Credential 下一动作，引用保护删除显示 repoint/delete 下一动作，删除成功显示 Connection/Profile deleted；Profile advanced 仍默认折叠。新增 `tests/test_v02_t03_m02.py` **1 passed**；指定旧回归 + M01/M02/UI/i18n 回归 **164 passed**；锁定环境全量 pytest **1371 passed, 5 skipped**；Ruff clean；mypy src **81 source files no issues**；pip check clean；Windows Qt 隔离临时 DB 的 English/zh_CN × 100%/150% 与高级展开截图无重叠/截断，进程关闭 PASS；秘密/范围/`git diff --check` clean，未改 i18n/service/repository/domain/schema/migration/依赖，未调用真实端点或操作真实用户数据。GUI 验证期间发现并已恢复全局测试语言偏好为 en，随后全量测试复跑通过。
+- **M02 checkpoint 前状态：** 所有门禁通过，`HEAD`/base/rollback=`1ecca03e6187f157c9a1051dbcc78abc43869590`，branch=`master`，仅 M02 allowed paths 有未提交改动；下一步只暂存并创建 M02 本地 checkpoint，提交后复核作者/文件清单/状态指针/工作树，再推进下一个依赖满足的 Milestone。
 
 ### 已完成小目标
 
