@@ -44,7 +44,7 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 
 ### V02-T02 — Project 生命周期与六格式 GUI
 
-- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P0 用户数据；High；in_progress（M03 当前）。依赖 V02-T01、V02-T02-M01、V02-T02-M02，已由 `537512f56523e0ff8efa5e392d07ddb109ad3740` 满足。
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P0 用户数据；High；in_progress（M04 当前）。依赖 V02-T01、V02-T02-M01、V02-T02-M02、V02-T02-M03，已由 `bf13d0f85a3b5f2c0cff188e71cf4789e35b9638` 满足。
 - **Reality Audit：** SPLIT——六格式 UI 是既有服务接线；Project 删除是高风险数据操作，分别实现后做联合 Gate。
 - **目标：** GUI 暴露 TXT/JSON/SRT/ASS/SSA/VTT 导入/翻译/保真导出，并提供可恢复的 Project 删除。
 - **非目标：** 不接 `.aiproject`/开放目录 GUI；不改变 format metadata/保真契约；不迁移为一 Project 一库。
@@ -61,7 +61,10 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 - **M02 完成证据：** 新增 `tests/test_v02_t02_m02.py` **7 passed**；指定 Project/Profile/Glossary/翻译旧回归 **83 passed**；锁定无 system-site-packages 环境全量 pytest **1363 passed, 5 skipped**；Ruff clean；mypy src **81 source files clean**；pip check clean；M01 原生 Windows Qt 中英文/DPI GUI 证据继续有效，M02 未新增 UI；资源/秘密/外部文件/范围检查 clean；最终独立 Review **APPROVE**，无 BLOCKER/SHOULD-FIX；M02 checkpoint 为 `537512f56523e0ff8efa5e392d07ddb109ad3740`。
 - **M03 Reality Check：** 2026-08-23 **FIT**——复用既有 `ProjectPage`/`ServiceWorker`/`WorkerPage`/i18n seam 和 M02 删除服务；M03 只接删除摘要、精确名称确认、异步删除结果/错误反馈与刷新，不改 Application/Domain/Infrastructure、schema/migration 或删除语义。无 ADAPT/REPLAN。
 - **M03 当前范围/验收：** Project 页显示从属摘要，输入精确 Project 名后确认并异步删除；备份/运行保护/事务失败错误可操作，成功后刷新 Project 状态；窗口关闭/worker 收敛、中文/英文/100%/150% GUI、旧回归、全量质量和独立 Review 通过；不提前进入 M04 联合 Gate。
-- **M03 完成证据：** 新增 `tests/test_v02_t02_m03.py` **3 passed**；M01/M02/既有 UI/关闭回归 **54 passed**；锁定无 system-site-packages 环境全量 pytest **1366 passed, 5 skipped**；Ruff clean；mypy src **81 source files clean**；pip check clean；原生 Windows Qt Project Tab 英文/中文 × 100%/150% 可见/关闭 PASS，placeholder 已本地化且代表性截图无重叠/截断；资源/秘密/范围检查 clean；独立 Review **APPROVE**，无 BLOCKER/SHOULD-FIX，checkpoint 待创建。
+- **M03 完成证据：** 新增 `tests/test_v02_t02_m03.py` **3 passed**；M01/M02/既有 UI/关闭回归 **54 passed**；锁定无 system-site-packages 环境全量 pytest **1366 passed, 5 skipped**；Ruff clean；mypy src **81 source files clean**；pip check clean；原生 Windows Qt Project Tab 英文/中文 × 100%/150% 可见/关闭 PASS，placeholder 已本地化且代表性截图无重叠/截断；资源/秘密/范围检查 clean；独立 Review **APPROVE**，无 BLOCKER/SHOULD-FIX；M03 checkpoint 为 `bf13d0f85a3b5f2c0cff188e71cf4789e35b9638`。
+- **M04 Reality Check：** 2026-08-23 **FIT**——M01–M03 已 checkpoint，M04 仅做联合 GUI/视觉/回归/范围 Gate，不新增行为、数据格式、依赖或发布动作。无 ADAPT/REPLAN。
+- **M04 当前范围/验收：** 锁定依赖、全量 pytest/Ruff/mypy/pip、M01–M03 回归和新增验收；原生 Windows Settings/Project/Translation 代表性状态中英文 × 100%/150% 可见/关闭，Project 删除控件/placeholder 无截断/重叠；资源/秘密/路径/allowed paths、独立 Review 通过；不构建候选、不签发、不 push/merge/tag/Release。
+- **M04 完成证据：** M01–M03 定向验收与指定旧回归 **57 passed**；锁定无 system-site-packages 环境全量 pytest **1366 passed, 5 skipped**；Ruff/mypy/pip check clean；原生 Windows Qt 中英文 × 100%/150% Settings/Project/Translation 代表性状态可见/关闭 PASS，Project 删除控件与 placeholder 代表性截图无重叠/截断；资源/秘密/路径/allowed paths clean；独立只读 Review **APPROVE**，无 BLOCKER/SHOULD-FIX；M04 checkpoint 待创建。
 
 ### V02-T03 — Connection/Profile 管理体验
 

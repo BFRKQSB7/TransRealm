@@ -1033,12 +1033,20 @@ Task重新规划
 
 ## 24. v0.2 Project M03 Reality Check：`V02-T02-M03`
 
-- **状态：** completed；恢复基线/rollback=`537512f56523e0ff8efa5e392d07ddb109ad3740`；当前 branch=`master`；`pending_decision: none`；checkpoint 待创建。
+- **状态：** completed；恢复基线/rollback=`537512f56523e0ff8efa5e392d07ddb109ad3740`；当前 branch=`master`；`pending_decision: none`；checkpoint=`bf13d0f85a3b5f2c0cff188e71cf4789e35b9638`；当前恢复指针已推进至 `V02-T02-M04`。
 - **判定：** **FIT**（2026-08-23）。`ProjectPage` 已有滚动表单与状态反馈，`ServiceWorker`/`WorkerPage` 提供异步 service seam，中英文资源和 M02 `ProjectDeletionSummary`/`delete_project` 已齐备；M03 只接 UI，不改 Application/Domain/Infrastructure、schema/migration、删除语义或运行依赖。
 - **目标边界：** Project 页显示从属摘要，要求输入精确 Project 名后异步确认删除；成功刷新 Project 状态，备份失败/运行保护/事务失败显示可操作错误；窗口关闭/worker 收敛和中英文/DPI GUI 证据纳入验收。M04 联合视觉/回归 Gate 不在本 M03。
 - **允许路径：** `src/transrealm/ui/**`、V02-T02 M03 测试和必要状态/契约 Markdown；复用 M02 删除 service/backup seam，不改 Application/Domain/Infrastructure、schema/migration、Project 数据格式或真实用户数据。
-- **下一步：** M03 验收样例、最小 UI 接线、旧回归、全量质量和 GUI smoke 已完成；独立 Review 通过后仅暂存 V02-T02-M03 allowed paths 创建本地 checkpoint，随后推进至 V02-T02-M04，不提前进入发布动作。
-- **完成证据：** 新增 `tests/test_v02_t02_m03.py` **3 passed**；M01/M02/既有 UI/关闭回归 **54 passed**；锁定无 system-site-packages 环境全量 pytest **1366 passed, 5 skipped**；Ruff clean；mypy src **81 source files no issues**；pip check clean；原生 Windows Qt Project Tab 英文/中文 × 100%/150% 可见/关闭 PASS，placeholder 已本地化且代表性截图无重叠/截断；资源/秘密/范围检查 clean；独立 Review **APPROVE**，无 BLOCKER/SHOULD-FIX，M03 checkpoint 待创建。
+- **下一步：** M03 验收样例、最小 UI 接线、旧回归、全量质量和 GUI smoke 已完成；独立 Review 已通过并已创建 `bf13d0f85a3b5f2c0cff188e71cf4789e35b9638` checkpoint；当前仅推进 V02-T02-M04 联合 Gate，不提前进入发布动作。
+- **完成证据：** 新增 `tests/test_v02_t02_m03.py` **3 passed**；M01/M02/既有 UI/关闭回归 **54 passed**；锁定无 system-site-packages 环境全量 pytest **1366 passed, 5 skipped**；Ruff clean；mypy src **81 source files no issues**；pip check clean；原生 Windows Qt Project Tab 英文/中文 × 100%/150% 可见/关闭 PASS，placeholder 已本地化且代表性截图无重叠/截断；资源/秘密/范围检查 clean；独立 Review **APPROVE**，无 BLOCKER/SHOULD-FIX；M03 checkpoint=`bf13d0f85a3b5f2c0cff188e71cf4789e35b9638`。
+
+## 25. v0.2 Project M04联合 GUI/视觉/回归 Gate：`V02-T02-M04`
+
+- **状态：** completed；恢复基线/rollback=`bf13d0f85a3b5f2c0cff188e71cf4789e35b9638`；当前 branch=`master`；`pending_decision: none`；全部 Gate 已通过，checkpoint 待创建。
+- **判定：** **FIT**（2026-08-23）。M01 六格式 GUI、M02 可恢复删除服务和 M03 删除 UI/i18n 已 checkpoint；M04 是验证收束 Gate，不改产品行为、数据格式、依赖或发布状态。
+- **范围与验收：** 复核全量质量、M01–M03 回归/验收、原生 Windows Settings/Project/Translation 代表性状态中英文 × 100%/150% 可见/关闭、Project 删除控件/placeholder 视觉，以及资源/秘密/路径/allowed paths；独立 Review 通过。候选构建、签发、push/merge/tag/Release 不在本 M04。
+- **完成证据：** M01–M03 定向验收与指定旧回归 **57 passed**；锁定无 system-site-packages 环境全量 pytest **1366 passed, 5 skipped**；Ruff clean；mypy src **81 source files no issues**；pip check clean；原生 Windows Qt 中英文 × 100%/150% Settings/Project/Translation 代表性状态可见/关闭 PASS，Project 删除摘要/精确确认/placeholder 代表性截图无重叠或截断；资源/秘密/路径/allowed paths 与 `git diff --check` clean；未构建候选、未调用真实模型、未操作真实用户数据；独立只读 Review **APPROVE**，BLOCKER/SHOULD-FIX none。
+- **下一步：** 仅暂存 V02-T02-M04 allowed paths 创建本地 checkpoint；提交后复核作者、文件清单、HEAD、branch、状态指针和工作树，再推进至下一个依赖满足的 V02-T03-M01，不执行发布动作。
 
 ---
 
