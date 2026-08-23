@@ -966,7 +966,7 @@ Task重新规划
 ## 17. v0.3 计划决策：`DEC-V03-PROJECT-STORAGE`
 
 - **状态：** proposed；不是已裁决实现方案，v0.2 不触发。
-- **门禁复核（2026-08-23）：** 当前 `pending_decision: none`，明确保留本节点，不作提前架构裁决。现有推荐只作为待比较方向；不得跳过“保留全局库并单 Project 克隆/ID 重映射”“一 Project 一库”“全局索引库 + Project 库”三案的现场取证、兼容性、安全和迁移/回滚成本比较。默认仍在 V02-T05 完成后进入 V03-T00；当前开发恢复点保持 `V02-T01-M01`。
+- **门禁复核（2026-08-23）：** 当前 `pending_decision: none`，明确保留本节点，不作提前架构裁决。现有推荐只作为待比较方向；不得跳过“保留全局库并单 Project 克隆/ID 重映射”“一 Project 一库”“全局索引库 + Project 库”三案的现场取证、兼容性、安全和迁移/回滚成本比较。默认仍在 V02-T05 完成后进入 V03-T00；当前开发恢复点为 `V02-T01-M02`。
 - **触发点：** V02-T05 完成后进入 V03-T00，或用户明确要求提前进行 Project 工作区重构。
 - **问题：** 统一全局多 Project SQLite、单 Project 容器、应用级配置、受管工作区、外部开放目录、`.aiproject` 导入和旧库迁移。
 - **推荐：** 一次一个活动 `ProjectSession` 对应一个 Project SQLite；受管工作区与开放目录共享 Project 契约；`.aiproject` 是传输快照，导入后安装为可写工作区；界面语言/最近 Project 等应用配置独立保存；凭据继续只保存引用。
@@ -980,6 +980,14 @@ Task重新规划
 - **问题：** M01 行为、回归和 Review 已通过，但全量 pytest 被本机 `packaging` 漂移和活动 `dist/` 中陈旧 v0.1 candidate 阻塞。
 - **现场证据：** lock 要求 `packaging==26.2`，本机安装为 25.0；旧 manifest 记录 version 0.1.0、commit `110dea9...`、`git_dirty:true`，当前 HEAD 为 `9c0be23...` 且工作树含未提交 M01。构建脚本会记录 HEAD 和 dirty 标志，现有候选测试比较 commit 但不拒绝 dirty，因此现在重建可制造“commit 看似匹配、实际内容含未提交代码”的假绿。
 - **唯一推荐：** 不改业务、测试语义或 lock；使用隔离 Python 3.12 环境按 lock 恢复依赖；保存路径/hash 后把旧 `dist/` 整体可逆归档到仓库外；重跑完整 Gate，再由独立验收决定 M01 是否完成。
+
+## 19. v0.2 UI M02 实施门禁：`V02-T01-M02`
+
+- **状态：** completed；当前 HEAD 为 M01 checkpoint `f4283870e6fa7b46d2090ec56ed7f4a9d3ecc8f9`，M02 改动尚未 checkpoint；`pending_decision: none`。
+- **Reality Check：** 2026-08-23 **FIT**。M01 page seam、锁定环境和授权范围满足 M02；实现只落在 `src/transrealm/ui/**`、M02 测试和必要状态/契约 Markdown，无 REPLAN。
+- **实现边界：** 主窗口新增 header/三 Tab scroll shell、light token/QSS、surface palette；`MainShell` 保留已发现的旧 `QTabWidget` 查询/导航入口；Application/Domain/Infrastructure、SQLite/migration、worker 线程边界、页面业务行为均未改变；按钮前景色也纳入 token。
+- **门禁证据：** M02 新增测试 3 passed；受影响旧回归 134 passed；全量 pytest 1341 passed/5 skipped；Ruff clean；mypy 80 source files clean；pip check clean；原生 Windows Qt 100%/150% 可见与关闭 smoke PASS；原生 150% 截图与离屏 100%/150% 目标截图完成人工视觉检查；UI boundary/秘密/本机路径扫描和 `git diff --check` 通过。未构建候选、未操作真实模型或用户数据。
+- **Review 处理：** 首次独立只读 Review 因证据尚未同步到状态文档给出 `REJECT`，并提出未发现的 `centralWidget()` 扩展调用风险；已同步 GUI 证据、补齐已发现旧 tab API 兼容代理并纳入测试。最终复审为 `APPROVE-WITH-MINORS`，无 BLOCKER/SHOULD-FIX；MINOR 的“工作树干净”文案已修正。M02 可创建仅含自身范围文件的本地 checkpoint。
 - **否决：** dirty 现场重建候选（不可复现且可假绿）；把 lock 降为本机版本（掩盖漂移）；豁免全量失败（降低门禁）；把发布链修复混入页面拆分（范围和回滚边界失真）。
 - **兼容性/安全：** 无 API、UI、schema、Project、凭据或用户数据变化；旧 artifact 原样保留。v0.2 候选发布前必须增加 `git_dirty=false` 与 version/目标 commit/hash 一致性门禁；该安全加固不阻塞 M01 源码 checkpoint，但阻塞候选签发。
 - **迁移/回滚：** 无数据 migration。隔离环境可废弃重建；artifact 归档以 hash 验证并可移回原路径。禁止删除 artifact 或覆盖既有用户数据。

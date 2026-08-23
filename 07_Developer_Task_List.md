@@ -35,6 +35,7 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 - **Milestone：** M01 页面职责拆分且行为不变；M02 主壳/导航/token/浅色主题；M03 Qt i18n/运行时切换/持久化/打包；M04 全量回归、截图矩阵和独立 Review。
 - **M01 当前证据：** `page_base.py`、`settings_page.py`、`project_page.py`、`translation_page.py` 已拆分，`pages.py` 保留兼容 re-export；新增结构验收 3 项；受影响旧回归基线保持通过，本次锁定环境定向 UI/worker/关闭回归 **131 passed**；全量 pytest **1338 passed, 5 skipped**；Ruff clean、mypy 136 files clean、GUI smoke PASS。
 - **M01 门禁结果：** `DEC-V02-T01-M01-GATE-BASELINE` 已按批准方案完成：隔离 Python 3.12 精确恢复 `requirements.lock` 并 `pip check` 通过；旧 v0.1 `dist` 已连同 manifest/ZIP/EXE hash 可逆归档至仓库外；活动 `dist` 为空；所有 skip 有适用性说明；独立只读 Review `APPROVE-WITH-MINORS`，无 BLOCKER/SHOULD-FIX。M01 可创建本地 checkpoint，Task 仍因 M02–M04 保持 `verification`。
+- **M02 门禁结果：** `theme.py` light tokens/QSS、header shell、三 Tab scroll wrapper 和 surface palette 已实现；`MainShell` 保留已发现的旧 `QTabWidget` 查询/导航入口（`currentIndex`/`setCurrentIndex`/`count`/`widget`/`tabText`/`currentWidget`）。新增验收 **3 passed**；受影响 UI/worker/关闭回归 **134 passed**；全量 pytest **1341 passed, 5 skipped**；Ruff/mypy clean；`pip check` clean；原生 Windows Qt 100%/150% GUI 可见与关闭 smoke PASS，原生 150% 截图无文本/层级截断，离屏 1920×1080 目标截图页面 surface 正确；UI boundary/秘密/绝对路径扫描与 `git diff --check` 通过。首次独立 Review 的上下文缺口已补证并复审为 `APPROVE-WITH-MINORS`，无 BLOCKER/SHOULD-FIX；MINOR 文案已修正。M02 全部门禁通过，待仅含 M02 的本地 checkpoint。
 - **完成条件：** 旧 UI 回归、全量 pytest/Ruff/mypy、视觉 Gate 和文档同步全部通过。
 
 ### V02-T02 — Project 生命周期与六格式 GUI
