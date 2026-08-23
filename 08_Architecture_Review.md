@@ -1024,12 +1024,21 @@ Task重新规划
 
 ## 23. v0.2 Project M02 Reality Check：`V02-T02-M02`
 
-- **状态：** completed；恢复基线/rollback=`93d5e3ccb8e4fd4f4e08ed941c6dfd4d8bd35dbe`；当前 branch=`master`；`pending_decision: none`；checkpoint 待创建。
+- **状态：** completed；恢复基线/rollback=`93d5e3ccb8e4fd4f4e08ed941c6dfd4d8bd35dbe`；当前 branch=`master`；`pending_decision: none`；checkpoint=`537512f56523e0ff8efa5e392d07ddb109ad3740`；当前恢复指针已推进至 `V02-T02-M03`。
 - **判定：** **FIT**（2026-08-23）。现有 `ProjectService`/`ProjectRepository` CRUD、SQLite backup API 的 `create_consistent_snapshot`、FK CASCADE 和 transaction seam 已满足最小实现前提；Run status 与 segment processing lease 可只读检查。无需 migration、Project 数据格式变更、UI、真实端点或真实用户数据操作。
 - **目标边界：** 仅补可恢复 Project 删除的 Application/Repository 最小能力与 M02 测试：备份失败/运行中 Run/有效 processing lease/事务故障均零删除；成功删除只影响目标 Project 及其从属数据，其他 Project/全局配置保留；备份可打开恢复；外部源文件、导出、`.aiproject`、开放目录不触碰。M03 的 UI 摘要/确认和运行保护交互不在本 M02。
 - **允许路径：** `src/transrealm/application/project_service.py`、`src/transrealm/infrastructure/repositories/project_repository.py`、必要的既有 backup seam（若仅复用则不改）、`tests/test_v02_t02_m02.py` 和必要状态/契约 Markdown；若发现必须 migration 或改变已批准数据格式，须 REPLAN。
 - **下一步：** M02 验收样例、最小服务实现、旧回归、全量质量和范围检查已完成；独立 Review 通过后仅暂存 V02-T02-M02 allowed paths 创建本地 checkpoint，随后推进至 V02-T02-M03，不提前进入 M04 联合 Gate 或任何发布动作。
-- **完成证据：** 新增 `tests/test_v02_t02_m02.py` **7 passed**；指定 Project/Profile/Glossary/翻译旧回归 **83 passed**；锁定无 system-site-packages 环境全量 pytest **1363 passed, 5 skipped**；Ruff clean；mypy src **81 source files no issues**；pip check clean；M01 原生 Windows Qt 中英文/DPI GUI 证据继续有效，M02 未新增 UI；资源/秘密/外部文件/范围检查 clean；最终独立 Review **APPROVE**，无 BLOCKER/SHOULD-FIX，M02 checkpoint 待创建。
+- **完成证据：** 新增 `tests/test_v02_t02_m02.py` **7 passed**；指定 Project/Profile/Glossary/翻译旧回归 **83 passed**；锁定无 system-site-packages 环境全量 pytest **1363 passed, 5 skipped**；Ruff clean；mypy src **81 source files no issues**；pip check clean；M01 原生 Windows Qt 中英文/DPI GUI 证据继续有效，M02 未新增 UI；资源/秘密/外部文件/范围检查 clean；最终独立 Review **APPROVE**，无 BLOCKER/SHOULD-FIX；M02 checkpoint=`537512f56523e0ff8efa5e392d07ddb109ad3740`。
+
+## 24. v0.2 Project M03 Reality Check：`V02-T02-M03`
+
+- **状态：** completed；恢复基线/rollback=`537512f56523e0ff8efa5e392d07ddb109ad3740`；当前 branch=`master`；`pending_decision: none`；checkpoint 待创建。
+- **判定：** **FIT**（2026-08-23）。`ProjectPage` 已有滚动表单与状态反馈，`ServiceWorker`/`WorkerPage` 提供异步 service seam，中英文资源和 M02 `ProjectDeletionSummary`/`delete_project` 已齐备；M03 只接 UI，不改 Application/Domain/Infrastructure、schema/migration、删除语义或运行依赖。
+- **目标边界：** Project 页显示从属摘要，要求输入精确 Project 名后异步确认删除；成功刷新 Project 状态，备份失败/运行保护/事务失败显示可操作错误；窗口关闭/worker 收敛和中英文/DPI GUI 证据纳入验收。M04 联合视觉/回归 Gate 不在本 M03。
+- **允许路径：** `src/transrealm/ui/**`、V02-T02 M03 测试和必要状态/契约 Markdown；复用 M02 删除 service/backup seam，不改 Application/Domain/Infrastructure、schema/migration、Project 数据格式或真实用户数据。
+- **下一步：** M03 验收样例、最小 UI 接线、旧回归、全量质量和 GUI smoke 已完成；独立 Review 通过后仅暂存 V02-T02-M03 allowed paths 创建本地 checkpoint，随后推进至 V02-T02-M04，不提前进入发布动作。
+- **完成证据：** 新增 `tests/test_v02_t02_m03.py` **3 passed**；M01/M02/既有 UI/关闭回归 **54 passed**；锁定无 system-site-packages 环境全量 pytest **1366 passed, 5 skipped**；Ruff clean；mypy src **81 source files no issues**；pip check clean；原生 Windows Qt Project Tab 英文/中文 × 100%/150% 可见/关闭 PASS，placeholder 已本地化且代表性截图无重叠/截断；资源/秘密/范围检查 clean；独立 Review **APPROVE**，无 BLOCKER/SHOULD-FIX，M03 checkpoint 待创建。
 
 ---
 

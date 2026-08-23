@@ -26,6 +26,10 @@
     <message><source>Import file…</source><translation>导入文件…</translation></message>
     <message><source>Import TXT…</source><translation>导入 TXT…</translation></message>
     <message><source>Open project</source><translation>打开项目</translation></message>
+    <message><source>Delete Project</source><translation>删除项目</translation></message>
+    <message><source>Delete summary</source><translation>删除摘要</translation></message>
+    <message><source>Confirm name</source><translation>确认名称</translation></message>
+    <message><source>Type Project name to confirm</source><translation>输入项目名称以确认</translation></message>
     <message><source>Set Active Profile</source><translation>设置活动配置</translation></message>
     <message><source>Clear Active Profile</source><translation>清除活动配置</translation></message>
     <message><source>Active profile</source><translation>活动配置</translation></message>

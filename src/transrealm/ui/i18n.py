@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QGroupBox,
     QLabel,
+    QLineEdit,
     QTabWidget,
     QWidget,
 )
@@ -41,6 +42,7 @@ class LanguageManager(QObject):
         self._bound_widgets: WeakSet[QWidget] = WeakSet()
         self._tab_sources: WeakKeyDictionary[QTabWidget, list[str]] = WeakKeyDictionary()
         self._combo_sources: WeakKeyDictionary[QComboBox, list[str]] = WeakKeyDictionary()
+        self._placeholder_sources: WeakKeyDictionary[QLineEdit, str] = WeakKeyDictionary()
         self._language = self._normalize(self._settings.value("language", DEFAULT_LANGUAGE))
         self._load_language(self._language)
 
@@ -103,6 +105,20 @@ class LanguageManager(QObject):
             self._translate_combo(widget)
             return
 
+        if isinstance(widget, QLineEdit):
+            source = widget.property("transrealm_i18n_placeholder_source")
+            if source is None:
+                source = widget.placeholderText()
+                if not source:
+                    return
+                widget.setProperty("transrealm_i18n_placeholder_source", source)
+            if not isinstance(source, str) or not source:
+                return
+            self._placeholder_sources[widget] = source
+            self._bound_widgets.add(widget)
+            widget.setPlaceholderText(self.tr(source))
+            return
+
         if isinstance(widget, (QAbstractButton, QGroupBox, QLabel)):
             source = widget.property("transrealm_i18n_source")
             if source is None:
@@ -122,6 +138,10 @@ class LanguageManager(QObject):
                 self._translate_tabs(widget)
             elif isinstance(widget, QComboBox):
                 self._translate_combo(widget)
+            elif isinstance(widget, QLineEdit):
+                source = self._placeholder_sources.get(widget)
+                if source is not None:
+                    widget.setPlaceholderText(self.tr(source))
             elif isinstance(widget, (QAbstractButton, QGroupBox, QLabel)):
                 source = widget.property("transrealm_i18n_source")
                 if isinstance(source, str):

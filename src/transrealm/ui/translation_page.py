@@ -200,6 +200,12 @@ class TranslationPage(WorkerPage):
         self._project_id = project_id
         self.refresh()
 
+    def clear_project(self) -> None:
+        """Clear the project context after the active Project is deleted."""
+        self._project_id = None
+        self._document_id = None
+        self.refresh()
+
     def refresh(self) -> None:
         """Reload the project mode and active profile for status feedback."""
         self._submit("refresh", self._refresh_task())

@@ -39,7 +39,7 @@ from transrealm.application.glossary_service import GlossaryService
 from transrealm.application.import_service import ImportService
 from transrealm.application.model_profile_service import ModelProfileService
 from transrealm.application.preset_templates import current_preset
-from transrealm.application.project_service import ProjectService
+from transrealm.application.project_service import ProjectDeletionSummary, ProjectService
 from transrealm.application.provider_connection_service import ProviderConnectionService
 from transrealm.application.translation_run_service import TranslationRunService
 from transrealm.application.workbench import SegmentProgress, presented_parameters
@@ -68,6 +68,7 @@ class ProjectPage(WorkerPage):
     """
 
     project_ready = Signal(int)
+    project_deleted = Signal(int)
     document_ready = Signal(int, str, int)
     project_settings_changed = Signal(int)
 
@@ -76,6 +77,7 @@ class ProjectPage(WorkerPage):
         self._db_path = db_path
         self._app_version = app_version
         self._project_id: int | None = None
+        self._deletion_summary_data: ProjectDeletionSummary | None = None
 
         layout = QVBoxLayout(self)
         self._status = QLabel("", self)
@@ -99,6 +101,17 @@ class ProjectPage(WorkerPage):
         layout.addWidget(QLabel("Open project", self))
         self._project_combo = QComboBox(self)
         layout.addWidget(self._project_combo)
+
+        delete_form = QFormLayout()
+        self._delete_summary_label = QLabel("", self)
+        self._delete_summary_label.setWordWrap(True)
+        self._delete_confirmation = QLineEdit(self)
+        self._delete_confirmation.setPlaceholderText("Type Project name to confirm")
+        self._delete_project = QPushButton("Delete Project", self)
+        delete_form.addRow("Delete summary", self._delete_summary_label)
+        delete_form.addRow("Confirm name", self._delete_confirmation)
+        delete_form.addRow(self._delete_project)
+        layout.addLayout(delete_form)
 
         active_form = QFormLayout()
         self._active_profile_combo = QComboBox(self)
@@ -142,6 +155,7 @@ class ProjectPage(WorkerPage):
         self._create_project.clicked.connect(self._on_create_project)
         self._import_file.clicked.connect(self._on_import_file)
         self._project_combo.activated.connect(self._on_project_selected)
+        self._delete_project.clicked.connect(self._on_delete_project)
         self._set_active.clicked.connect(self._on_set_active)
         self._clear_active.clicked.connect(self._on_clear_active)
         self._add_glossary.clicked.connect(self._on_add_glossary)
@@ -166,6 +180,11 @@ class ProjectPage(WorkerPage):
                     (p for p in project_list if p.id == project_id),
                     None,
                 )
+                deletion_summary = (
+                    projects.get_project_deletion_summary(project_id)
+                    if project is not None and project_id is not None
+                    else None
+                )
             with ModelProfileService(
                 self._db_path,
                 app_version=self._app_version,
@@ -183,7 +202,14 @@ class ProjectPage(WorkerPage):
                     app_version=self._app_version,
                 ) as glossary:
                     glossary_entries = glossary.list_entries(project_id)
-            return project_list, profile_list, project, active_profile, glossary_entries
+            return (
+                project_list,
+                profile_list,
+                project,
+                active_profile,
+                glossary_entries,
+                deletion_summary,
+            )
 
         return task
 
@@ -256,6 +282,30 @@ class ProjectPage(WorkerPage):
         self._project_id = project_id
         self.project_ready.emit(project_id)
         self.refresh()
+
+    def _on_delete_project(self) -> None:
+        self.delete_project()
+
+    def delete_project(self, confirmation_name: str | None = None) -> None:
+        """Delete the selected Project after an exact-name confirmation."""
+        if confirmation_name is not None:
+            self._delete_confirmation.setText(confirmation_name)
+        if self._project_id is None or self._deletion_summary_data is None:
+            self._handle_error("Create or select a project first.")
+            return
+        expected_name = self._deletion_summary_data.project_name
+        if self._delete_confirmation.text().strip() != expected_name:
+            self._handle_error("Type the exact Project name to confirm deletion.")
+            return
+        project_id = self._project_id
+        self._submit("delete_project", self._delete_project_task(project_id))
+
+    def _delete_project_task(self, project_id: int) -> Callable[[], object]:
+        def task() -> object:
+            with ProjectService(self._db_path, app_version=self._app_version) as service:
+                return service.delete_project(project_id)
+
+        return task
 
     def _on_set_active(self) -> None:
         if self._project_id is None:
@@ -415,11 +465,25 @@ class ProjectPage(WorkerPage):
     def _handle_action(self, action: str, result: object) -> None:
         if action == "refresh":
             assert isinstance(result, tuple)
-            projects, profiles, project, active_profile, glossary_entries = result
+            (
+                projects,
+                profiles,
+                project,
+                active_profile,
+                glossary_entries,
+                deletion_summary,
+            ) = result
             assert isinstance(projects, list)
             assert isinstance(profiles, list)
             assert isinstance(glossary_entries, list)
-            self._populate(projects, profiles, project, active_profile, glossary_entries)
+            self._populate(
+                projects,
+                profiles,
+                project,
+                active_profile,
+                glossary_entries,
+                deletion_summary,
+            )
         elif action == "create_project":
             assert isinstance(result, Project)
             assert result.id is not None
@@ -448,6 +512,19 @@ class ProjectPage(WorkerPage):
         elif action == "delete_glossary":
             self._status.setText("Glossary entry deleted.")
             self.refresh()
+        elif action == "delete_project":
+            if result is None:
+                self._handle_error("Project was not found.")
+                return
+            assert isinstance(result, Path)
+            deleted_id = self._project_id
+            self._project_id = None
+            self._deletion_summary_data = None
+            self._delete_confirmation.clear()
+            self._status.setText("Project deleted. Recovery backup retained.")
+            if deleted_id is not None:
+                self.project_deleted.emit(deleted_id)
+            self.refresh()
         elif action in {"import_file", "import_txt"}:
             assert isinstance(result, tuple)
             document, segments = result
@@ -468,9 +545,12 @@ class ProjectPage(WorkerPage):
         project: object,
         active_profile: object,
         glossary_entries: list[object],
+        deletion_summary: object,
     ) -> None:
         assert isinstance(project, Project | None)
         assert isinstance(active_profile, ModelProfile | None)
+        assert isinstance(deletion_summary, ProjectDeletionSummary | None)
+        self._deletion_summary_data = deletion_summary
         self._project_combo.clear()
         for candidate in projects:
             assert isinstance(candidate, Project)
@@ -480,6 +560,20 @@ class ProjectPage(WorkerPage):
             index = self._project_combo.findData(self._project_id)
             if index >= 0:
                 self._project_combo.setCurrentIndex(index)
+
+        if deletion_summary is not None:
+            self._delete_summary_label.setText(
+                f"{deletion_summary.project_name}: "
+                f"{deletion_summary.source_documents} source document(s), "
+                f"{deletion_summary.segments} segment(s), "
+                f"{deletion_summary.translation_runs} Run(s), "
+                f"{deletion_summary.glossary_entries} glossary entr(y/ies). "
+                f"Blockers: {deletion_summary.running_runs} running Run(s), "
+                f"{deletion_summary.active_processing_leases} active lease(s).",
+            )
+        else:
+            self._delete_summary_label.setText("")
+            self._delete_confirmation.clear()
 
         self._active_profile_combo.clear()
         for candidate in profiles:

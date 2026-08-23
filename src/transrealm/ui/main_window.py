@@ -187,6 +187,9 @@ class MainWindow(QMainWindow):
         self._i18n.bind_tree(self)
 
         self._project.project_ready.connect(self._translation.set_project)
+        self._project.project_deleted.connect(
+            lambda _project_id: self._translation.clear_project(),
+        )
         self._project.project_settings_changed.connect(self._translation.set_project)
         self._project.document_ready.connect(self._translation.set_document)
         self._translation.request_project_setup.connect(

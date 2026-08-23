@@ -26,6 +26,10 @@
     <message><source>Import file…</source><translation>Import file…</translation></message>
     <message><source>Import TXT…</source><translation>Import TXT…</translation></message>
     <message><source>Open project</source><translation>Open project</translation></message>
+    <message><source>Delete Project</source><translation>Delete Project</translation></message>
+    <message><source>Delete summary</source><translation>Delete summary</translation></message>
+    <message><source>Confirm name</source><translation>Confirm name</translation></message>
+    <message><source>Type Project name to confirm</source><translation>Type Project name to confirm</translation></message>
     <message><source>Set Active Profile</source><translation>Set Active Profile</translation></message>
     <message><source>Clear Active Profile</source><translation>Clear Active Profile</translation></message>
     <message><source>Active profile</source><translation>Active profile</translation></message>

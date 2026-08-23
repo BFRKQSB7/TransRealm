@@ -5,20 +5,20 @@ protocol_version: 2
 current_phase: Phase 1.5A
 current_release: v0.2.0
 current_task: V02-T02
-current_milestone: V02-T02-M02
+current_milestone: V02-T02-M03
 state: completed
 last_updated: 2026-08-23
-baseline_commit: 93d5e3ccb8e4fd4f4e08ed941c6dfd4d8bd35dbe
+baseline_commit: 537512f56523e0ff8efa5e392d07ddb109ad3740
 baseline_integrity: committed_clean_planning_baseline
-worktree_disposition: v02_t02_m02_verified_checkpoint_pending
-gate_status: m02_all_gates_passed
+worktree_disposition: v02_t02_m03_verified_checkpoint_pending
+gate_status: m03_all_gates_passed
 plan_alignment: fit
 review_status: independent_review_approved
-rollback_ref: 93d5e3ccb8e4fd4f4e08ed941c6dfd4d8bd35dbe
+rollback_ref: 537512f56523e0ff8efa5e392d07ddb109ad3740
 pending_decision: none
 decision_prompt: none
 decision_result: DEC-V02-T01-M01-GATE-BASELINE_approved
-resume_milestone: V02-T02-M02
+resume_milestone: V02-T02-M03
 authorization_scope: V02-T02_allowed_paths
 code_authorized: true
 branch_authorized: false
@@ -75,23 +75,26 @@ external_actions_authorized: false
 
 ### v0.2 当前事实与授权（2026-08-23）
 
-- **Git 事实：** `master` 当前 HEAD=`93d5e3ccb8e4fd4f4e08ed941c6dfd4d8bd35dbe`（V02-T02-M01 checkpoint），V02-T01 M01/M02/M03/M04 checkpoint 分别为 `f4283870e6fa7b46d2090ec56ed7f4a9d3ecc8f9`、`165c87e4377d7e1ace119991df3e5ddc541de61c`、`dbf31da1ad6668389cf0e453f70b93d461204a4b`、`609d529960b7d47654def7a4d4b3a21fe19257b9`，V02-T02-M01 checkpoint 为 `93d5e3ccb8e4fd4f4e08ed941c6dfd4d8bd35dbe`，均未 push；当前工作树包含 V02-T02-M02 的 Project 删除实现、测试和状态/契约文档改动，尚未 checkpoint。没有创建或切换分支；tag `v0.1.0` 指向 commit `7bf26be6cc4c5a17933d27ae4e1d781d15b2c06c`。
+- **Git 事实：** `master` 当前 HEAD=`537512f56523e0ff8efa5e392d07ddb109ad3740`（V02-T02-M02 checkpoint），V02-T01 M01/M02/M03/M04 checkpoint 分别为 `f4283870e6fa7b46d2090ec56ed7f4a9d3ecc8f9`、`165c87e4377d7e1ace119991df3e5ddc541de61c`、`dbf31da1ad6668389cf0e453f70b93d461204a4b`、`609d529960b7d47654def7a4d4b3a21fe19257b9`，V02-T02-M01 checkpoint 为 `93d5e3ccb8e4fd4f4e08ed941c6dfd4d8bd35dbe`、M02 checkpoint 为 `537512f56523e0ff8efa5e392d07ddb109ad3740`，均未 push；当前工作树包含 V02-T02-M03 的 UI/i18n 实现、测试和状态/契约文档改动，尚未 checkpoint。没有创建或切换分支；tag `v0.1.0` 指向 commit `7bf26be6cc4c5a17933d27ae4e1d781d15b2c06c`。
 - **发布事实：** v0.1.0 已发布；其后 master 包含 CI 与状态文档修复。最后归档质量证据为 pytest 1339 passed（1 skipped）、Ruff clean、mypy clean；本次 Markdown-only 规划没有复跑会写缓存的测试，不把历史数字表述为本次执行结果。
 - **用户裁决：** 2026-08-22 用户确认 v0.2/v0.3 无人值守方案。2026-08-23 用户撤销创建、切换或删除分支的权限，但保留本地里程碑提交权限：只能在用户当前分支上，于 Milestone 全部门禁通过后暂存范围内文件并创建一个本地 checkpoint commit。当前代码 Task 已获授权；本轮用户另行批准 `DEC-V02-T01-M01-GATE-BASELINE` 并授权自主同步 Markdown，但决策 Agent 仍不得借此实现、构建、提交或发布。本地提交授权不包含 push、merge、tag、Release、远程资源、真实/付费模型调用或真实用户数据操作。
 - **路线裁决：** Phase 2 的 RAG/TM/Character Data 暂停；先完成 Phase 1.5A/v0.2 的 UI 重构、中英文、六格式 GUI、安全删除、Connection/Profile 编辑和 Workbench 体验。`.aiproject`/开放目录 GUI 延后至 v0.3 的 `DEC-V03-PROJECT-STORAGE`。
-- **决策门禁复核（2026-08-23）：** `pending_decision` 保持 `none`，`DEC-V03-PROJECT-STORAGE` 明确保留至 V02-T05 完成后的 V03-T00；除非用户明确要求提前进行 Project 工作区重构，否则不得把“一次一个活动 ProjectSession + 一 Project 一 SQLite”推荐方向写成已裁决方案。正式裁决仍须比较“全局库 + 单 Project 克隆/ID 重映射”“一 Project 一库”“全局索引库 + Project 库”三案，并交付兼容性、安全、迁移/回滚、portable/data-dir、Application/UI seam 和验收矩阵。当前恢复点为 `V02-T02-M02`。
-- **工作树处置：** 当前仅允许 V02-T02 M02 的 Project Application/Repository 最小删除能力、M02 测试和必要状态/契约 Markdown；复用既有 SQLite backup/FK/transaction seam，不改 schema、migration、Project 数据格式、UI 或真实用户数据。V02-T02 M02 未通过全部门禁前不得提交。
+- **决策门禁复核（2026-08-23）：** `pending_decision` 保持 `none`，`DEC-V03-PROJECT-STORAGE` 明确保留至 V02-T05 完成后的 V03-T00；除非用户明确要求提前进行 Project 工作区重构，否则不得把“一次一个活动 ProjectSession + 一 Project 一 SQLite”推荐方向写成已裁决方案。正式裁决仍须比较“全局库 + 单 Project 克隆/ID 重映射”“一 Project 一库”“全局索引库 + Project 库”三案，并交付兼容性、安全、迁移/回滚、portable/data-dir、Application/UI seam 和验收矩阵。当前恢复点为 `V02-T02-M03`。
+- **工作树处置：** 当前仅允许 V02-T02 M03 的 `src/transrealm/ui/**`、M03 测试和必要状态/契约 Markdown；复用 V02-T02-M02 删除服务/备份/运行保护 seam，不改 schema、migration、Project 数据格式、Application/Domain/Infrastructure 或真实用户数据。V02-T02 M03 未通过全部门禁前不得提交。
 
 ### 当前 Task
 
 - **Task：** V02-T02 — Project 生命周期与六格式 GUI。
-- **状态：** `in_progress`；`code_authorized: true`。依赖 V02-T01 与 V02-T02-M01 已完成并 checkpoint；当前为 M02 Reality Check FIT 后的实现阶段。
+- **状态：** `in_progress`；`code_authorized: true`。依赖 V02-T01、V02-T02-M01、V02-T02-M02 已完成并 checkpoint；当前为 M03 Reality Check FIT 后的实现阶段。
 - **完整定义：** `07_Developer_Task_List.md` §0 `V02-T02`。
 - **前置治理：** V02-T00 文档规划已在当前分支形成 planning checkpoint `9c0be23e6e598939b1a672e8bed4958e7ce2cbaf`；用户禁止创建或切换分支，但允许在当前分支按 Milestone 形成本地 checkpoint。
 - **M01 Reality Check（历史）：** 2026-08-23 判定 **FIT**——页面职责拆分现场与 `07` M01 一致，无 Project/数据库/公共契约/依赖冲突。
 - **M02 Reality Check：** 2026-08-23 判定 **FIT**——`ProjectService`/`ProjectRepository` 已提供 Project CRUD 与单连接事务 seam；现有 `create_consistent_snapshot` 使用 SQLite backup API 生成可重开一致性快照；`projects` 下属 source document、segment、run、attempt、revision、glossary 等关联已由既有 FK CASCADE 覆盖，Run 状态与 segment processing lease 可只读检查。M02 仅需补 Project 删除服务/仓库最小能力、备份/故障/完整性测试和状态文档；不需要 migration、Project 数据格式、UI、真实端点或用户数据操作，无 ADAPT/REPLAN。
 - **M02 范围与验收：** 删除前备份失败不得删除；运行中 Run/有效 processing lease 拒绝；单事务删除成功且其他 Project/全局配置不受影响；事务故障回滚并保留可打开备份；外部源文件/导出/`.aiproject`/开放目录不触碰；新增 M02 测试、指定旧回归、全量质量命令和独立只读 Review。M03 再负责删除 UI/确认/摘要展示与运行保护交互，不在本 M02 实现。
 - **M02 完成证据：** `ProjectService.get_project_deletion_summary/delete_project` 复用 SQLite backup API 生成并保留 `*.project-delete-*.db.bak`，`ProjectRepository.delete_project` 用 `BEGIN IMMEDIATE` 重查运行中 Run/有效 lease 后单事务级联删除；新增 `tests/test_v02_t02_m02.py` **7 passed**；指定 Project/Profile/Glossary/翻译旧回归 **83 passed**；无 system-site-packages 的 `D:\TransRealm-v02-t02-m01-lock-venv-20260823` 全量 pytest **1363 passed, 5 skipped**；Ruff、mypy src 81 files、pip check clean。M01 GUI 证据继续有效，M02 未新增 UI；资源/秘密/外部文件/范围检查 clean；最终独立 Review **APPROVE**，无 BLOCKER/SHOULD-FIX，checkpoint 待创建。
+- **M03 Reality Check：** 2026-08-23 判定 **FIT**——`ProjectPage` 已有表单/滚动布局、`ServiceWorker`/`WorkerPage` 异步服务调用和中英文 i18n seam；M02 已提供 `get_project_deletion_summary`、`delete_project` 与运行/lease 拒绝。M03 仅接入删除摘要、Project 名确认和可操作错误反馈到既有 UI，不改 Application/Domain/Infrastructure、schema/migration 或删除语义，无 ADAPT/REPLAN。
+- **M03 范围与验收：** Project 页显示从属摘要、要求输入精确 Project 名并确认后异步删除；备份/运行保护/事务失败错误可操作，删除成功刷新 Project 状态；窗口关闭/worker 收敛、中文/英文/100%/150% GUI、旧回归、全量质量和独立 Review 通过；不提前进入 M04 联合 Gate。
+- **M03 完成证据：** `ProjectPage` 接入 M02 `get_project_deletion_summary/delete_project`，精确名称确认、异步删除、错误反馈、删除后清空 Translation context；`LanguageManager` 增 QLineEdit placeholder 翻译，en/zh_CN `.ts/.qm` 已重编译。新增 `tests/test_v02_t02_m03.py` **3 passed**；M01/M02/既有 UI/关闭回归 **54 passed**；锁定无 system-site-packages 环境全量 pytest **1366 passed, 5 skipped**；Ruff、mypy src 81 files、pip check clean；原生 Windows Qt Project Tab 英文/中文 × 100%/150% 可见/关闭 PASS，placeholder 已本地化且代表性截图无重叠/截断；资源/秘密/范围检查 clean；独立 Review **APPROVE**，无 BLOCKER/SHOULD-FIX，checkpoint 待创建。
 
 ### 已完成小目标
 
