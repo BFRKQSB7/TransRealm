@@ -22,8 +22,8 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 
 ### V02-T01 — UI 基础、视觉系统与中英文
 
-- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P1 用户可见；Medium；proposed（代码未授权，规划文档尚未形成可执行 commit）。
-- **base_commit：** `1542291` + 本次 Markdown 计划；代码开工前以实际 planning commit 重写完整 hash。
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P1 用户可见；Medium；verification（M01 实现完成，2026-08-23；全量 Gate 有两项 Task 外基线失败，未标记 completed）。
+- **base_commit：** `9c0be23e6e598939b1a672e8bed4958e7ce2cbaf`（当前分支 planning checkpoint，未 push）。
 - **Reality Audit：** SPLIT——页面拆分、主题、主壳、i18n 和视觉 Gate 分成垂直 Milestone，避免一次性重写 UI。
 - **目标：** 保持 Application/Domain/Infrastructure 契约，建立清晰、可维护、可本地化的桌面层和一致视觉语言。
 - **非目标：** 不改 schema、Project/容器格式、翻译状态机、Prompt、模型协议；不引入第三方 UI 框架、暗色主题或动画系统。
@@ -33,6 +33,8 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 - **兼容性基线：** P0-T08、P1-T03、P1-T04 UI/worker/关闭恢复测试和现有程序化页面入口。
 - **异常/视觉验收：** 缺资源/非法语言值安全回退；150% DPI 无截断；错误不吞；冻结场景矩阵、Tab/焦点、disabled/focus/error 状态通过独立视觉 Review。
 - **Milestone：** M01 页面职责拆分且行为不变；M02 主壳/导航/token/浅色主题；M03 Qt i18n/运行时切换/持久化/打包；M04 全量回归、截图矩阵和独立 Review。
+- **M01 当前证据：** `page_base.py`、`settings_page.py`、`project_page.py`、`translation_page.py` 已拆分，`pages.py` 保留兼容 re-export；新增结构验收 3 项；受影响旧回归基线保持通过，本次锁定环境定向 UI/worker/关闭回归 **131 passed**；全量 pytest **1338 passed, 5 skipped**；Ruff clean、mypy 136 files clean、GUI smoke PASS。
+- **M01 门禁结果：** `DEC-V02-T01-M01-GATE-BASELINE` 已按批准方案完成：隔离 Python 3.12 精确恢复 `requirements.lock` 并 `pip check` 通过；旧 v0.1 `dist` 已连同 manifest/ZIP/EXE hash 可逆归档至仓库外；活动 `dist` 为空；所有 skip 有适用性说明；独立只读 Review `APPROVE-WITH-MINORS`，无 BLOCKER/SHOULD-FIX。M01 可创建本地 checkpoint，Task 仍因 M02–M04 保持 `verification`。
 - **完成条件：** 旧 UI 回归、全量 pytest/Ruff/mypy、视觉 Gate 和文档同步全部通过。
 
 ### V02-T02 — Project 生命周期与六格式 GUI

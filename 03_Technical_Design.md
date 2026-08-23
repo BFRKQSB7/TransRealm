@@ -455,6 +455,8 @@ Gate 是布尔判定，不把"执行过"当通过（对齐 `02` V1.0 Release Gat
 - 零数据损失：任何故障注入不得丢失/损坏既有 Project、Revision、Segment、备份或目标文件；失败不得污染 DB 或目标；不得静默删除外置数据。
 - 证据位置：每 Gate 通过证据落点 = 测试 nodeid、smoke 目录、`requirements.lock`、本文件、`08` 落地取舍记录、`DEVELOPMENT_STATE.md`。M02 资源基线（内存峰值/耗时/Segment 数/外部调用次数）打印为 `LONG_TEXT_RESOURCE_BASELINE` 并写入 JSON 证据（tmp），只记录不断言虚构阈值（`02` §3 长文本测试）。
 
+`DEC-V02-T01-M01-GATE-BASELINE`（2026-08-23）明确 artifact 生命周期：仓库内 ignored `dist/` 是“当前候选工作区”，不是跨 HEAD 的历史档案。普通开发 Milestone 若不涉及冻结包，允许候选测试按既有机制明确 skip；旧候选必须连同 manifest/ZIP/onedir/hash 可逆归档到仓库外，不得删除、覆盖或被新 HEAD 自动当作当前候选。候选构建只允许来自干净、已提交、可定位的目标基线；v0.2 正式候选 Gate 必须断言 `git_dirty=false`，且 version、目标 commit、manifest 与 artifact hash 一致。dirty 工作树构建即使其他 hash 自洽也不得作为候选证据。
+
 ### 12.6 P0/P1 release-blocking 等级
 
 - **P0（release-blocking）：** 数据丢失/损坏、Project/格式损坏、secret 泄露、locked Revision 被覆盖、无法启动/迁移/恢复/完成核心旅程、依赖锁不一致、P0 缺陷。

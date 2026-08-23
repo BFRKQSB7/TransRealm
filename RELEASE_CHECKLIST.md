@@ -16,6 +16,7 @@
 - [ ] `py -3.12 -m ruff check src tests` 通过。
 - [ ] `py -3.12 -m mypy src tests` 通过。
 - [ ] 格式、迁移、恢复、导入/导出、长文本和 GUI 的 Release Gate 场景均有可复现证据。
+- [ ] 构建前工作树干净且目标 commit 已提交；manifest 必须记录 `git_dirty=false`，version/目标 commit 与待签发版本一致。历史候选不得留在活动 `dist/` 冒充当前候选，应连同 manifest/hash 可逆归档。
 - [ ] 独立 Review 无未解决的数据、安全、兼容性或发布阻塞发现。
 
 ## 3. 安全与数据完整性

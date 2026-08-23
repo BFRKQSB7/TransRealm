@@ -10,7 +10,9 @@ from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QMainWindow, QTabWidget
 
 from transrealm.adapters.protocol import ModelAdapter
-from transrealm.ui.pages import ProjectPage, SettingsPage, TranslationPage
+from transrealm.ui.project_page import ProjectPage
+from transrealm.ui.settings_page import SettingsPage
+from transrealm.ui.translation_page import TranslationPage
 from transrealm.ui.worker import (
     ServiceWorker,
     TranslationWorker,

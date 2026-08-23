@@ -966,12 +966,26 @@ Task重新规划
 ## 17. v0.3 计划决策：`DEC-V03-PROJECT-STORAGE`
 
 - **状态：** proposed；不是已裁决实现方案，v0.2 不触发。
+- **门禁复核（2026-08-23）：** 当前 `pending_decision: none`，明确保留本节点，不作提前架构裁决。现有推荐只作为待比较方向；不得跳过“保留全局库并单 Project 克隆/ID 重映射”“一 Project 一库”“全局索引库 + Project 库”三案的现场取证、兼容性、安全和迁移/回滚成本比较。默认仍在 V02-T05 完成后进入 V03-T00；当前开发恢复点保持 `V02-T01-M01`。
 - **触发点：** V02-T05 完成后进入 V03-T00，或用户明确要求提前进行 Project 工作区重构。
 - **问题：** 统一全局多 Project SQLite、单 Project 容器、应用级配置、受管工作区、外部开放目录、`.aiproject` 导入和旧库迁移。
 - **推荐：** 一次一个活动 `ProjectSession` 对应一个 Project SQLite；受管工作区与开放目录共享 Project 契约；`.aiproject` 是传输快照，导入后安装为可写工作区；界面语言/最近 Project 等应用配置独立保存；凭据继续只保存引用。
 - **必须比较的替代方案：** 保留全局库并实现单 Project 克隆/ID 重映射；一 Project 一库；全局索引库 + Project 库混合。不得仅因推荐已记录就跳过现场取证和迁移成本比较。
 - **不可变约束：** 旧库先一致性备份并保留只读恢复点；逐 Project 验证关联闭包、六格式载体、Revision/current/lock、Attempt、Profile/Connection 和秘密引用；全部新工作区验收前不删除或覆盖旧库；不原地编辑归档。
 - **裁决交付：** 唯一推荐与否决理由、数据/路径契约、旧库拆分算法与故障切点、portable/data-dir 优先级、Application/UI session seam、测试/回滚矩阵和恢复 Task。
+
+## 18. v0.2 门禁裁决：`DEC-V02-T01-M01-GATE-BASELINE`
+
+- **状态：** approved（2026-08-23）；恢复 Milestone `V02-T01-M01`。
+- **问题：** M01 行为、回归和 Review 已通过，但全量 pytest 被本机 `packaging` 漂移和活动 `dist/` 中陈旧 v0.1 candidate 阻塞。
+- **现场证据：** lock 要求 `packaging==26.2`，本机安装为 25.0；旧 manifest 记录 version 0.1.0、commit `110dea9...`、`git_dirty:true`，当前 HEAD 为 `9c0be23...` 且工作树含未提交 M01。构建脚本会记录 HEAD 和 dirty 标志，现有候选测试比较 commit 但不拒绝 dirty，因此现在重建可制造“commit 看似匹配、实际内容含未提交代码”的假绿。
+- **唯一推荐：** 不改业务、测试语义或 lock；使用隔离 Python 3.12 环境按 lock 恢复依赖；保存路径/hash 后把旧 `dist/` 整体可逆归档到仓库外；重跑完整 Gate，再由独立验收决定 M01 是否完成。
+- **否决：** dirty 现场重建候选（不可复现且可假绿）；把 lock 降为本机版本（掩盖漂移）；豁免全量失败（降低门禁）；把发布链修复混入页面拆分（范围和回滚边界失真）。
+- **兼容性/安全：** 无 API、UI、schema、Project、凭据或用户数据变化；旧 artifact 原样保留。v0.2 候选发布前必须增加 `git_dirty=false` 与 version/目标 commit/hash 一致性门禁；该安全加固不阻塞 M01 源码 checkpoint，但阻塞候选签发。
+- **迁移/回滚：** 无数据 migration。隔离环境可废弃重建；artifact 归档以 hash 验证并可移回原路径。禁止删除 artifact 或覆盖既有用户数据。
+- **验收：** 精确 lock + `pip check`；原失败 nodeid 与全量 pytest 通过（不适用候选测试只允许明确 skip）；M01 回归、Ruff、mypy、GUI smoke、allowed paths 和独立 Review 保持通过；checkpoint 前复核 staged diff。
+- **恢复执行结果（2026-08-23）：** 隔离环境 `D:\TransRealm-v02-t01-m01-venv-20260823` 按 lock 安装并通过 `pip check`；原失败 nodeid `1 passed, 1 skipped`；全量 pytest `1338 passed, 5 skipped`；M01 定向回归 `131 passed`；Ruff/mypy/GUI smoke/allowed-path 检查通过。陈旧 `dist` 完整归档至 `D:\TransRealm-v0.1.0-candidate-archive-20260823`，未删除、覆盖或重建候选。
+- **独立 Review 结果：** `APPROVE-WITH-MINORS`；无 BLOCKER/SHOULD-FIX。MINOR 为新增结构测试不直接重复主窗口边界，既有 UI/worker/关闭回归、真实窗口 smoke、AST 与秘密/绝对路径扫描已覆盖，接受不扩大 M01。
 
 ---
 

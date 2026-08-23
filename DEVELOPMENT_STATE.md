@@ -3,24 +3,24 @@ project: TransRealm
 file_role: agent-entrypoint-and-runtime-checkpoint
 protocol_version: 2
 current_phase: Phase 1.5A
-current_release: v0.2.0-planning
+current_release: v0.2.0
 current_task: V02-T01
 current_milestone: V02-T01-M01
-state: proposed
-last_updated: 2026-08-22
-baseline_commit: 1542291ca43dd17c874b18d3c109ec34b49ae463
-baseline_integrity: committed_clean_synced_before_planning_docs
-worktree_disposition: markdown_planning_changes_uncommitted
-gate_status: architecture_plan_approved_code_not_authorized
-plan_alignment: pending_reality_check
-review_status: architecture_plan_user_approved
-rollback_ref: 1542291ca43dd17c874b18d3c109ec34b49ae463
+state: completed
+last_updated: 2026-08-23
+baseline_commit: 9c0be23e6e598939b1a672e8bed4958e7ce2cbaf
+baseline_integrity: committed_clean_planning_baseline
+worktree_disposition: v02_t01_m01_verified_checkpoint_pending
+gate_status: m01_all_gates_passed
+plan_alignment: fit
+review_status: independent_review_approved_with_minor_accepted
+rollback_ref: 9c0be23e6e598939b1a672e8bed4958e7ce2cbaf
 pending_decision: none
 decision_prompt: none
-decision_result: none_for_v02_DEC-V03-PROJECT-STORAGE_deferred
-resume_milestone: V02-T01-M01_after_explicit_code_authorization
-authorization_scope: markdown_only
-code_authorized: false
+decision_result: DEC-V02-T01-M01-GATE-BASELINE_approved
+resume_milestone: V02-T01-M01
+authorization_scope: V02-T01_allowed_paths
+code_authorized: true
 branch_authorized: false
 local_commit_authorized: true
 external_actions_authorized: false
@@ -73,29 +73,43 @@ external_actions_authorized: false
 
 ## 4. 当前开发现场
 
-### v0.2 当前事实与授权（2026-08-22）
+### v0.2 当前事实与授权（2026-08-23）
 
-- **Git 事实：** 本次规划读取时 `master` 与 `origin/master` 同步，HEAD `1542291ca43dd17c874b18d3c109ec34b49ae463`，`git describe` 为 `v0.1.0-3-g1542291`，工作树干净；tag `v0.1.0` 指向 commit `7bf26be6cc4c5a17933d27ae4e1d781d15b2c06c`。本次仅修改权威 Markdown，尚未 commit。
+- **Git 事实：** Reality Check 时 `master` 与 `origin/master` 在 `1542291ca43dd17c874b18d3c109ec34b49ae463` 同步；随后已在当前 `master` 创建本地 planning checkpoint `9c0be23e6e598939b1a672e8bed4958e7ce2cbaf`，提交作者为 `BFRKQSB7 <226671264+BFRKQSB7@users.noreply.github.com>`，未 push。当前有 M01 代码与状态同步未提交；没有创建或切换分支；tag `v0.1.0` 指向 commit `7bf26be6cc4c5a17933d27ae4e1d781d15b2c06c`。
 - **发布事实：** v0.1.0 已发布；其后 master 包含 CI 与状态文档修复。最后归档质量证据为 pytest 1339 passed（1 skipped）、Ruff clean、mypy clean；本次 Markdown-only 规划没有复跑会写缓存的测试，不把历史数字表述为本次执行结果。
-- **用户裁决：** 2026-08-22 用户确认 v0.2/v0.3 无人值守方案；当前仍仅授权修改项目 Markdown，明确“不要动代码”。2026-08-23 用户撤销创建、切换或删除分支的权限，但保留本地里程碑提交权限：只能在用户当前分支上，于 Milestone 全部门禁通过后暂存范围内文件并创建一个本地 checkpoint commit。本授权不包含源码、测试、脚本、配置或依赖修改，也不包含 push、merge、tag、Release、远程资源、真实/付费模型调用或真实用户数据操作。
+- **用户裁决：** 2026-08-22 用户确认 v0.2/v0.3 无人值守方案。2026-08-23 用户撤销创建、切换或删除分支的权限，但保留本地里程碑提交权限：只能在用户当前分支上，于 Milestone 全部门禁通过后暂存范围内文件并创建一个本地 checkpoint commit。当前代码 Task 已获授权；本轮用户另行批准 `DEC-V02-T01-M01-GATE-BASELINE` 并授权自主同步 Markdown，但决策 Agent 仍不得借此实现、构建、提交或发布。本地提交授权不包含 push、merge、tag、Release、远程资源、真实/付费模型调用或真实用户数据操作。
 - **路线裁决：** Phase 2 的 RAG/TM/Character Data 暂停；先完成 Phase 1.5A/v0.2 的 UI 重构、中英文、六格式 GUI、安全删除、Connection/Profile 编辑和 Workbench 体验。`.aiproject`/开放目录 GUI 延后至 v0.3 的 `DEC-V03-PROJECT-STORAGE`。
+- **决策门禁复核（2026-08-23）：** `pending_decision` 保持 `none`，`DEC-V03-PROJECT-STORAGE` 明确保留至 V02-T05 完成后的 V03-T00；除非用户明确要求提前进行 Project 工作区重构，否则不得把“一次一个活动 ProjectSession + 一 Project 一 SQLite”推荐方向写成已裁决方案。正式裁决仍须比较“全局库 + 单 Project 克隆/ID 重映射”“一 Project 一库”“全局索引库 + Project 库”三案，并交付兼容性、安全、迁移/回滚、portable/data-dir、Application/UI seam 和验收矩阵。当前恢复点不变，仍为 `V02-T01-M01`。
 - **工作树处置：** 只保留本次 Markdown 规划改动；禁止修改或删除 `src/`、`tests/`、`scripts/`、配置、artifact、用户数据库、备份、源文件与导出。
 
 ### 当前 Task
 
 - **Task：** V02-T01 — UI 基础、视觉系统与中英文。
-- **状态：** `proposed`，不是 `ready`；`code_authorized: false`。任何 Agent 不得写测试或代码，也不得把读取/规划解释为开工授权。
+- **状态：** `verification`；`code_authorized: true`。M01 已完成并待本地 checkpoint；M02–M04 仍未开始，因此 Task 保持 `verification`。
 - **完整定义：** `07_Developer_Task_List.md` §0 `V02-T01`。
-- **前置治理：** V02-T00 文档规划在本次完成；用户禁止创建或切换分支，但允许在当前分支按 Milestone 形成本地 checkpoint。这些 Markdown 尚未 checkpoint，因此 V02-T01 暂无干净可执行 base commit。
-- **解除条件：** 用户使用 `USER_GUIDE.md` 的“启动或继续当前代码 Task”提示词或以等价表述明确授权代码开发；随后保持在用户当前分支，核验实际 HEAD/工作树，把 planning checkpoint 完整 hash 写入本文件和 `07`，运行兼容性基线，再记录 FIT/ADAPT/REPLAN。
+- **前置治理：** V02-T00 文档规划已在当前分支形成 planning checkpoint `9c0be23e6e598939b1a672e8bed4958e7ce2cbaf`；用户禁止创建或切换分支，但允许在当前分支按 Milestone 形成本地 checkpoint。
+- **Reality Check：** 2026-08-23 判定 **FIT**——页面职责拆分现场与 `07` M01 一致：`src/transrealm/ui/pages.py` 集中承载 `SettingsPage`/`ProjectPage`/`TranslationPage`，`main_window.py` 直接导入，现有 P0/P1 GUI/worker 测试覆盖真实入口；无 Project/数据库/公共契约/依赖冲突，无 `REPLAN`。
 
 ### 当前小目标
 
 - **Milestone：** V02-T01-M01 — 页面职责拆分并保留兼容入口。
-- **状态：** `proposed` / 未激活。
-- **目标（获代码授权后）：** 先以行为不变为硬约束拆分 UI 页面，保留 `SettingsPage`/`ProjectPage`/`TranslationPage` 兼容 re-export，禁止同时改视觉、i18n 或业务服务；完成旧 UI/worker 回归和实际启动后才进入 M02。
-- **本次完成内容：** 仅同步 `01`/`02`/`03`/`06`/`07`/`08`/`09` 与本文件，冻结 v0.2 任务、视觉矩阵、删除边界、授权门禁和 v0.3 存储决策门禁。
-- **本次验证：** 只做 Markdown 范围、标题/引用和 Git diff 检查；未运行产品测试，未构建候选。
+- **状态：** `completed`；锁定环境恢复、全量质量、GUI smoke、范围检查和独立 Review 均通过，等待本地 checkpoint。
+- **目标：** 先以行为不变为硬约束拆分 UI 页面，保留 `SettingsPage`/`ProjectPage`/`TranslationPage` 兼容 re-export，禁止同时改视觉、i18n 或业务服务；完成旧 UI/worker 回归和实际启动后才进入 M02。
+- **垂直切片：** 新增 `page_base.py`、`settings_page.py`、`project_page.py`、`translation_page.py`；`pages.py` 保留兼容 re-export；`main_window.py` 改为直接导入职责模块；新增 `tests/test_v02_t01_m01.py` 结构验收。
+- **测试与质量证据：** 锁定隔离环境 `D:\TransRealm-v02-t01-m01-venv-20260823` 按 `requirements.lock` 安装，`packaging==26.2` 精确匹配且 `pip check` 通过；原失败 nodeid **1 passed, 1 skipped**；全量 pytest **1338 passed, 5 skipped**；M01 定向 UI/worker/关闭回归 **131 passed**；Ruff **All checks passed**；mypy **136 source files no issues**；实际窗口 **720×662** 可见/关闭 smoke **PASS**。
+- **跳过说明：** `tests/test_p1_t02_m01.py` 1 项因当前 Windows 权限 `WinError 1314` 无法创建 symlink；`tests/test_p1_t05_m04.py` 3 项因陈旧 v0.1 `dist` 已归档且未从 dirty 工作树重建；`tests/test_p1_t05_m05.py` 1 项因候选 manifest 不存在而适用性 skip。均未把失败改成 skip。
+- **恢复与范围证据：** 旧候选完整归档至 `D:\TransRealm-v0.1.0-candidate-archive-20260823`，manifest/ZIP/EXE SHA256 分别为 `A9AE00D7F82DB20F2F9D769191CF8FDA1C0717711B5E9FDE37A3BF9A487D3B51`、`C59B3EBBE2FE3D4D139FD787A6DF28BFAD18256274D974658375BCBE9FB5AE44`、`CFFC576F1A026C26D347620C67582CE78D46F49B7DEE2E93484FC275BC78A728`；活动 `dist` 不存在；changed paths 全在 allowed paths，`git diff --check` 通过。
+- **独立 Review：** 只读 Review Agent **APPROVE-WITH-MINORS**，无 BLOCKER/SHOULD-FIX；MINOR 为新增结构测试不直接重复主窗口边界，已由 131 项旧 UI/worker/关闭回归、真实窗口 smoke、AST 及秘密/绝对路径扫描覆盖，接受不扩大范围。
+- **恢复动作：** 已按 `USER_GUIDE.md` 的“C. 恢复验证基线”完成锁定环境、旧候选可逆归档、原失败 nodeid、全量 pytest、Ruff、mypy、M01 回归和 GUI smoke；未改业务实现、测试语义、lock 或候选内容。
+- **已批准门禁裁决 `DEC-V02-T01-M01-GATE-BASELINE`（2026-08-23）：** 唯一推荐是恢复锁定依赖环境并可逆归档陈旧 v0.1 `dist/`，不改业务、测试语义、lock 或候选内容。否决：(a) dirty 工作树直接重建候选——构建会包含未提交 M01 代码，却只记录旧 HEAD；当前测试又不拒绝 `git_dirty:true`，可产生假绿；(b) 把 lock 改为 `packaging==25.0`——无依赖变更证据，只掩盖环境漂移；(c) 忽略失败直接完成 M01——违反全量 pytest 底线；(d) 扩大 M01 到发布/依赖/业务重构——混合不相关风险。旧 v0.1 artifact 必须连同 manifest/hash 保留原样；没有数据库、Project 或用户数据迁移。v0.2 候选签发前另设安全门禁：干净已提交基线、`git_dirty:false`、版本/目标 commit/artifact hash 一致。
+- **裁决验收：** 锁定环境精确匹配且 `pip check` 通过；活动 `dist` 不含历史候选；全量 pytest exit 0，所有 skip 有适用性说明；M01 定向回归、Ruff、mypy、GUI smoke、allowed paths 和独立 Review 均通过。
+- **checkpoint 动作：** 当前仍在 `V02-T01-M01`，待复核 staged diff 后创建仅含 M01 的本地 checkpoint；提交后将 `resume_milestone` 推进至 `V02-T01-M02` 并重新执行 HEAD/branch/worktree/base/rollback/授权/依赖/验收核验。
+- **本轮提示词治理：** `USER_GUIDE.md` 已从语义重叠的角色说明重构为十种互斥操作模式；每种明确输入状态、写权限、禁止动作、成功终点和固定交付。新增“恢复验证基线”与“独立验收”模式，避免开发 Agent 越权处理范围外 Gate，也避免 Review Agent 一边修复一边自我放行；“连续无人开发”明确授权在当前 release 内逐 Milestone/Task 自动推进和本地 checkpoint，同时把真实性阻塞、决策节点、release 边界及外部动作设为硬停止条件；配套“中断连续无人开发”会撤销连续授权、仅安全收敛和交接，且不把用户主动中断伪报为技术阻塞。
+- **本次完成内容：** 形成 planning checkpoint `9c0be23e6e598939b1a672e8bed4958e7ce2cbaf`；完成 M01 Reality Check **FIT**；完成页面职责拆分、兼容入口、结构验收、旧回归、质量检查、GUI smoke 与独立 Review。
+- **本次验证：** 见上方 M01 证据；未构建或发布候选，未 push/merge/tag/Release，未调用真实或付费模型，未操作真实用户数据库。
+- **本次交接复核（2026-08-23）：** 垂直验收 `tests/test_v02_t01_m01.py` **3 passed**；受影响 UI/worker/关闭恢复回归第二次完整执行 **131 passed**（第一次为 `130 passed/1 failed`，失败 node 单独执行通过，第二次未复现，未据此修改代码）；Ruff **All checks passed**；mypy **136 source files no issues**；真实 `QApplication` 窗口 smoke **PASS**（720×662 可见、标题正确、关闭后两个 worker 线程停止）；异常/安全定向矩阵 **22 passed**（缺配置/服务异常/失败隔离/凭据不泄漏/UI 不直连 DB）；独立 AST Review 确认四个页面 class body 与 HEAD 等价；allowed_paths 断言与 `git diff --check` 通过（仅 CRLF 转换提示）。
+- **基线阻塞已解除（2026-08-23）：** 原 `packaging` 漂移已由隔离锁定环境消除；陈旧候选已完整可逆归档且未重建。M01 由独立 Review 给出 `APPROVE-WITH-MINORS`，无阻塞项。
+- **本轮 Agent 交接复核（2026-08-23）：** 按当前工作树实际执行 M01 新验收 + UI/worker/关闭恢复旧回归 **127 passed**（包含 `tests/test_v02_t01_m01.py` 3 项；候选发布测试未并入该功能回归）；Ruff/mypy 仍通过。真实窗口使用独立 `%TEMP%` SQLite 启动，Settings/Project/Translation 三 Tab 可切换、空文档状态可见、关闭后窗口消失，临时库完成 12 migrations；AST 逐类比较确认四个页面 class body 与 HEAD 等价，UI 无 sqlite/repository/transport 直连，changed paths 全在 allowed_paths，凭据/本机绝对路径扫描无命中。全量 Gate 的两项既有范围外失败保持不变；不修改代码、测试、脚本、配置、lock、候选产物，不暂存、不提交。
 
 ### 历史环境检查（P0/P1）
 
