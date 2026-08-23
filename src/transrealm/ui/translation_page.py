@@ -58,6 +58,7 @@ from transrealm.domain.project import MODE_AUTO, MODE_WORKBENCH, Project
 from transrealm.domain.prompt_override import PromptOverride
 from transrealm.domain.provider_connection import ProviderConnection
 from transrealm.domain.segment import SourceDocument
+from transrealm.domain.translation_revision import TranslationRevision
 from transrealm.ui.i18n import LanguageManager
 from transrealm.ui.page_base import WorkerPage
 from transrealm.ui.workbench import (
@@ -106,6 +107,8 @@ class TranslationPage(WorkerPage):
         self._revision_editor: WorkbenchRevisionEditor | None = None
         self._workbench_progress: list[SegmentProgress] = []
         self._selected_workbench_id: int | None = None
+        self._revision_history_segment_id: int | None = None
+        self._revision_entries: list[TranslationRevision] = []
 
         layout = QVBoxLayout(self)
         overview_section = QGroupBox("Auto overview", self)
@@ -181,6 +184,20 @@ class TranslationPage(WorkerPage):
         self._segment_detail.setProperty("transrealm_i18n_dynamic", True)
         self._segment_detail.setWordWrap(True)
         workbench_layout.addWidget(self._segment_detail)
+        workbench_layout.addWidget(QLabel("Revision history:", self._workbench_container))
+        self._revision_history_list = QListWidget(self._workbench_container)
+        self._revision_history_list.setObjectName("revision-history")
+        workbench_layout.addWidget(self._revision_history_list)
+        revision_actions = QHBoxLayout()
+        self._use_revision = QPushButton("Use selected revision", self._workbench_container)
+        self._use_revision.setObjectName("use-selected-revision")
+        self._use_revision.setEnabled(False)
+        revision_actions.addWidget(self._use_revision)
+        self._retry_failed = QPushButton("Retry failed segment", self._workbench_container)
+        self._retry_failed.setObjectName("retry-failed-segment")
+        self._retry_failed.setEnabled(False)
+        revision_actions.addWidget(self._retry_failed)
+        workbench_layout.addLayout(revision_actions)
         self._param_host = QWidget(self._workbench_container)
         self._param_layout = QVBoxLayout(self._param_host)
         self._param_layout.setContentsMargins(0, 0, 0, 0)
@@ -212,6 +229,11 @@ class TranslationPage(WorkerPage):
         self._document_combo.activated.connect(self._on_document_selected)
         self._workbench_filter.currentIndexChanged.connect(self._on_workbench_filter_changed)
         self._segment_progress.itemSelectionChanged.connect(self._on_segment_selected)
+        self._revision_history_list.itemSelectionChanged.connect(
+            self._on_revision_history_selected,
+        )
+        self._use_revision.clicked.connect(self._on_use_revision)
+        self._retry_failed.clicked.connect(self._on_retry_failed)
 
         translation_worker.progress.connect(self._on_progress)
         translation_worker.segment_completed.connect(self._on_segment_completed)
@@ -411,6 +433,7 @@ class TranslationPage(WorkerPage):
         self._cancel.setEnabled(running)
         self._export.setEnabled(not running)
         self._document_combo.setEnabled(not running)
+        self._sync_revision_actions()
 
     def _on_mode_switch(self, index: int) -> None:
         """Persist a mode change, refusing to change it mid-run.
@@ -618,6 +641,23 @@ class TranslationPage(WorkerPage):
         elif action == "unlock_revision":
             self._status.setText("Current translation unlocked.")
             self.refresh()
+        elif action == "load_revision_history":
+            assert isinstance(result, tuple)
+            segment_id, revisions = result
+            if segment_id != self._selected_segment_id():
+                return
+            assert isinstance(revisions, list)
+            self._revision_history_segment_id = segment_id
+            self._revision_entries = [
+                revision for revision in revisions if isinstance(revision, TranslationRevision)
+            ]
+            self._render_revision_history()
+        elif action == "set_current_revision":
+            self._status.setText("Current revision selected.")
+            self.refresh()
+        elif action == "retry_failed":
+            self._status.setText("Failed segment requeued.")
+            self.refresh()
         elif action == "export":
             self._status.setText("Export written.")
         else:
@@ -660,6 +700,10 @@ class TranslationPage(WorkerPage):
             self._update_segment_detail(None)
         else:
             self._update_segment_detail(selected)
+        if selected is not None:
+            self._load_revision_history(selected.segment_id)
+        else:
+            self._clear_revision_history()
 
         if not isinstance(active_profile, ModelProfile):
             self._workbench_info.setText("")
@@ -746,6 +790,8 @@ class TranslationPage(WorkerPage):
             # Keep the editor and its draft visible while a filter temporarily
             # hides the selected segment; clearing the filter restores it.
             self._update_segment_detail(selected)
+        if selected is not None:
+            self._load_revision_history(selected.segment_id)
 
     def _update_segment_detail(self, item: SegmentProgress | None) -> None:
         if item is None:
@@ -775,6 +821,116 @@ class TranslationPage(WorkerPage):
         self._restore_workbench_selection()
         selected = self._selected_segment_item() if self._selected_workbench_id else None
         self._update_segment_detail(selected)
+        self._render_revision_history()
+
+    def _revision_history_task(
+        self,
+        segment_id: int,
+    ) -> Callable[[], object]:
+        def task() -> object:
+            with TranslationRunService(
+                self._db_path,
+                app_version=self._app_version,
+            ) as runs:
+                return segment_id, runs.list_revisions_for_segment(segment_id=segment_id)
+
+        return task
+
+    def _load_revision_history(self, segment_id: int) -> None:
+        self._revision_history_segment_id = segment_id
+        self._revision_entries = []
+        self._render_revision_history()
+        self._submit("load_revision_history", self._revision_history_task(segment_id))
+
+    def _render_revision_history(self) -> None:
+        blocker = QSignalBlocker(self._revision_history_list)
+        try:
+            self._revision_history_list.clear()
+            selected = self._selected_segment_item()
+            current_id = selected.current_revision_id if selected is not None else None
+            for revision in self._revision_entries:
+                label = f"{self._i18n.tr('Revision')} {revision.id}: "
+                label += self._i18n.tr(revision.origin.capitalize())
+                if revision.id == current_id:
+                    label += f" · {self._i18n.tr('current')}"
+                if revision.is_locked:
+                    label += f" · {self._i18n.tr('locked')}"
+                item = QListWidgetItem(label)
+                item.setData(Qt.ItemDataRole.UserRole, revision.id)
+                self._revision_history_list.addItem(item)
+        finally:
+            del blocker
+        self._sync_revision_actions()
+
+    def _clear_revision_history(self) -> None:
+        self._revision_history_segment_id = None
+        self._revision_entries = []
+        self._revision_history_list.clear()
+        self._sync_revision_actions()
+
+    def _on_revision_history_selected(self) -> None:
+        self._sync_revision_actions()
+
+    def _sync_revision_actions(self) -> None:
+        selected = self._selected_segment_item()
+        retry_enabled = (
+            selected is not None and selected.status == "failed" and not self._running
+        )
+        self._retry_failed.setEnabled(retry_enabled)
+        history_item = self._revision_history_list.currentItem()
+        revision_id = history_item.data(Qt.ItemDataRole.UserRole) if history_item else None
+        self._use_revision.setEnabled(
+            selected is not None
+            and isinstance(revision_id, int)
+            and revision_id != selected.current_revision_id
+            and not self._running,
+        )
+
+    def _set_current_revision_task(
+        self,
+        segment_id: int,
+        revision_id: int,
+    ) -> Callable[[], object]:
+        def task() -> object:
+            with TranslationRunService(
+                self._db_path,
+                app_version=self._app_version,
+            ) as runs:
+                return runs.set_current_revision(
+                    segment_id=segment_id,
+                    revision_id=revision_id,
+                )
+
+        return task
+
+    def _on_use_revision(self) -> None:
+        selected = self._selected_segment_item()
+        history_item = self._revision_history_list.currentItem()
+        revision_id = history_item.data(Qt.ItemDataRole.UserRole) if history_item else None
+        if selected is None or not isinstance(revision_id, int):
+            self._handle_error("Select a revision first.")
+            return
+        self._submit(
+            "set_current_revision",
+            self._set_current_revision_task(selected.segment_id, revision_id),
+        )
+
+    def _retry_failed_task(self, segment_id: int) -> Callable[[], object]:
+        def task() -> object:
+            with TranslationRunService(
+                self._db_path,
+                app_version=self._app_version,
+            ) as runs:
+                return runs.retry_failed(segment_id=segment_id)
+
+        return task
+
+    def _on_retry_failed(self) -> None:
+        selected = self._selected_segment_item()
+        if selected is None or selected.status != "failed":
+            self._handle_error("Select a failed segment to retry.")
+            return
+        self._submit("retry_failed", self._retry_failed_task(selected.segment_id))
 
     def _rebuild_param_editor(
         self,
@@ -881,6 +1037,7 @@ class TranslationPage(WorkerPage):
         self._selected_workbench_id = selected.segment_id
         self._update_segment_detail(selected)
         self._rebuild_revision_editor(selected)
+        self._load_revision_history(selected.segment_id)
 
     def _rebuild_revision_editor(
         self,
@@ -1010,6 +1167,7 @@ class TranslationPage(WorkerPage):
         self._clear_revision_editor()
         self._segment_progress.clear()
         self._workbench_progress = []
+        self._clear_revision_history()
 
     def _handle_error(self, error: str) -> None:
         # A failed mode change must not leave the selector showing a mode that

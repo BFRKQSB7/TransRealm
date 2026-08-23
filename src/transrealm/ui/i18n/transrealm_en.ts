@@ -18,6 +18,15 @@
     <message><source>No segment selected.</source><translation>No segment selected.</translation></message>
     <message><source>Source</source><translation>Source</translation></message>
     <message><source>Current translation</source><translation>Current translation</translation></message>
+    <message><source>Revision history:</source><translation>Revision history:</translation></message>
+    <message><source>Use selected revision</source><translation>Use selected revision</translation></message>
+    <message><source>Retry failed segment</source><translation>Retry failed segment</translation></message>
+    <message><source>Revision</source><translation>Revision</translation></message>
+    <message><source>AI</source><translation>AI</translation></message>
+    <message><source>User</source><translation>User</translation></message>
+    <message><source>Import</source><translation>Import</translation></message>
+    <message><source>current</source><translation>current</translation></message>
+    <message><source>locked</source><translation>locked</translation></message>
     <message><source>Language</source><translation>Language</translation></message>
     <message><source>English</source><translation>English</translation></message>
     <message><source>简体中文</source><translation>简体中文</translation></message>

@@ -18,6 +18,15 @@
     <message><source>No segment selected.</source><translation>未选择片段。</translation></message>
     <message><source>Source</source><translation>源文</translation></message>
     <message><source>Current translation</source><translation>当前译文</translation></message>
+    <message><source>Revision history:</source><translation>修订历史：</translation></message>
+    <message><source>Use selected revision</source><translation>使用选中的修订</translation></message>
+    <message><source>Retry failed segment</source><translation>重试失败片段</translation></message>
+    <message><source>Revision</source><translation>修订</translation></message>
+    <message><source>AI</source><translation>AI</translation></message>
+    <message><source>User</source><translation>用户</translation></message>
+    <message><source>Import</source><translation>导入</translation></message>
+    <message><source>current</source><translation>当前</translation></message>
+    <message><source>locked</source><translation>已锁定</translation></message>
     <message><source>Language</source><translation>语言</translation></message>
     <message><source>English</source><translation>英语</translation></message>
     <message><source>简体中文</source><translation>简体中文</translation></message>

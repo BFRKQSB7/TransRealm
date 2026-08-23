@@ -1085,7 +1085,17 @@ Task重新规划
 - **M02 allowed paths：** `src/transrealm/ui/translation_page.py`、必要的 `src/transrealm/ui/i18n/**` 资源、`tests/test_v02_t04_m02.py`、必要状态/契约 Markdown；不触碰真实端点或真实用户数据。
 - **验收与硬约束：** 状态筛选结果准确、All 可恢复；源文与当前译文在列表/详情中可读；筛选不静默丢失当前选择或已有编辑草稿；Auto 与既有取消/关闭/状态机行为不变；中英文/100%/150% GUI 无截断/重叠；新增 M02 测试、T04 旧回归、全量质量和独立只读 Review 通过。
 - **完成证据：** 新增 `tests/test_v02_t04_m02.py` **2 passed**；指定旧 Workbench/状态机 + M01/M02 回归 **88 passed**；全量 pytest **1375 passed、5 skipped**；Ruff clean；mypy src **81 source files no issues**；pip check clean；Windows Qt 隔离 Workbench English/zh_CN × 100%/150% 顶部与滚动到底部截图、筛选/源文/当前译文可达、关闭 PASS，无重叠/截断；未改 service/repository/domain/schema/migration/依赖，未调用真实端点或操作真实用户数据；独立只读 Review **APPROVE**，无 BLOCKER/SHOULD-FIX；checkpoint 待创建。
-- **下一步：** 独立 Review 已通过，创建仅含 V02-T04-M02 的本地 checkpoint；不提前进入 M03 Revision/history/lock/retry。
+- **下一步：** 已创建 M02 checkpoint=`87c6899a4c627d8ade8d2e20b986a0d15e43b22c`；当前推进至 M03，不提前进入 M04 恢复/长文本/最终视觉 Gate。
+
+## 30. v0.2 Translation/Workbench M03 Reality Check：`V02-T04-M03`
+
+- **状态：** in_progress；恢复基线/rollback=`87c6899a4c627d8ade8d2e20b986a0d15e43b22c`；当前 branch=`master`；`pending_decision: none`；Reality Check **FIT + ADAPT**。
+- **目标边界：** 在既有 Workbench 选中 Segment 面内补齐不可变 Revision history/current 切换、既有 lock/unlock 的可见接线和受控 retry；Auto、状态机、数据格式、取消/关闭与后续恢复/长文本 Gate 不变。
+- **现场结论：** `TranslationRevisionRepository.list_by_segment` 已有历史读取，`TranslationRunService` 已有 `get_revision`、`set_current_revision`、`lock_current_revision`、`unlock_current_revision`、`retry_failed` 的约束实现；唯一 seam 缺口是 Application 层按 Segment 的只读历史列表。ADAPT 仅新增 `list_revisions_for_segment` 转发式只读方法并经 ServiceWorker 调用，不复制 repository 到 UI，不改写 Revision。
+- **M03 allowed paths：** `src/transrealm/ui/translation_page.py`、必要的 `src/transrealm/application/translation_run_service.py` 只读 seam、必要的 `src/transrealm/ui/i18n/**` 资源、`tests/test_v02_t04_m03.py`、必要状态/契约 Markdown；不触碰 schema/migration/其他 service/domain/repository/真实端点/真实用户数据。
+- **验收与硬约束：** history/current 可读、切换经 service 且 Revision immutable；lock/unlock 保持既有原子语义；retry 只能由 service 的 retryable 规则允许；筛选/草稿/Auto/运行中切换/取消/关闭不回退；中英文/100%/150% GUI 无截断/重叠；新增 M03 测试、T04 旧回归、全量质量和独立只读 Review 通过。
+- **实现与门禁现场：** M03 history/current/retry 验收样例、最小 Application seam/UI 接线、TS/QM 编译、指定旧回归、全量 pytest/Ruff/mypy/pip check 与 Windows Qt en/zh_CN × 100%/150% GUI/关闭验证均已完成；独立只读 Review 首轮要求修正文档陈旧事实，复审 **APPROVE**，无 BLOCKER/SHOULD-FIX/MINOR。
+- **下一步：** 仅暂存 M03 allowed paths 创建本地 checkpoint，再推进至 M04 恢复/长文本/最终视觉 Gate，不提前执行发布候选或远程动作。
 
 ---
 

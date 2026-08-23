@@ -455,6 +455,14 @@ class TranslationRunService:
         """Fetch a revision by id."""
         return self._revision_repository.get_by_id(revision_id)
 
+    def list_revisions_for_segment(self, *, segment_id: int) -> list[TranslationRevision]:
+        """Return the immutable revision history for one segment."""
+        if self._segment_repository.get_by_id(segment_id) is None:
+            raise TranslationRunServiceError(
+                f"Segment with id {segment_id} does not exist.",
+            )
+        return self._revision_repository.list_by_segment(segment_id)
+
     def append_user_revision(
         self,
         *,
