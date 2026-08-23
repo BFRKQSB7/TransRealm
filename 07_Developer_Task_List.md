@@ -86,7 +86,7 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 
 ### V02-T04 — Translation/Workbench 体验
 
-- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P1 核心体验；Medium；in_progress（M03 当前，M01/M02 已完成）。依赖 V02-T02、V02-T03；V02-T03 checkpoint=`17b865be808aba935e5118a56eea9338512de84c`。
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P1 核心体验；Medium；in_progress（M04 当前，M01–M03 已完成）。依赖 V02-T02、V02-T03；V02-T03 checkpoint=`17b865be808aba935e5118a56eea9338512de84c`。
 - **Reality Audit：** REFINE——复用既有 Run/Attempt/Revision 服务，重组交互；不复制 orchestrator/状态机。
 - **目标：** Auto 最短旅程；Workbench 提供 Segment 状态过滤、源文/译文双栏、Revision 历史/current 切换、锁定、失败详情和受控重试。
 - **非目标：** 不做多候选、QC Engine、节点式 Workflow、RAG/TM 或新重试语义。
@@ -104,7 +104,11 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 - **M02 checkpoint：** `87c6899a4c627d8ade8d2e20b986a0d15e43b22c`（`feat(ui): add workbench segment filtering`），作者 `BFRKQSB7 <226671264+BFRKQSB7@users.noreply.github.com>`；9 个文件均在 M02 allowed paths，未 push/merge/tag/Release。
 - **M03 Reality Check（2026-08-24）：** **FIT + ADAPT**——既有 `TranslationRevisionRepository.list_by_segment` 保留不可变历史，`TranslationRunService` 已提供 `get_revision`/`set_current_revision`/`lock_current_revision`/`unlock_current_revision`/`retry_failed`，`TranslationPage` 已有选中 Segment 的编辑与锁定接线。范围内 ADAPT 仅新增 `TranslationRunService.list_revisions_for_segment` 只读 seam，并在 UI 接入历史/current 切换和受控 retry；不改 schema/migration、Revision/lock/retry 语义、真实端点或依赖。无 REPLAN/待决策。
 - **M03 当前范围/验收：** Workbench 显示选中 Segment 的 Revision history/current，切换 current 经 ServiceWorker 且保留不可变 Revision；复用现有 lock/unlock，失败 Segment 只经既有 retryable 规则 requeue；Auto/运行中切换/取消/关闭/状态机不变；筛选、草稿、源文/当前译文不静默丢失；中英文/DPI、旧回归、全量质量、GUI 与独立 Review 必须通过。M04 再负责恢复/长文本/最终视觉 Gate。
-- **M03 完成证据：** 新增 `TranslationRunService.list_revisions_for_segment` 只读 seam、TranslationPage history/current/受控 retry UI 与必要 en/zh_CN `.ts/.qm`；新增 `tests/test_v02_t04_m03.py` **2 passed**；指定旧 Workbench/状态机 + M01/M02/M03 回归 **95 passed**；全量 pytest **1377 passed、5 skipped**；Ruff clean；mypy src **81 source files no issues**；pip check clean；Windows Qt 隔离 en/zh_CN × 100%/150% GUI、历史列表/切换按钮/滚动/关闭 PASS，代表性截图无重叠/截断；未改 schema/migration/其他 service/domain/repository/依赖，未调用真实端点或操作真实用户数据；独立 Review 首轮文档事实修正后复审 **APPROVE**，无 BLOCKER/SHOULD-FIX/MINOR；M03 checkpoint 待创建。
+- **M03 完成证据：** 新增 `TranslationRunService.list_revisions_for_segment` 只读 seam、TranslationPage history/current/受控 retry UI 与必要 en/zh_CN `.ts/.qm`；新增 `tests/test_v02_t04_m03.py` **2 passed**；指定旧 Workbench/状态机 + M01/M02/M03 回归 **95 passed**；全量 pytest **1377 passed、5 skipped**；Ruff clean；mypy src **81 source files no issues**；pip check clean；Windows Qt 隔离 en/zh_CN × 100%/150% GUI、历史列表/切换按钮/滚动/关闭 PASS，代表性截图无重叠/截断；未改 schema/migration/其他 service/domain/repository/依赖，未调用真实端点或操作真实用户数据；独立 Review 首轮文档事实修正后复审 **APPROVE**，无 BLOCKER/SHOULD-FIX/MINOR；M03 checkpoint=`7c54efeaf73019e97691c6d714fa680c28666ef1`。
+- **M03 checkpoint：** `7c54efeaf73019e97691c6d714fa680c28666ef1`（`feat(ui): add revision history controls`），作者 `BFRKQSB7 <226671264+BFRKQSB7@users.noreply.github.com>`；10 个文件均在 M03 allowed paths，未 push/merge/tag/Release。
+- **M04 Reality Check（2026-08-24）：** **FIT**——M01–M03 checkpoint/依赖、既有 `TranslationService`/`TranslationWorker`/lease-recovery/fake-adapter seam、P1-T05 翻译/恢复/长文本 Gate 与 T04 GUI 状态均齐备；M04 仅做验证型 Gate，不新增产品行为、schema/migration、公开契约或依赖，无 ADAPT/REPLAN。
+- **M04 当前范围/验收：** 固定长文本 fake-endpoint 翻译/重开/恢复/导出或等价 Gate 证据；current/locked/retry/取消/关闭状态可解释且不覆盖已完成 Revision；Auto/Workbench 状态机、筛选/草稿/源文/当前译文不回退；Settings/Project/Translation 代表性空/错/禁用/Workbench/history 状态在 en/zh_CN × 100%/150% 可见、滚动和关闭无截断/重叠；指定旧回归、全量质量、适用安全/异常/回滚检查和独立 Review。allowed paths 仅为 `tests/test_v02_t04_m04.py` 与必要状态/契约 Markdown；若发现范围内可复现 UI/i18n 缺陷，才使用既有 T04 UI/i18n allowed paths 做最小修复；不构建候选、不签发、不 push/merge/tag/Release。
+- **M04 完成证据：** 新增 `tests/test_v02_t04_m04.py` **2 passed**；指定 T04 + 既有恢复/长文本 matrix **178 passed**；全量 pytest **1379 passed、5 skipped**；Ruff/mypy/pip check clean；Settings/Project/Translation × en/zh_CN × 100%/150% 顶部/底部共 24 张 GUI 截图，Workbench/history/error/disabled 代表状态、滚动、关闭与线程停机 PASS，抽查无截断/重叠；allowed paths、秘密、迁移未触碰、回滚 ref 与 `git diff --check` clean；未构建候选、未调用真实端点或操作真实用户数据；独立 Review **APPROVE**，无 BLOCKER/SHOULD-FIX/MINOR；M04 checkpoint 待创建。
 
 ### V02-T05 — v0.2 Release Candidate Gate
 
