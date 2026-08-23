@@ -23,6 +23,7 @@
     <message><source>Model id</source><translation>Model id</translation></message>
     <message><source>Connection</source><translation>Connection</translation></message>
     <message><source>Create Project</source><translation>Create Project</translation></message>
+    <message><source>Import file…</source><translation>Import file…</translation></message>
     <message><source>Import TXT…</source><translation>Import TXT…</translation></message>
     <message><source>Open project</source><translation>Open project</translation></message>
     <message><source>Set Active Profile</source><translation>Set Active Profile</translation></message>
@@ -47,6 +48,7 @@
     <message><source>Document:</source><translation>Document:</translation></message>
     <message><source>Translate</source><translation>Translate</translation></message>
     <message><source>Cancel</source><translation>Cancel</translation></message>
+    <message><source>Export file…</source><translation>Export file…</translation></message>
     <message><source>Export TXT…</source><translation>Export TXT…</translation></message>
     <message><source>Set active profile…</source><translation>Set active profile…</translation></message>
     <message><source>Preset (read-only):</source><translation>Preset (read-only):</translation></message>

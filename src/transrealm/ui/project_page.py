@@ -86,12 +86,14 @@ class ProjectPage(WorkerPage):
         self._source_language = QLineEdit(self)
         self._target_language = QLineEdit(self)
         self._create_project = QPushButton("Create Project", self)
-        self._import_txt = QPushButton("Import TXT…", self)
+        self._import_file = QPushButton("Import file…", self)
+        # Keep the old private hook usable for existing UI tests/integrations.
+        self._import_txt = self._import_file
         form.addRow("Name", self._project_name)
         form.addRow("Source lang", self._source_language)
         form.addRow("Target lang", self._target_language)
         form.addRow(self._create_project)
-        form.addRow(self._import_txt)
+        form.addRow(self._import_file)
         layout.addLayout(form)
 
         layout.addWidget(QLabel("Open project", self))
@@ -138,7 +140,7 @@ class ProjectPage(WorkerPage):
         layout.addWidget(self._glossary_list)
 
         self._create_project.clicked.connect(self._on_create_project)
-        self._import_txt.clicked.connect(self._on_import_txt)
+        self._import_file.clicked.connect(self._on_import_file)
         self._project_combo.activated.connect(self._on_project_selected)
         self._set_active.clicked.connect(self._on_set_active)
         self._clear_active.clicked.connect(self._on_clear_active)
@@ -210,18 +212,22 @@ class ProjectPage(WorkerPage):
 
         return task
 
-    def _on_import_txt(self) -> None:
+    def _on_import_file(self) -> None:
         if self._project_id is None:
             self._handle_error("Create or select a project first.")
             return
         path, _ = QFileDialog.getOpenFileName(
             self,
-            "Import TXT",
+            "Import source file",
             "",
-            "Text files (*.txt);;All files (*)",
+            "Source files (*.txt *.json *.srt *.ass *.ssa *.vtt);;All files (*)",
         )
         if path:
             self.import_file(Path(path))
+
+    def _on_import_txt(self) -> None:
+        """Preserve the legacy programmatic slot name."""
+        self._on_import_file()
 
     def import_file(self, path: Path) -> None:
         """Import ``path`` for the current project (no file dialog)."""
@@ -229,15 +235,12 @@ class ProjectPage(WorkerPage):
             self._handle_error("Create or select a project first.")
             return
         project_id = self._project_id
-        self._submit(
-            "import_txt",
-            self._import_task(project_id, path),
-        )
+        self._submit("import_file", self._import_task(project_id, path))
 
     def _import_task(self, project_id: int, path: Path) -> Callable[[], object]:
         def task() -> object:
             with ImportService(self._db_path, app_version=self._app_version) as service:
-                return service.import_txt(project_id, path, name=path.name)
+                return service.import_file(project_id, path, name=path.name)
 
         return task
 
@@ -445,7 +448,7 @@ class ProjectPage(WorkerPage):
         elif action == "delete_glossary":
             self._status.setText("Glossary entry deleted.")
             self.refresh()
-        elif action == "import_txt":
+        elif action in {"import_file", "import_txt"}:
             assert isinstance(result, tuple)
             document, segments = result
             assert isinstance(document, SourceDocument)

@@ -22,7 +22,7 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 
 ### V02-T01 — UI 基础、视觉系统与中英文
 
-- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P1 用户可见；Medium；verification（M01/M02/M03 已完成并 checkpoint，M04 当前进行最终 Gate）。
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P1 用户可见；Medium；completed（M01–M04 全部门禁通过，M04 checkpoint `609d529960b7d47654def7a4d4b3a21fe19257b9`）。
 - **base_commit：** `9c0be23e6e598939b1a672e8bed4958e7ce2cbaf`（当前分支 planning checkpoint，未 push）。
 - **Reality Audit：** SPLIT——页面拆分、主题、主壳、i18n 和视觉 Gate 分成垂直 Milestone，避免一次性重写 UI。
 - **目标：** 保持 Application/Domain/Infrastructure 契约，建立清晰、可维护、可本地化的桌面层和一致视觉语言。
@@ -34,17 +34,17 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 - **异常/视觉验收：** 缺资源/非法语言值安全回退；150% DPI 无截断；错误不吞；冻结场景矩阵、Tab/焦点、disabled/focus/error 状态通过独立视觉 Review。
 - **Milestone：** M01 页面职责拆分且行为不变；M02 主壳/导航/token/浅色主题；M03 Qt i18n/运行时切换/持久化/打包；M04 全量回归、截图矩阵和独立 Review。
 - **M01 当前证据：** `page_base.py`、`settings_page.py`、`project_page.py`、`translation_page.py` 已拆分，`pages.py` 保留兼容 re-export；新增结构验收 3 项；受影响旧回归基线保持通过，本次锁定环境定向 UI/worker/关闭回归 **131 passed**；全量 pytest **1338 passed, 5 skipped**；Ruff clean、mypy 136 files clean、GUI smoke PASS。
-- **M01 门禁结果：** `DEC-V02-T01-M01-GATE-BASELINE` 已按批准方案完成：隔离 Python 3.12 精确恢复 `requirements.lock` 并 `pip check` 通过；旧 v0.1 `dist` 已连同 manifest/ZIP/EXE hash 可逆归档至仓库外；活动 `dist` 为空；所有 skip 有适用性说明；独立只读 Review `APPROVE-WITH-MINORS`，无 BLOCKER/SHOULD-FIX。M01 checkpoint 与 M02 checkpoint 均已创建，Task 仍因 M04 保持 `verification`。
+- **M01 门禁结果：** `DEC-V02-T01-M01-GATE-BASELINE` 已按批准方案完成：隔离 Python 3.12 精确恢复 `requirements.lock` 并 `pip check` 通过；旧 v0.1 `dist` 已连同 manifest/ZIP/EXE hash 可逆归档至仓库外；活动 `dist` 为空；所有 skip 有适用性说明；独立只读 Review `APPROVE-WITH-MINORS`，无 BLOCKER/SHOULD-FIX。M01 checkpoint 与 M02 checkpoint 均已创建，Task 后续 M02–M04 已完成并汇总为 T01 checkpoint。
 - **M02 门禁结果：** `theme.py` light tokens/QSS、header shell、三 Tab scroll wrapper 和 surface palette 已实现；`MainShell` 保留已发现的旧 `QTabWidget` 查询/导航入口（`currentIndex`/`setCurrentIndex`/`count`/`widget`/`tabText`/`currentWidget`）。新增验收 **3 passed**；受影响 UI/worker/关闭回归 **134 passed**；全量 pytest **1341 passed, 5 skipped**；Ruff/mypy clean；`pip check` clean；原生 Windows Qt 100%/150% GUI 可见与关闭 smoke PASS，原生 150% 截图无文本/层级截断，离屏 1920×1080 目标截图页面 surface 正确；UI boundary/秘密/绝对路径扫描与 `git diff --check` 通过。独立 Review 复审为 `APPROVE-WITH-MINORS`，无 BLOCKER/SHOULD-FIX；M02 checkpoint 为 `165c87e4377d7e1ace119991df3e5ddc541de61c`。
 - **M03 Reality Check：** 2026-08-23 **FIT**——M02 主壳/page seam 可复用；现场无 `QTranslator`/`QSettings`/i18n 资源目录，PySide6 6.11.1 已提供 Qt 原生 i18n/settings 与 `lrelease`；现有 PyInstaller 仅收集 migrations，翻译资源收集落在已批准的必要打包路径；不改 schema、Project 数据格式、业务服务、worker 线程边界或新增运行依赖，无 pending decision。
 - **M03 门禁结果：** `LanguageManager`、en/zh_CN `.ts/.qm`、Settings 语言选择器、运行时重翻译、动态 Workbench editor 绑定和 PyInstaller i18n 收集/冻结守卫已实现；新增验收 **3 passed**，受影响旧回归 **137 passed**，全量 pytest **1344 passed, 5 skipped**，Ruff/mypy/pip check clean；原生 Windows Qt English→中文切换/重启持久化、100% 中文与 150% 英文截图、关闭 smoke PASS；未改 schema/业务/线程边界。独立 Review `APPROVE`，无 BLOCKER/SHOULD-FIX/MINOR；M03 checkpoint 为 `dbf31da1ad6668389cf0e453f70b93d461204a4b`。
 - **M04 Reality Check：** 2026-08-23 **FIT**——M01–M03 checkpoint/依赖已满足；M04 仅做最终验证与证据收束，不引入产品行为或新依赖。
-- **M04 门禁结果：** 原生 Windows Qt 已覆盖 Settings 的英文/中文 × 100%/150%，Project/Translation 空状态代表性组合，以及 Translation error/running-disabled/focus/Workbench 的英文/中文 × 100%/150% 补证；100%/150% 可见/关闭 PASS，代表性截图人工检查无重叠/截断，滚动内容可达。文档按代表性组合如实记录，不将每个状态的语言/DPI 全组合过度声明；最终全量 pytest **1344 passed, 5 skipped**、Ruff/mypy/pip check clean；资源/秘密/路径/范围检查 clean，未构建候选。首轮 Review 指出的问题已修正，第二轮独立 Review `APPROVE`，无 BLOCKER/SHOULD-FIX/MINOR；M04 checkpoint 待创建。
+- **M04 门禁结果：** 原生 Windows Qt 已覆盖 Settings 的英文/中文 × 100%/150%，Project/Translation 空状态代表性组合，以及 Translation error/running-disabled/focus/Workbench 的英文/中文 × 100%/150% 补证；100%/150% 可见/关闭 PASS，代表性截图人工检查无重叠/截断，滚动内容可达。文档按代表性组合如实记录，不将每个状态的语言/DPI 全组合过度声明；最终全量 pytest **1344 passed, 5 skipped**、Ruff/mypy/pip check clean；资源/秘密/路径/范围检查 clean，未构建候选。首轮 Review 指出的问题已修正，第二轮独立 Review `APPROVE`，无 BLOCKER/SHOULD-FIX/MINOR；M04 checkpoint 为 `609d529960b7d47654def7a4d4b3a21fe19257b9`。
 - **完成条件：** 旧 UI 回归、全量 pytest/Ruff/mypy、视觉 Gate 和文档同步全部通过。
 
 ### V02-T02 — Project 生命周期与六格式 GUI
 
-- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P0 用户数据；High；pending。依赖 V02-T01。
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P0 用户数据；High；in_progress（M01 当前）。依赖 V02-T01，已由 `609d529960b7d47654def7a4d4b3a21fe19257b9` 满足。
 - **Reality Audit：** SPLIT——六格式 UI 是既有服务接线；Project 删除是高风险数据操作，分别实现后做联合 Gate。
 - **目标：** GUI 暴露 TXT/JSON/SRT/ASS/SSA/VTT 导入/翻译/保真导出，并提供可恢复的 Project 删除。
 - **非目标：** 不接 `.aiproject`/开放目录 GUI；不改变 format metadata/保真契约；不迁移为一 Project 一库。
@@ -53,6 +53,9 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 - **安全/异常验收：** 备份失败、取消、并发运行、事务故障均零删除；其他 Project/全局配置不受影响；备份可恢复。六格式分别完成 GUI fake-endpoint 旅程和 P1-T01 保真矩阵。
 - **Milestone：** M01 六格式通用 GUI；M02 删除服务/备份/故障测试；M03 删除 UI/运行保护；M04 联合 GUI/视觉/回归 Review。
 - **完成条件：** 数据完整性、高风险独立 Review、全量质量命令和视觉 Gate 通过。
+- **M01 Reality Check：** 2026-08-23 **FIT**——V02-T01 的 shell、i18n、worker seam 与 DPI/语言视觉基础已 checkpoint；既有 `ImportService.import_file` 与六种 fidelity Exporter 可直接复用。M01 只接 UI/测试，不改 Project/format metadata/schema/migration/删除契约或新增依赖。
+- **M01 当前范围/验收：** `ProjectPage` 六格式导入与 `TranslationPage` 按 `SourceDocument.format` 六格式导出；六格式 fake-endpoint 导入→翻译→保真导出旅程、扩展名/失败不覆盖、异常/关闭、旧 UI/worker/全量质量、中文/英文/DPI GUI smoke 和独立 Review；不提前进入 M02 删除服务/备份或 M03 运行保护。
+- **M01 完成证据：** 新增 acceptance **12 passed**（六格式 fake-endpoint 成功旅程与六格式失败目标保留）；指定旧 UI/worker/关闭/自动旅程 **29 passed**；无 system-site-packages 的 `D:\TransRealm-v02-t02-m01-lock-venv-20260823` 按 `requirements.lock` 重建，`pip check` clean，全量 pytest **1356 passed, 5 skipped**；Ruff clean；mypy src **81 source files clean**；原生 Windows Qt 中英文 × 100%/150% Project/Translation Tab 可见/关闭 PASS，代表性截图无重叠/截断；资源/秘密/路径/范围检查 clean；共享解释器的 `packaging==25.0` 漂移及继承系统包诊断 venv 的宿主冲突均未改锁文件或共享环境；首轮 Review 的问题已修正，最终独立 Review **APPROVE**，无 BLOCKER/SHOULD-FIX，checkpoint 待创建。
 
 ### V02-T03 — Connection/Profile 管理体验
 

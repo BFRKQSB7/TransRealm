@@ -35,6 +35,14 @@ from transrealm.application.credential_status import (
     CredentialStatus,
     report_credential_availability,
 )
+from transrealm.application.exporter import (
+    AssExporter,
+    JsonExporter,
+    SrtExporter,
+    SsaExporter,
+    TxtExporter,
+    VttExporter,
+)
 from transrealm.application.glossary_service import GlossaryService
 from transrealm.application.import_service import ImportService
 from transrealm.application.model_profile_service import ModelProfileService
@@ -88,6 +96,7 @@ class TranslationPage(WorkerPage):
         self._project_id: int | None = None
         self._document_id: int | None = None
         self._document_name = ""
+        self._document_format = "txt"
         self._mode = MODE_AUTO
         self._running = False
         self._active_profile_id: int | None = None
@@ -124,7 +133,7 @@ class TranslationPage(WorkerPage):
         self._translate = QPushButton("Translate", self)
         self._cancel = QPushButton("Cancel", self)
         self._cancel.setEnabled(False)
-        self._export = QPushButton("Export TXT…", self)
+        self._export = QPushButton("Export file…", self)
         form.addRow(self._translate)
         form.addRow(self._cancel)
         form.addRow(self._export)
@@ -246,6 +255,7 @@ class TranslationPage(WorkerPage):
         """Record the imported document and surface its segment count."""
         self._document_id = source_document_id
         self._document_name = name
+        self._document_format = Path(name).suffix.lstrip(".").lower() or "txt"
         self._status.setText(f"Document {name}: {count} segments.")
         self._progress.setRange(0, 0)
         self._progress.setValue(0)
@@ -306,10 +316,12 @@ class TranslationPage(WorkerPage):
             self._document_combo.addItem(doc.name, doc.id)
         self._document_id = effective_id
         self._document_name = ""
+        self._document_format = "txt"
         if effective_id is not None:
             for doc in docs:
                 if doc.id == effective_id:
                     self._document_name = doc.name
+                    self._document_format = doc.format
                     break
             if effective_id != previous:
                 self._status.setText(
@@ -459,11 +471,13 @@ class TranslationPage(WorkerPage):
         if self._document_id is None:
             self._handle_error("Import a document first.")
             return
+        suffix = f".{self._document_format}"
+        default_name = Path(self._document_name or "translated").with_suffix(suffix).name
         path, _ = QFileDialog.getSaveFileName(
             self,
-            "Export TXT",
-            f"{self._document_name}.txt",
-            "Text files (*.txt);;All files (*)",
+            "Export source file",
+            default_name,
+            f"{self._document_format.upper()} files (*{suffix});;All files (*)",
         )
         if path:
             self.export_to(Path(path))
@@ -477,10 +491,21 @@ class TranslationPage(WorkerPage):
         self._submit("export", self._export_task(document_id, target_path))
 
     def _export_task(self, document_id: int, target_path: Path) -> Callable[[], object]:
-        def task() -> object:
-            from transrealm.application.exporter import TxtExporter
+        document_format = self._document_format
 
-            exporter = TxtExporter(self._db_path, app_version=self._app_version)
+        def task() -> object:
+            exporter_types = {
+                "txt": TxtExporter,
+                "json": JsonExporter,
+                "srt": SrtExporter,
+                "ass": AssExporter,
+                "ssa": SsaExporter,
+                "vtt": VttExporter,
+            }
+            exporter_type = exporter_types.get(document_format)
+            if exporter_type is None:
+                raise ValueError(f"Unsupported document format: {document_format}")
+            exporter = exporter_type(self._db_path, app_version=self._app_version)
             try:
                 exporter.export_document(
                     source_document_id=document_id,

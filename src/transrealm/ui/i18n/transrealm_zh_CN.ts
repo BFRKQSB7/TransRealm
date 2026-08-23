@@ -23,6 +23,7 @@
     <message><source>Model id</source><translation>模型 ID</translation></message>
     <message><source>Connection</source><translation>连接</translation></message>
     <message><source>Create Project</source><translation>创建项目</translation></message>
+    <message><source>Import file…</source><translation>导入文件…</translation></message>
     <message><source>Import TXT…</source><translation>导入 TXT…</translation></message>
     <message><source>Open project</source><translation>打开项目</translation></message>
     <message><source>Set Active Profile</source><translation>设置活动配置</translation></message>
@@ -47,6 +48,7 @@
     <message><source>Document:</source><translation>文档：</translation></message>
     <message><source>Translate</source><translation>翻译</translation></message>
     <message><source>Cancel</source><translation>取消</translation></message>
+    <message><source>Export file…</source><translation>导出文件…</translation></message>
     <message><source>Export TXT…</source><translation>导出 TXT…</translation></message>
     <message><source>Set active profile…</source><translation>设置活动配置…</translation></message>
     <message><source>Preset (read-only):</source><translation>预设（只读）：</translation></message>
