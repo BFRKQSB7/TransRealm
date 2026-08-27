@@ -31,7 +31,7 @@ def window_factory(qtbot: Any, tmp_path: Path) -> Any:
         window = MainWindow(
             tmp_path / "project.sqlite",
             app_version=APP_VERSION,
-            adapter_factory=lambda _profile_id: None,  # type: ignore[return-value]
+            adapter_factory=lambda _profile_id: None,  # type: ignore[arg-type, return-value]
             settings=settings,
         )
         qtbot.addWidget(window)
@@ -83,8 +83,12 @@ def test_run_service_lists_all_revisions_without_mutating_current(tmp_path: Path
         assert second.id is not None
         history = runs.list_revisions_for_segment(segment_id=segment_id)
         assert [revision.text for revision in history] == ["一", "二"]
-        assert runs.get_revision(first.id).text == "一"
-        assert runs.get_revision(second.id).text == "二"
+        first_revision = runs.get_revision(first.id)
+        second_revision = runs.get_revision(second.id)
+        assert first_revision is not None
+        assert second_revision is not None
+        assert first_revision.text == "一"
+        assert second_revision.text == "二"
 
 
 class TestRevisionHistoryControls:

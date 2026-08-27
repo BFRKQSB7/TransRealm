@@ -79,6 +79,23 @@ def _bundle_dir(bundle: Path) -> Path:
     return bundle / BUNDLE_NAME
 
 
+def _isolated_build_path() -> str:
+    """Keep unrelated native DLL directories out of PyInstaller resolution."""
+    system_root = Path(os.environ.get("SystemRoot", r"C:\Windows"))
+    paths = [
+        Path(sys.executable).parent,
+        Path(sys.prefix),
+        Path(sys.base_prefix),
+        system_root / "System32",
+        system_root,
+    ]
+    git = shutil.which("git")
+    if git:
+        paths.insert(0, Path(git).parent)
+    unique = dict.fromkeys(str(path) for path in paths if path.is_dir())
+    return os.pathsep.join(unique)
+
+
 def _validate_bundle(bundle: Path) -> dict[str, object]:
     """Verify the frozen bundle has migrations, i18n resources and Qt plugins."""
     exe = bundle / f"{BUNDLE_NAME}.exe"
@@ -146,7 +163,15 @@ def _build(output: Path, work: Path) -> Path:
         "--add-data", f"{I18N.resolve()}{os.pathsep}transrealm/ui/i18n",
         str(RUN_PY.resolve()),
     ]
-    pyinstaller_main(argv)
+    original_path = os.environ.get("PATH")
+    os.environ["PATH"] = _isolated_build_path()
+    try:
+        pyinstaller_main(argv)
+    finally:
+        if original_path is None:
+            os.environ.pop("PATH", None)
+        else:
+            os.environ["PATH"] = original_path
     bundle = _bundle_dir(bundle_output)
     if not bundle.is_dir():
         raise SystemExit(f"PyInstaller produced no onedir at {bundle}")

@@ -72,7 +72,7 @@ def window_factory(qtbot: Any, tmp_path: Path) -> Any:
         window = MainWindow(
             tmp_path / "project.sqlite",
             app_version=APP_VERSION,
-            adapter_factory=lambda _profile_id: None,  # type: ignore[return-value]
+            adapter_factory=lambda _profile_id: None,  # type: ignore[arg-type, return-value]
             settings=settings,
         )
         qtbot.addWidget(window)

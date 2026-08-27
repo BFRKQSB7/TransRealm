@@ -40,8 +40,10 @@ def test_main_window_exposes_hierarchical_shell_and_navigation(
                 scroll.viewport().backgroundRole(),
             ) == expected_surface
             assert scroll.widget() is not None
-            assert scroll.widget().palette().color(
-                scroll.widget().backgroundRole(),
+            page = scroll.widget()
+            assert page is not None
+            assert page.palette().color(
+                page.backgroundRole(),
             ) == expected_surface
         assert window.minimumWidth() >= 960
         assert window.minimumHeight() >= 600

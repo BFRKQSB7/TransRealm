@@ -113,6 +113,7 @@ def test_delete_project_creates_recoverable_backup_and_preserves_other_data(
         summary = service.get_project_deletion_summary(project_id)
         backup_path = service.delete_project(project_id)
 
+    assert summary is not None
     assert summary.project_name == "Delete me"
     assert summary.source_documents == 1
     assert summary.segments == 1
@@ -214,7 +215,10 @@ def test_delete_transaction_failure_rolls_back_and_keeps_backup(
     with ProjectService(db_path, app_version=APP_VERSION) as service:
         original_execute = service._repository._db.execute
 
-        def fail_delete(sql: str, parameters: tuple[object, ...] | None = None):
+        def fail_delete(
+            sql: str,
+            parameters: tuple[object, ...] | None = None,
+        ) -> sqlite3.Cursor:
             if sql.strip().upper().startswith("DELETE FROM PROJECTS"):
                 raise RuntimeError("forced delete failure")
             return original_execute(sql, parameters)
