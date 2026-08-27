@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from transrealm import __version__
 from transrealm.adapters.protocol import ModelAdapter
 from transrealm.ui.i18n import LanguageManager
 from transrealm.ui.project_page import ProjectPage
@@ -29,7 +30,7 @@ from transrealm.ui.worker import (
     compose_adapter_factory,
 )
 
-APP_VERSION = "0.1.0"
+APP_VERSION = __version__
 
 
 class MainShell(QWidget):

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "transrealm"
-version = "0.1.0"
+version = "0.2.0"
 description = "译境 / TransRealm — 本地优先的 AI 辅助翻译工作台"
 readme = "README.md"
 requires-python = ">=3.12"

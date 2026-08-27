@@ -16,7 +16,7 @@ import transrealm.ui
 
 def test_package_version() -> None:
     """The root package exposes a version string."""
-    assert transrealm.__version__ == "0.1.0"
+    assert transrealm.__version__ == "0.2.0"
 
 
 def test_layer_packages_are_importable() -> None:
