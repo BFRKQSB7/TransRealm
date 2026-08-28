@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import cast
 
 import pytest
+from scripts import build_release
 
 REPO = Path(__file__).resolve().parents[1]
 DIST = REPO / "dist"
@@ -118,8 +119,19 @@ def _launch(exe: Path, data_root: Path) -> subprocess.Popen[str]:
 @pytest.fixture(scope="module")
 def candidate_zip() -> Path | None:
     """Return the green artifact zip, or None when the candidate is absent."""
-    zips = sorted(DIST.glob("transrealm-*-win-x64.zip"))
-    return zips[0] if zips else None
+    if not MANIFEST.is_file():
+        return None
+    candidate = _load_manifest().get("candidate")
+    if not isinstance(candidate, str):
+        return None
+    path = DIST / candidate
+    return path if path.is_file() else None
+
+
+def test_build_rejects_dirty_source(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(build_release, "_git", lambda *_args: " M tracked.py")
+    with pytest.raises(SystemExit, match="clean"):
+        build_release._ensure_clean_source()
 
 
 def test_build_tooling_exists() -> None:
@@ -178,6 +190,7 @@ def test_candidate_built_and_manifest_matches_artifact() -> None:
         ).stdout.strip()
     )
     assert manifest["git_commit"] == head
+    assert manifest["git_dirty"] is False
 
     import hashlib
 

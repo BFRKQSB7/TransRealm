@@ -63,6 +63,12 @@ def _git(*args: str) -> str:
     return result.stdout.strip()
 
 
+def _ensure_clean_source() -> None:
+    dirty = _git("status", "--porcelain")
+    if dirty:
+        raise SystemExit("Source checkout must be clean before building a candidate.")
+
+
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -237,6 +243,7 @@ def main() -> int:
 
     print(f"Building {BUNDLE_NAME} {version} -> {output}")
     print(f"PyInstaller locked: {_locked_version('pyinstaller')}")
+    _ensure_clean_source()
 
     started = datetime.now(UTC)
     bundle = _build(output, work)
