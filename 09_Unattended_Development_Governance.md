@@ -116,7 +116,7 @@ GitHub 远端是源码、测试、权威文档、自动化定义和经签发 Rel
 ```
 
 - `.local/`、`.venv/`、缓存、`build/`、`dist/`、日志、SQLite/备份、`.aiproject`、真实用户数据、凭据和未脱敏截图只留本机并由 `.gitignore` 排除；忽略不等于允许秘密进入临时 commit，备份前仍须核对 Git 对象范围。
-- `master` 只接收已通过对应门禁的可定位 checkpoint；普通现场备份不得直接推进 `origin/master`，不得伪装成候选或发布证据。
+- 本地主线与远端默认主线（当前分别为 `master` 与 `main`）只接收已通过对应门禁的可定位 checkpoint；普通现场备份不得直接推进任一主线，不得因本地/远端名称不同而误推，也不得伪装成候选或发布证据。
 - 一次性现场备份使用远端分支 `codex/backup-YYYYMMDD-<short-purpose>`；优先通过独立 Git 对象/临时 index 生成，不切换本地分支、不污染用户暂存区。备份分支必须在状态文件记录 ref、commit、包含范围和未验证属性。
 - 正式功能开发分支若未来获授权，使用 `codex/<task>-<short-purpose>`；当前用户禁止创建/切换本地开发分支的约束仍有效，除非当次指令明确解除。PR 合并、tag、GitHub Release 和 artifact 上传分别需要授权与发布门禁。
 - Release 二进制、ZIP、manifest/hash 只在正式签发后放入 GitHub Release，不提交到源码树；大型验证证据保留在 `D:/TransRealm/.local/verification/`，远端只提交可复现测试、必要的小型脱敏 fixture 和结论索引。
