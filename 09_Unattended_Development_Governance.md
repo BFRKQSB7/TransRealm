@@ -81,6 +81,46 @@ py -3.12 -m mypy src tests
 - 发布候选仅能来自已验证、可定位的基线。构建、签名、推送、创建远程资源和正式发布均需用户单独授权。候选发布与回滚执行 `RELEASE_CHECKLIST.md`。
 - 用户禁止 Agent 创建、切换或删除分支；所有工作必须留在用户当前分支。用户仍授权在 Milestone 的验收、回归、质量门禁、适用 Review 和状态同步全部通过后，暂存范围内文件并创建一个本地 checkpoint commit。commit 前后必须核对 staged diff、允许路径、作者身份、文件清单和状态指针；不得改写既有历史。该本地提交授权不等于代码开发授权，也不包含 push、merge、tag、Release、远程资源或其他外部动作。
 
+### 6.1 开发输出目录边界（2026-08-27）
+
+依据 `08_Architecture_Review.md` 的 `DEC-DEV-OUTPUT-ROOT`，项目开发输出的唯一根目录为 `D:/TransRealm/`。本约束覆盖业务源码之外的虚拟环境、依赖下载缓存、类型/测试缓存、临时文件、日志、GUI 验证数据库、截图、构建产物和历史候选归档。不得因文件 ignored、环境需要隔离或保持 Git clean，就在 D 盘根目录、同级目录或其他未授权位置创建项目输出。原裁决仅授权 Markdown；后续用户已另行批准环境整理及忽略配置，具体执行结果、策略阻止的外部删除及开发恢复授权以 `DEVELOPMENT_STATE.md` 最新交接为准。
+
+- 统一位置：主验证环境用 `.venv/`；既有 `.mypy_cache/`、`.pytest_cache/`、`.ruff_cache/` 保持原位；其他验证数据、截图、临时文件和依赖缓存分别集中到 `.local/verification/`、`.local/tmp/`、`.local/cache/`；历史候选用 `.local/archive/`，与活动 `dist/`、`build/` 分离。均相对于项目根目录，不得进入源码提交或候选分发包。
+- 获准执行环境整理后，先确认目录忽略与打包排除规则；新增 `.local/` 的忽略配置属于单独授权的非 Markdown 修改，已在本次后续环境整理授权下完成。需要多个隔离环境时，额外环境也必须在项目内并记录用途，不按每个里程碑无条件复制。
+- 运行会产生输出的工具前，确认最终解析路径在项目内，包括工具的临时目录、缓存和 GUI 测试数据目录；重定向仅限当前进程，不更改机器级设置。不得用符号链接或目录联接把写入转移到根目录外；工具无法遵守时，停止该动作并申请明确的路径例外。
+- 可以读取既有外部工具和本轮已点名目录的来源证据；这不授予在外部安装、写入、搬移或清理的权限。操作系统及宿主自身的内部数据不在项目输出契约内，但不得借此把 Agent 主动创建的验证目录排除在约束之外。
+- 既有外部目录处理须取得针对具体来源、目标和动作的授权。环境在项目内按现有 lock 重建；历史候选及验证数据先复制、核对并切换引用，原目录保留至确认无进程/配置引用、数据归属和恢复能力明确后，再经授权删除。不得按 `TransRealm-*` 通配符批量清理，不得把仍含数据库/备份的 GUI 目录直接视为可丢缓存。
+- 不修改产品默认数据存储、schema、依赖锁或秘密边界；不自动整理真实用户数据。历史“仓库外归档”记录保留为过去事实，自本裁决起不再作为新操作授权。
+- 验收须独立核对文件系统输出位置与 Git 范围；Git clean 或 allowed paths 检查不能替代目录边界检查。环境、数据和候选的既有质量/恢复门禁不降低。
+
+唯一状态入口为 `D:/TransRealm/DEVELOPMENT_STATE.md`。提示词统一使用该正斜杠写法及代码格式；下划线属于文件名，不附加转义反斜杠。不创建兼容别名或第二份状态文件；输入有歧义时先核对根目录实际文件，再说明纠正依据。
+
+### 6.2 GitHub 仓库目录与备份分支契约（2026-09-07）
+
+GitHub 远端是源码、测试、权威文档、自动化定义和经签发 Release 的托管面，不复制本地工作区的缓存/验证/运行数据目录结构。主仓库保持以下稳定分区：
+
+```text
+/
+├─ src/                         产品源码
+├─ tests/                       自动化测试与固定合成 fixture
+├─ docs/                        面向用户的详细文档
+├─ scripts/                     开发、验证和构建入口
+├─ .github/workflows/           CI 工作流
+├─ .github/ISSUE_TEMPLATE/      Issue 模板（需要时）
+├─ .github/pull_request_template.md
+├─ 00_...09_*.md                编号权威产品/架构/开发文档
+├─ DEVELOPMENT_STATE.md         唯一运行状态入口
+├─ README.md / USER_GUIDE.md / SECURITY.md / CONTRIBUTING.md
+├─ pyproject.toml / requirements.lock / run.py
+└─ LICENSE / RELEASE_CHECKLIST.md
+```
+
+- `.local/`、`.venv/`、缓存、`build/`、`dist/`、日志、SQLite/备份、`.aiproject`、真实用户数据、凭据和未脱敏截图只留本机并由 `.gitignore` 排除；忽略不等于允许秘密进入临时 commit，备份前仍须核对 Git 对象范围。
+- `master` 只接收已通过对应门禁的可定位 checkpoint；普通现场备份不得直接推进 `origin/master`，不得伪装成候选或发布证据。
+- 一次性现场备份使用远端分支 `codex/backup-YYYYMMDD-<short-purpose>`；优先通过独立 Git 对象/临时 index 生成，不切换本地分支、不污染用户暂存区。备份分支必须在状态文件记录 ref、commit、包含范围和未验证属性。
+- 正式功能开发分支若未来获授权，使用 `codex/<task>-<short-purpose>`；当前用户禁止创建/切换本地开发分支的约束仍有效，除非当次指令明确解除。PR 合并、tag、GitHub Release 和 artifact 上传分别需要授权与发布门禁。
+- Release 二进制、ZIP、manifest/hash 只在正式签发后放入 GitHub Release，不提交到源码树；大型验证证据保留在 `D:/TransRealm/.local/verification/`，远端只提交可复现测试、必要的小型脱敏 fixture 和结论索引。
+
 ## 7. 决策节点与 Agent 切换
 
 决策节点只用于会改变多个后续切片、持久化/安全契约或用户可见语义，且权威文档尚未给出唯一答案的选择。每个 Task 最多一个基础节点；只有新证据与已裁决契约冲突时才允许第二个节点。

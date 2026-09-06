@@ -4,11 +4,11 @@
 
 ## 应用本体
 
-- TransRealm 0.1.0 — **MIT License**（见仓库根 `LICENSE`；Copyright (c) 2026 TransRealm Contributors）。
+- TransRealm 0.2.0 — **MIT License**（见仓库根 `LICENSE`；Copyright (c) 2026 TransRealm Contributors）。
 
 ## 运行时依赖
 
-V1.0 候选唯一声明的运行时依赖是 PySide6（GUI，Qt 6）。候选冻结版本为 PySide6 6.11.1。
+v0.2.0 候选唯一声明的运行时依赖是 PySide6（GUI，Qt 6）。候选冻结版本为 PySide6 6.11.1。
 
 | 包 | 版本 | 许可 |
 |---|---|---|

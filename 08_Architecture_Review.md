@@ -965,18 +965,23 @@ Task重新规划
 
 ## 17. v0.3 计划决策：`DEC-V03-PROJECT-STORAGE`
 
-- **状态：** proposed；不是已裁决实现方案，v0.2 不触发。
-- **门禁复核（2026-08-23）：** 当前 `pending_decision: none`，明确保留本节点，不作提前架构裁决。现有推荐只作为待比较方向；不得跳过“保留全局库并单 Project 克隆/ID 重映射”“一 Project 一库”“全局索引库 + Project 库”三案的现场取证、兼容性、安全和迁移/回滚成本比较。默认仍在 V02-T05 完成后进入 V03-T00；当前开发恢复点为 `V02-T02-M02`。
-- **触发点：** V02-T05 完成后进入 V03-T00，或用户明确要求提前进行 Project 工作区重构。
-- **问题：** 统一全局多 Project SQLite、单 Project 容器、应用级配置、受管工作区、外部开放目录、`.aiproject` 导入和旧库迁移。
-- **推荐：** 一次一个活动 `ProjectSession` 对应一个 Project SQLite；受管工作区与开放目录共享 Project 契约；`.aiproject` 是传输快照，导入后安装为可写工作区；界面语言/最近 Project 等应用配置独立保存；凭据继续只保存引用。
-- **必须比较的替代方案：** 保留全局库并实现单 Project 克隆/ID 重映射；一 Project 一库；全局索引库 + Project 库混合。不得仅因推荐已记录就跳过现场取证和迁移成本比较。
-- **不可变约束：** 旧库先一致性备份并保留只读恢复点；逐 Project 验证关联闭包、六格式载体、Revision/current/lock、Attempt、Profile/Connection 和秘密引用；全部新工作区验收前不删除或覆盖旧库；不原地编辑归档。
-- **裁决交付：** 唯一推荐与否决理由、数据/路径契约、旧库拆分算法与故障切点、portable/data-dir 优先级、Application/UI session seam、测试/回滚矩阵和恢复 Task。
+- **状态/结果：** approved（2026-09-07），`decision_result=APPROVE_ONE_PROJECT_ONE_WORKSPACE`。frontmatter 当时为 `pending_decision: none`，但用户明确要求提前规划新功能，满足本节点的提前触发条件。本裁决完成不等于 v0.3 开工；当前仍停在 `V02-T05-M02`，V02-T05 完整签收并另获代码/测试授权后才可从 `V03-T01-M01` 恢复。
+- **问题与现场证据：** 当前 `ui/main_window.py` 以固定 `~/.transrealm/project.sqlite` 组合页面，数据库可含多个 Project；Application Service 普遍已按 `db_path` 构造。另一方面，`open_directory_service.py`、`archive_service.py`、`install_service.py` 和 manifest 校验明确要求容器恰有一个 Project，并已具备 SQLite 一致性 snapshot、隔离解包、资源限额、向前 migration、冲突备份和原子安装。Profile/Connection/Prompt Override/Workflow 与 Project/Attempt 存在同库外键或审计关系；语言已由 QSettings 独立于业务库保存。当前 v0.2 M02 源码门禁通过但目标 GUI/人工矩阵、候选/AV/签发未完成。
+- **成熟方案取证：** calibre 官方 Library 模型允许创建、连接、切换多个独立库，每个库有自己的存储根和 `metadata.db`（https://manual.calibre-ebook.com/gui.html）；Godot Project Manager 管理最近项目并导入已有项目目录（https://docs.godotengine.org/en/4.2/tutorials/editor/project_manager.html）；VS Code 区分 User/Workspace settings，并用程序旁 `data` 目录提供 Portable Mode（https://code.visualstudio.com/docs/configure/settings、https://code.visualstudio.com/docs/setup/portable）；SQLite 官方要求活动库用 Backup API/VACUUM INTO 生成一致性副本，并警告网络文件系统锁/同步可能导致损坏（https://sqlite.org/backup.html、https://www.sqlite.org/useovernet.html）。采用其“应用偏好与项目数据分离、项目目录可注册/切换、一致性快照传递、本地文件系统写入”模式，不复制其扩展、多根工作区或在线能力。
+- **方案 A—保留全局库 + 单 Project 克隆/ID 重映射（否决）：** 初期 UI 改动较少，但活动 Project、导出 snapshot 和已安装容器形成两种身份；每次导入、覆盖、删除、回写和恢复都要维护 ID/引用映射。它不能消除当前根冲突，且在 failure boundary 上同时牵涉全局库与目标容器，兼容/安全/回滚成本最高。
+- **方案 B—一次一个活动 ProjectSession + 一 Project 一 SQLite（采用）：** 与现有容器恰一 Project 的不可变约束一致，Application Service 的 `db_path` seam 可直接复用；Project 自包含、故障域小、备份/转移/删除边界清晰。代价是旧库必须拆分、全局配置表需要复制，但可在 staging 完成并保留旧库，风险可门禁、可重试。
+- **方案 C—全局索引库 + Project 库（否决）：** 最近 Project 只需非权威路径列表，不足以证明需要第二个 SQLite。该案引入跨库一致性、索引重建、两阶段更新、Profile/Connection 归属和恢复顺序问题；未来只有跨 Project 搜索/聚合成为已批准需求时才可重新触发独立决策。
+- **唯一数据/会话契约：** 一个应用进程一次一个可写 `ProjectSession`；Session 持有工作区路径、`project.sqlite`、单 Project 身份、会话写锁和生命周期，只向现有 Service/worker 提供当前 `db_path`。切换前停止新工作，运行中要求完成或取消，等待 worker/lease/connection 收敛，验证目标 manifest/hash/schema/身份后才替换 UI 上下文。应用设置仅含语言、最近/上次 Project、受管根、日志/UI 偏好；Project SQLite 继续包含 Project、文档/Segment、Run/Attempt/Revision、current/lock、Glossary、Workflow、Model Profile、Provider Connection 非敏感字段和 Prompt Override。secret 仅存环境变量/Windows Credential Manager，数据库/归档只存引用。
+- **路径与产品契约：** data-dir 优先级为显式 `--data-dir` → Portable 程序旁 `data/` → 本机自定义数据目录指针 → `%LOCALAPPDATA%/TransRealm`；选定路径不可用时停止并重选，不静默回退。受管工作区位于 `<data-dir>/projects/`；外部开放目录通过同一容器校验后可原地编辑，不可写时只允许导入副本。`.aiproject` 是传输快照，“打开”即隔离解包、验证、migration 和原子安装，源归档不变。UNC/网络盘不作为活动 SQLite 写工作区；跨机使用 `.aiproject`。
+- **旧库迁移与回滚：** `~/.transrealm/project.sqlite` 只作迁移源。先只读盘点、integrity/foreign-key 检查和 SQLite Backup API 一致性快照；每个 Project 在独立 staging 复制自身全部从属闭包，同时复制全部非敏感 Connection/Profile/Prompt Override/Workflow，以保持旧版全局可选配置和单库外键；目标可保留旧整数 ID，manifest `source_id` 记录源 Project id。逐库验证行数、引用闭包、Revision/current/lock、Attempt、六格式 fidelity carrier 和 credential reference，全部成功后才原子更新应用入口。旧库、快照、迁移映射不自动删除；失败不切换入口，可幂等重试。新工作区投入使用后的增量不自动合并回旧库，降级前导出 `.aiproject`。
+- **安全/兼容性：** 保留已发布 migration、manifest format、资源限额、路径/link 防护、原子替换、凭据引用、错误脱敏、worker/SQLite 线程和 Revision 保护；不新增依赖。外部目录、归档、原文件和旧库不随“移除最近记录”删除；“移除记录”与“删除数据”必须分离。同一工作区第二写实例拒绝。零 Project 但存在配置、未知 schema、外键损坏、孤立记录或备份失败一律停在预检并 REPLAN。
+- **验收矩阵：** data-dir 四级优先级、Unicode/长路径/不可写/磁盘满/Portable 移动；Session 运行中切换、取消/关闭收敛、双实例锁、非法目标不替换、跨 Project 状态隔离；多 Project/shared config 旧库逐库闭包与故障注入；开放目录及 `.aiproject` 的 tamper/traversal/压缩炸弹/未知版本/冲突/恢复；中英文 × `1280x720@100%`、`1920x1080@150%` 的 Project Manager/导入/切换/错误路径；冻结 Portable 候选数据根、卸载不删外置 Project、AV/人工签收。真实端点不作本功能前置，使用本地 fake endpoint。
+- **任务与文档：** 按 `07` 的 V03-T01 数据根/应用配置 → T02 ProjectSession → T03 旧库拆分 → T04 Project Manager/工作区 → T05 `.aiproject` GUI → T06 集成/恢复/候选门禁推进。契约同步到 `01` §21.3、`02` v0.3、`03` §10.2、`04` §7.1、`07` V03、本文和 `DEVELOPMENT_STATE.md`；实现时再同步 README、用户指南、数据安全和已知限制。
 
 ## 18. v0.2 门禁裁决：`DEC-V02-T01-M01-GATE-BASELINE`
 
 - **状态：** approved（2026-08-23）；恢复 Milestone `V02-T01-M01`。
+- **位置约束更新（2026-08-27）：** 本节的“仓库外归档”仅保留为历史裁决记录，后续操作以 §32 `DEC-DEV-OUTPUT-ROOT` 的项目内归档规则为准；锁定依赖、保留候选原样和不降低门禁的要求不变。
 - **问题：** M01 行为、回归和 Review 已通过，但全量 pytest 被本机 `packaging` 漂移和活动 `dist/` 中陈旧 v0.1 candidate 阻塞。
 - **现场证据：** lock 要求 `packaging==26.2`，本机安装为 25.0；旧 manifest 记录 version 0.1.0、commit `110dea9...`、`git_dirty:true`，当前 HEAD 为 `9c0be23...` 且工作树含未提交 M01。构建脚本会记录 HEAD 和 dirty 标志，现有候选测试比较 commit 但不拒绝 dirty，因此现在重建可制造“commit 看似匹配、实际内容含未提交代码”的假绿。
 - **唯一推荐：** 不改业务、测试语义或 lock；使用隔离 Python 3.12 环境按 lock 恢复依赖；保存路径/hash 后把旧 `dist/` 整体可逆归档到仓库外；重跑完整 Gate，再由独立验收决定 M01 是否完成。
@@ -1109,5 +1114,54 @@ Task重新规划
 - **下一步：** 仅暂存 M04 allowed paths 创建本地 checkpoint，再推进至 V02-T05 Release Candidate Gate，不提前执行候选构建、签发或远程动作。
 
 ---
+
+## 32. 开发输出目录与状态入口裁决：`DEC-DEV-OUTPUT-ROOT`
+
+- **后续执行交接（2026-08-27）：** 用户另行授权实体环境整理、验证与条件满足后的删除，并要求可直接交接开发。项目内 `.venv/` 的锁与质量验证、候选/GUI 数据复制校验已完成；六个外部原目录的实际删除被执行环境安全策略拒绝，仍待手动清理，不得记为完成或绕过。开发 Agent 可使用新环境单次继续 `V02-T05-M01`；最新证据、实际授权及未完成项以 `DEVELOPMENT_STATE.md` 顶部交接为准，下方“本次 Markdown”描述保留为原裁决时的权限。
+- **状态：** approved（2026-08-27）；用户批准本次 Markdown 修改。裁决批准不等于环境迁移、删除、构建、验收或提交授权；`resume_milestone: V02-T05-M01`，保持暂停，不自动恢复。
+- **问题与证据：** D 盘根目录存在三个 Python 虚拟环境、一个 mypy 缓存、一个包含 SQLite/备份的 GUI 验证目录及一个 v0.1 候选归档。三个 `pyvenv.cfg` 记录了在项目外创建环境的命令，缓存标签明确来自 mypy；旧候选包含 EXE、ZIP 和 manifest。§18 与旧操作模板 C 明确允许仓库外归档；历史依赖漂移记录解释了多个环境的形成，但不能据此推定每次外部写入均获用户授权。
+- **不可变约束：** 项目开发输出限定在 `D:/TransRealm/`；既有数据与候选恢复证据不得丢失；不改业务、数据库格式、依赖锁或产品数据路径；保持当前分支和既有未提交修改；不降低原有候选门禁。
+- **唯一推荐：** 开发环境、缓存、临时文件、验证数据及归档统一收敛到项目内，具体位置和授权边界见 `09_Unattended_Development_Governance.md` §6.1。历史归档与活动 `dist/` 分开，环境和产物不进入 Git 或分发包。
+- **否决候选 A（保持外部目录，只补登记）：** 兼容现有路径、无需立即迁移，但持续违背目录约束，登记不能阻止新增写入，也不能满足输出边界验收。
+- **否决候选 B（统一到外部专用目录）：** 可减少散落目录、支持可逆迁移，但仍在用户限定根目录之外，且同样需要引用切换与数据保护，没有足够收益支持放宽边界。
+- **兼容性与安全：** 推荐方案只改变开发输出位置；不改变产品 API、UI、schema、Project/Revision/Attempt 或凭据契约。Git clean 不是文件系统写入边界证据；路径检查须覆盖最终目标和重定向。含 SQLite/备份的目录先确认归属，不按目录名称推定可以删除。
+- **迁移与回滚：** 获准后在项目内按既有 lock 重建环境，不假定搬动 venv 后仍可运行；历史候选/验证数据先复制核对再切换引用，保留旧路径与恢复资料。切换失败时保留新旧现场，不覆盖原件；若需要恢复外部写入，须另获路径例外，不能以回滚为由绕过边界。
+- **明确保留项及解除条件：** 外部目录删除时点保留；须确认无进程/配置引用、数据归属、归档完整和恢复能力，并取得具体目录清理授权。创建者和逐次命令日志尚未完整确认，不影响项目内收敛裁决，不阻塞文档更新。
+- **后续验收（本轮未执行）：** 重新运行获准的开发/验证动作后，输出位置均在项目内；新环境满足现有 lock 与原质量门禁；归档内容完整且不被当前候选发现；数据可恢复；目录忽略/分发排除有效；清理前复核占用与授权。不得以历史 passed 替代迁移后结果。
+- **状态入口裁决：** 唯一入口是根目录文件 `D:/TransRealm/DEVELOPMENT_STATE.md`。提示词统一正斜杠与代码格式，不在下划线前增加转义字符；输入不一致时先核对文件名，不反复猜路径。否决为错误路径创建副本/别名，避免形成第二权威；不重命名当前真实入口。
+- **必须同步的文档：** 本节、`09_Unattended_Development_Governance.md` §6.1、`USER_GUIDE.md`、`DEVELOPMENT_STATE.md`；`AGENTS.md` 提供固定入口，`06_AI_Development_Guide.md` 与 `07_Developer_Task_List.md` 补充执行前路径约束，不改变产品任务目标。
+- **恢复提示：** 先读取 `D:/TransRealm/DEVELOPMENT_STATE.md` 的授权及恢复前置条件；仅 Markdown 授权时停止于文档。取得环境整理授权后按 §6.1 收敛输出，取得独立开发授权后才从 `V02-T05-M01` 继续；不因裁决已批准自动执行构建、提交或发布。
+
+## 33. V02-T05-M01 版本来源裁决：`DEC-V02-T05-M01-VERSION-SOURCE`
+
+- **状态：** approved（2026-08-27）；用户批准把 `src/transrealm/ui/main_window.py` 纳入 V02-T05-M01 的版本来源接线，并授权同步必要权威 Markdown。不得因此扩大产品、依赖、数据库、构建或发布范围。
+- **问题：** `pyproject.toml` 与 `src/transrealm/__init__.py` 已统一为 `0.2.0`，但桌面入口仍在 `main_window.py` 维护独立 `APP_VERSION = "0.1.0"`，`main()` 将其传入服务，造成运行/迁移元数据与包版本不一致。
+- **唯一裁决：** 保留公开/兼容名称 `APP_VERSION`，令其复用 `transrealm.__version__`；不在 `main_window.py` 维护独立版本字面量。候选构建仍从 `pyproject.toml` 读取版本；本 M01 不改构建脚本或输出契约。
+- **允许路径：** 仅 `pyproject.toml`、`src/transrealm/__init__.py`、`src/transrealm/ui/main_window.py` 的上述接线、直接版本验收测试和必要状态/任务/架构 Markdown。禁止其他 UI/服务/数据库/迁移/依赖/候选/发布改动。
+- **验收与恢复：** 断言 `pyproject.toml`、`transrealm.__version__`、`_version_from_pyproject()` 和 `main_window.APP_VERSION` 同为 `0.2.0`；复跑 M01 相关旧回归、全量 pytest、Ruff、mypy、pip check、范围/秘密检查和独立 Review。不得构建候选、暂存、提交或发布。
+- **兼容性与安全：** 仅消除版本元数据漂移；保留 `APP_VERSION` 名称和现有调用关系，不改变服务、schema/migration、用户数据、真实端点或秘密边界。旧 v0.1 候选/文档作为历史记录保留。
+
+## 34. V02-T05 v0.2 候选 Gate：`5744b9db`
+
+- **状态：** 内部候选 Gate completed（2026-08-28 历史事实）；人工反馈后的下一计划已由 §35 调整为候选签收前修复，当前不进入外部签发。以下 Reality Check **FIT + ADAPT** 仅属当时内部 Gate；ADAPT 仅为构建期隔离 PATH，防止外部 native DLL 污染 PyInstaller，`finally` 恢复原环境；不改变产品行为、依赖、输出契约、数据格式或发布边界。
+- **checkpoint 与范围：** 首轮 Review 的 P1/P2 已修复；`5744b9db53028c0bcbed48c37fac9fc6d3fe2d1e` 仅含 `scripts/build_release.py` 的 clean-source 门禁与 `tests/test_p1_t05_m04.py` 的对应验收/manifest ZIP 选择修复；README/`docs/` 候选身份同步作为当前工作树必要文档，未混入既有治理/状态现场，不 push/merge/tag/Release。M01 版本来源裁决已由前一 checkpoint `1e4714b10ea76975707d987fa431257f262710de` 完成。
+- **候选身份：** `D:/TransRealm/dist/build_manifest.json` 记录 version=`0.2.0`、git commit=`5744b9db53028c0bcbed48c37fac9fc6d3fe2d1e`、`git_dirty=false`、Python 3.12.10、PyInstaller 6.21.0、PySide6 6.11.1、12 migrations、双语 QM、8 类 Qt 插件；ZIP `transrealm-0.2.0-win-x64.zip` 48091679 bytes，SHA-256 `a4da4eff71facc38064b33042bae45a2ab5a578fdc679cf9c636ac001f9ca498`；EXE SHA-256 `d77eb0f83fb8a5825ba80ef981573e7fe8f1c313276c11479720a447f2c16e17`。manifest 与实际 hash/size 自校验通过。
+- **验收证据：** 候选专项 `tests/test_p1_t05_m04.py` + `test_p1_t05_m05.py` + `test_v02_t05_m01.py` **10 passed**；V1.0 T05 M01–M05 + v0.2 M01 回归 **43 passed**；最终全量 pytest **1385 passed, 1 skipped**（唯一 skip 为 symlink `WinError 1314`）；Ruff clean；mypy `src tests` 150 files clean；pip check、candidate hygiene、manifest/hash、源代码秘密/路径/unsafe-operation 扫描均通过。冻结 unzip→launch→12 migrations→WM_CLOSE→外置数据保留/程序目录删除 smoke 通过；ZIP 纯净性/无用户数据通过。
+- **Review 结论：** 首轮独立 Review 的 P1/P2 已按上述范围修复并由本地门禁复验；最终独立只读复审以 `5744b9d`、当前候选和同步后的文档为对象，结论 **APPROVE / NO-BLOCKER**，不把 Review Agent 当作验收替代；主 Agent 另以逐文件 diff、manifest、自校验、全量门禁和回滚核对完成验收。
+- **未覆盖与安全：** AV 扫描受当前 Windows Defender 能力限制未执行；冻结应用内完整 create/import/translate/export 最终人工 smoke 未执行；真实端点、签发和发布未执行。上述均保持未通过/待用户动作，不降低候选门禁，不涉及真实用户数据。
+
+## 35. v0.2 候选签收前修复裁决：`DEC-V02-T05-M02-SIGNOFF-REPAIR`
+
+- **decision_result / 状态：** **REPLAN**；2026-08-28 计划裁决完成，执行未授权。新增 `V02-T05-M02`，仍属 v0.2.0。§34 的内部候选通过与旧测试/Review 是历史事实；新增人工反馈使“下一步仅外部签收”的假设失效，不把旧 APPROVE 延用为本修复批准或正式可发布结论。
+- **触发/截止/恢复：** 外部人工首次配置与首次翻译受阻，并出现错误信息暴露；在任何继续签收/签发前停止该推进。恢复 Milestone 为 `V02-T05-M02`，须另获限定代码/测试授权并重做 Reality Check。只依本轮指定七份文件及用户事实作决策，未读取源码、定位根因或实施验证。
+- **证据与不确定项：** `.local/verification/manual-signoff/SIGNOFF.md` 同时写 GUI PASS 与首次翻译未完成，完整 smoke 判 INCOMPLETE；create/import 仅可能成功；现有中英文图只覆盖 `2560x1440 @150%` 启动。用户报告的 `error.png` 暴露用户名、数据库绝对路径和 SQL，仅内部保留。配置可发现性缺口与脱敏缺口已足以阻止签收，但尚不能推定服务/模型协议有代码缺陷。AV 完全未执行；真实端点未执行、未授权。
+- **方案比较：** A，FIT：只补说明并继续外部签收——改动少、无数据迁移，但不能闭合用户无法完成首译和错误暴露证据，否决。B，ADAPT：在已完成构建 Gate 下直接微调 UI——可能复用旧 seam，但现授权/切片/签收证据不足，且新增用户可见修复不能冒充构建内部调整，否决。C，REPLAN：新增一个有上限的签收前修复切片——保留全部底层契约和历史基线，付出限定 UI/测试/文档及重新候选验证成本，能够独立验收和回退；采用 C。无方案允许扩展到 v0.3 或降低安全/发布门禁。
+- **冻结语义（交付目标，未实现）：** Connection 表示服务地址/连接策略/可选凭据引用；Model Profile 表示所选模型、模板与参数，引用已有 Connection；Project active Profile 决定当前项目使用哪套 Profile。中文用“连接 / 模型配置 / 当前项目使用的模型配置”并配说明，英文用 Connection / Model Profile / active Profile；不新增持久化实体、字段或第二套配置系统。llama.cpp 沿用既有 OpenAI-compatible 接口，不新增厂商适配或模型管理；最短路径与缺项引导按 `07` M02 明确依赖顺序，所有新文案须双语验收。
+- **GUI 设计方法：** 按用户补充偏好优先参考成熟应用已有流程与呈现模式，再适配现有三页和 Connection/Profile/active 语义；不从零设计完整 UI。本轮未扩大唯一依据范围或外查；后续经授权核验参考来源，在 `07` M02 的 `design-reference.md` 留存借鉴与差异，先冻结最小交互方案再实现；不能借参考设计扩大功能、依赖或公共契约。
+- **安全与兼容性：** 保留唯一性、引用 RESTRICT、`env:`/`wincred:`、历史 Attempt snapshot、Revision/current/lock、既有失败/重试/导出/关闭恢复、UI→Application/worker 线程边界。错误呈现须有用户可理解原因/恢复动作与未知错误兜底，不能直出原始异常/SQL/系统路径/用户名/凭据。优先限定现有 UI/worker 边界；若须新增服务异常公共契约等超界变更，先提交最小需求另行决策，不能以本裁决自动授权。
+- **边界与风险：** 仅配置入口/说明/状态接线、错误脱敏、必要 i18n、回归/异常/GUI 测试和文档；具体 allowed paths 以 `07` M02 为上限。无新依赖、schema/migration/Project 格式/公开 API 变更；不重构全部 UI，不触发 `DEC-V03-PROJECT-STORAGE`。涉及安全和核心旅程，独立行为/安全/视觉 Review 必须重新执行，不能独自凭方案验收。
+- **验收与外部条件：** 本地 fake HTTP endpoint + 合成数据完成 GUI create → import → translate → export → close/reopen，并补必要六格式旧回归、错误/失败恢复/脱敏测试；en/zh_CN × `1280x720 @100%` / `1920x1080 @150%` 的适用主壳/Settings/Project/Auto/Workbench 空、运行/禁用、错、成功状态须逐格交互/截图与视觉签核。源码测试通过后须另获 checkpoint/构建授权、重建候选并重新人工签收；AV 扫描是同一最终候选的独立外部条件，不能由修复或 fake 测试替代。真实端点不纳入本切片，保持未执行并留待签发前独立裁决适用性/授权，不暗中豁免。
+- **迁移/恢复：** 无数据迁移。HEAD/base/固定 rollback_ref=`5744b9db53028c0bcbed48c37fac9fc6d3fe2d1e`；所有既有 dirty、未跟踪 `AGENTS.md`、原候选和原始缺陷证据保留。失败先停止推进、保存脱敏证据和合成数据/备份；仅在明确授权后回退本次可识别修改，不覆盖既有现场、不清理外部目录。若 scope/依赖/公共契约冲突再 REPLAN。
+- **必须更新/停止：** 本轮只增量修改 `DEVELOPMENT_STATE.md`、`07_Developer_Task_List.md` 和本节；不改原签收记录/Release 清单。证据位置、逐项验收、解除条件和分阶段停止点在 `07` M02；即时授权/指针只在状态入口。计划完成即停，后续开发、提交、构建和签发各依明确授权，不 push/merge/tag/Release、远程资源、真实模型或真实用户数据。
 
 # 文档结束

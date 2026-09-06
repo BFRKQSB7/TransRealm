@@ -31,6 +31,10 @@
     <message><source>English</source><translation>英语</translation></message>
     <message><source>简体中文</source><translation>简体中文</translation></message>
     <message><source>Connections</source><translation>连接</translation></message>
+    <message><source>Connection = where/how to reach the local OpenAI-compatible service; it does not choose a model.</source><translation>连接 = 如何到达本地 OpenAI-compatible 服务；它不选择模型。</translation></message>
+    <message><source>Add a Connection with the API address of your already-running local OpenAI-compatible service.</source><translation>请填写已运行的本地 OpenAI-compatible 服务 API 地址，然后添加连接。</translation></message>
+    <message><source>Connection saved. Next, create a Model Profile and choose this Connection.</source><translation>连接已保存。下一步请创建模型配置并选择此连接。</translation></message>
+    <message><source>Connection and Model Profile are ready. Next, select the active Profile in Project.</source><translation>连接和模型配置已就绪。下一步请在项目中选择活动配置。</translation></message>
     <message><source>Add Connection</source><translation>添加连接</translation></message>
     <message><source>Delete Selected Connection</source><translation>删除选中连接</translation></message>
     <message><source>Edit Selected Connection</source><translation>编辑选中连接</translation></message>
@@ -40,6 +44,7 @@
     <message><source>Max retries</source><translation>最大重试次数</translation></message>
     <message><source>Retry delay (seconds)</source><translation>重试延迟（秒）</translation></message>
     <message><source>Profiles</source><translation>配置</translation></message>
+    <message><source>Model Profile = which model and translation parameters to use; select an existing Connection first.</source><translation>模型配置 = 使用哪个模型及翻译参数；请先选择已有连接。</translation></message>
     <message><source>Add Profile</source><translation>添加配置</translation></message>
     <message><source>Delete Selected Profile</source><translation>删除选中配置</translation></message>
     <message><source>Edit Selected Profile</source><translation>编辑选中配置</translation></message>
@@ -73,6 +78,10 @@
     <message><source>Set Active Profile</source><translation>设置活动配置</translation></message>
     <message><source>Clear Active Profile</source><translation>清除活动配置</translation></message>
     <message><source>Active profile</source><translation>活动配置</translation></message>
+    <message><source>Project active Profile is the Model Profile used for translation in this project.</source><translation>项目活动配置是本项目翻译时使用的模型配置。</translation></message>
+    <message><source>Choose a Model Profile above, then select Set Active Profile.</source><translation>请先在上方选择模型配置，然后点击“设置活动配置”。</translation></message>
+    <message><source>Create a Connection and Model Profile in Settings, then return here to set the active Profile.</source><translation>请在设置中创建连接和模型配置，然后返回此处设置活动配置。</translation></message>
+    <message><source>Open Settings</source><translation>打开设置</translation></message>
     <message><source>Glossary</source><translation>术语表</translation></message>
     <message><source>Locked (injected into prompt)</source><translation>锁定（注入提示）</translation></message>
     <message><source>Add Entry</source><translation>添加条目</translation></message>
@@ -95,6 +104,8 @@
     <message><source>Export file…</source><translation>导出文件…</translation></message>
     <message><source>Export TXT…</source><translation>导出 TXT…</translation></message>
     <message><source>Set active profile…</source><translation>设置活动配置…</translation></message>
+    <message><source>Configure Connection and Model Profile…</source><translation>配置连接和模型配置…</translation></message>
+    <message><source>Create a Connection and Model Profile in Settings, then set the Profile active in Project.</source><translation>请在设置中创建连接和模型配置，然后在项目中设置活动配置。</translation></message>
     <message><source>Preset (read-only):</source><translation>预设（只读）：</translation></message>
     <message><source>Override:</source><translation>覆盖：</translation></message>
     <message><source>Save as override</source><translation>保存为覆盖</translation></message>

@@ -31,6 +31,10 @@
     <message><source>English</source><translation>English</translation></message>
     <message><source>简体中文</source><translation>简体中文</translation></message>
     <message><source>Connections</source><translation>Connections</translation></message>
+    <message><source>Connection = where/how to reach the local OpenAI-compatible service; it does not choose a model.</source><translation>Connection = where/how to reach the local OpenAI-compatible service; it does not choose a model.</translation></message>
+    <message><source>Add a Connection with the API address of your already-running local OpenAI-compatible service.</source><translation>Add a Connection with the API address of your already-running local OpenAI-compatible service.</translation></message>
+    <message><source>Connection saved. Next, create a Model Profile and choose this Connection.</source><translation>Connection saved. Next, create a Model Profile and choose this Connection.</translation></message>
+    <message><source>Connection and Model Profile are ready. Next, select the active Profile in Project.</source><translation>Connection and Model Profile are ready. Next, select the active Profile in Project.</translation></message>
     <message><source>Add Connection</source><translation>Add Connection</translation></message>
     <message><source>Delete Selected Connection</source><translation>Delete Selected Connection</translation></message>
     <message><source>Edit Selected Connection</source><translation>Edit Selected Connection</translation></message>
@@ -40,6 +44,7 @@
     <message><source>Max retries</source><translation>Max retries</translation></message>
     <message><source>Retry delay (seconds)</source><translation>Retry delay (seconds)</translation></message>
     <message><source>Profiles</source><translation>Profiles</translation></message>
+    <message><source>Model Profile = which model and translation parameters to use; select an existing Connection first.</source><translation>Model Profile = which model and translation parameters to use; select an existing Connection first.</translation></message>
     <message><source>Add Profile</source><translation>Add Profile</translation></message>
     <message><source>Delete Selected Profile</source><translation>Delete Selected Profile</translation></message>
     <message><source>Edit Selected Profile</source><translation>Edit Selected Profile</translation></message>
@@ -73,6 +78,10 @@
     <message><source>Set Active Profile</source><translation>Set Active Profile</translation></message>
     <message><source>Clear Active Profile</source><translation>Clear Active Profile</translation></message>
     <message><source>Active profile</source><translation>Active profile</translation></message>
+    <message><source>Project active Profile is the Model Profile used for translation in this project.</source><translation>Project active Profile is the Model Profile used for translation in this project.</translation></message>
+    <message><source>Choose a Model Profile above, then select Set Active Profile.</source><translation>Choose a Model Profile above, then select Set Active Profile.</translation></message>
+    <message><source>Create a Connection and Model Profile in Settings, then return here to set the active Profile.</source><translation>Create a Connection and Model Profile in Settings, then return here to set the active Profile.</translation></message>
+    <message><source>Open Settings</source><translation>Open Settings</translation></message>
     <message><source>Glossary</source><translation>Glossary</translation></message>
     <message><source>Locked (injected into prompt)</source><translation>Locked (injected into prompt)</translation></message>
     <message><source>Add Entry</source><translation>Add Entry</translation></message>
@@ -95,6 +104,8 @@
     <message><source>Export file…</source><translation>Export file…</translation></message>
     <message><source>Export TXT…</source><translation>Export TXT…</translation></message>
     <message><source>Set active profile…</source><translation>Set active profile…</translation></message>
+    <message><source>Configure Connection and Model Profile…</source><translation>Configure Connection and Model Profile…</translation></message>
+    <message><source>Create a Connection and Model Profile in Settings, then set the Profile active in Project.</source><translation>Create a Connection and Model Profile in Settings, then set the Profile active in Project.</translation></message>
     <message><source>Preset (read-only):</source><translation>Preset (read-only):</translation></message>
     <message><source>Override:</source><translation>Override:</translation></message>
     <message><source>Save as override</source><translation>Save as override</translation></message>

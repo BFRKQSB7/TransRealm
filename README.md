@@ -2,7 +2,7 @@
 
 本地优先、AI 辅助的翻译工作台。V1.0 目标：单用户、SQLite、OpenAI-compatible HTTP、Windows 11 绿色版优先。
 
-## 用户文档（V1.0 候选 0.1.0）
+## 用户文档（v0.2.0 候选）
 
 - [安装与使用指南](docs/user-guide.md) — 绿色版安装、三标签页操作、Auto/Workbench 模式、Profile/Glossary、导出与清理
 - [数据安全](docs/data-safety.md) — 迁移、备份、恢复/回滚、卸载清理
@@ -52,7 +52,7 @@ transrealm
 py -3.12 scripts/build_release.py
 ```
 
-产物在 `dist/`（gitignored）：`transrealm/`（onedir）、`transrealm-0.1.0-win-x64.zip`（绿色 artifact）、`build_manifest.json`（候选身份与 hash）。迁移 SQL 数据文件由脚本以 `--add-data "src/transrealm/migrations;transrealm/migrations"` 收集，否则冻结应用无法应用迁移。构建候选不等于提交、推送或发布；外部动作始终需用户单独授权。Phase 0 的 P0-T08-M06 已验证该工具链能 build/start；依赖锁、体积、Qt 插件与杀毒扫描属 V1.0 Release Gate（`03` §12）。
+产物在 `dist/`（gitignored）：`transrealm/`（onedir）、`transrealm-0.2.0-win-x64.zip`（绿色 artifact）、`build_manifest.json`（候选身份与 hash）。迁移 SQL 数据文件由脚本以 `--add-data "src/transrealm/migrations;transrealm/migrations"` 收集，否则冻结应用无法应用迁移。构建候选不等于提交、推送或发布；外部动作始终需用户单独授权。依赖锁、体积、Qt 插件与杀毒扫描仍属当前 v0.2.0 Release Gate（`03` §12）。
 
 ## 开发质量检查
 

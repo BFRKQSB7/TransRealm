@@ -9,6 +9,9 @@ venv/
 ENV/
 env/
 
+# Local development evidence, temporary data, caches and historical artifacts
+.local/
+
 # Distribution / packaging
 build/
 dist/

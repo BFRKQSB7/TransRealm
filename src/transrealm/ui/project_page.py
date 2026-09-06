@@ -49,7 +49,8 @@ from transrealm.domain.project import MODE_AUTO, MODE_WORKBENCH, Project
 from transrealm.domain.prompt_override import PromptOverride
 from transrealm.domain.provider_connection import ProviderConnection
 from transrealm.domain.segment import SourceDocument
-from transrealm.ui.page_base import WorkerPage
+from transrealm.ui.i18n import LanguageManager
+from transrealm.ui.page_base import WorkerPage, safe_error_message
 from transrealm.ui.workbench import (
     WorkbenchParamEditor,
     WorkbenchPromptEditor,
@@ -71,13 +72,26 @@ class ProjectPage(WorkerPage):
     project_deleted = Signal(int)
     document_ready = Signal(int, str, int)
     project_settings_changed = Signal(int)
+    request_settings_setup = Signal()
 
-    def __init__(self, worker: ServiceWorker, *, db_path: Path, app_version: str) -> None:
+    def __init__(
+        self,
+        worker: ServiceWorker,
+        *,
+        db_path: Path,
+        app_version: str,
+        i18n: LanguageManager | None = None,
+    ) -> None:
         super().__init__(worker)
         self._db_path = db_path
         self._app_version = app_version
+        self._i18n = i18n or LanguageManager(parent=self)
         self._project_id: int | None = None
         self._deletion_summary_data: ProjectDeletionSummary | None = None
+        self._has_profiles = False
+        self._has_project = False
+        self._has_active_profile = False
+        self._allow_initial_project_restore = True
 
         layout = QVBoxLayout(self)
         self._status = QLabel("", self)
@@ -123,6 +137,20 @@ class ProjectPage(WorkerPage):
         layout.addLayout(active_form)
         self._active_profile_label = QLabel("", self)
         layout.addWidget(self._active_profile_label)
+        active_help = QLabel(
+            "Project active Profile is the Model Profile used for translation in this project.",
+            self,
+        )
+        active_help.setWordWrap(True)
+        layout.addWidget(active_help)
+        self._profile_setup_hint = QLabel("", self)
+        self._profile_setup_hint.setWordWrap(True)
+        self._profile_setup_hint.setProperty("transrealm_i18n_dynamic", True)
+        self._profile_setup_hint.hide()
+        layout.addWidget(self._profile_setup_hint)
+        self._open_settings = QPushButton("Open Settings", self)
+        self._open_settings.hide()
+        layout.addWidget(self._open_settings)
 
         layout.addWidget(QLabel("Glossary", self))
         glossary_form = QFormLayout()
@@ -158,10 +186,13 @@ class ProjectPage(WorkerPage):
         self._delete_project.clicked.connect(self._on_delete_project)
         self._set_active.clicked.connect(self._on_set_active)
         self._clear_active.clicked.connect(self._on_clear_active)
+        self._open_settings.clicked.connect(self.request_settings_setup.emit)
         self._add_glossary.clicked.connect(self._on_add_glossary)
         self._update_glossary.clicked.connect(self._on_update_glossary)
         self._delete_glossary.clicked.connect(self._on_delete_glossary)
         self._glossary_list.itemSelectionChanged.connect(self._on_glossary_selected)
+        self._i18n.language_changed.connect(lambda _language: self._refresh_profile_guidance())
+        self._i18n.bind_tree(self)
 
     def refresh(self) -> None:
         """Reload projects, profiles, the active selection and glossary."""
@@ -476,6 +507,15 @@ class ProjectPage(WorkerPage):
             assert isinstance(projects, list)
             assert isinstance(profiles, list)
             assert isinstance(glossary_entries, list)
+            if self._allow_initial_project_restore and self._project_id is None and projects:
+                self._allow_initial_project_restore = False
+                first_project = projects[0]
+                if isinstance(first_project, Project) and first_project.id is not None:
+                    self._project_id = first_project.id
+                    self.project_ready.emit(first_project.id)
+                    self.refresh()
+                    return
+            self._allow_initial_project_restore = False
             self._populate(
                 projects,
                 profiles,
@@ -596,6 +636,10 @@ class ProjectPage(WorkerPage):
             self._active_profile_label.setText("Active profile: none")
         else:
             self._active_profile_label.setText("")
+        self._has_project = project is not None
+        self._has_profiles = bool(profiles)
+        self._has_active_profile = active_profile is not None
+        self._refresh_profile_guidance()
 
         self._glossary_list.clear()
         for entry in glossary_entries:
@@ -615,4 +659,22 @@ class ProjectPage(WorkerPage):
             self.project_settings_changed.emit(self._project_id)
 
     def _handle_error(self, error: str) -> None:
-        self._status.setText(f"Error: {error}")
+        self._status.setText(f"Error: {safe_error_message(error)}")
+
+    def _refresh_profile_guidance(self) -> None:
+        """Keep the active-profile setup action aligned with current state."""
+        if not self._has_project or self._has_active_profile:
+            self._profile_setup_hint.hide()
+            self._open_settings.hide()
+            return
+        if self._has_profiles:
+            source = "Choose a Model Profile above, then select Set Active Profile."
+            self._open_settings.hide()
+        else:
+            source = (
+                "Create a Connection and Model Profile in Settings, then return here "
+                "to set the active Profile."
+            )
+            self._open_settings.show()
+        self._profile_setup_hint.setText(self._i18n.tr(source))
+        self._profile_setup_hint.show()

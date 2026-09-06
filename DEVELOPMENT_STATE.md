@@ -4,27 +4,224 @@ file_role: agent-entrypoint-and-runtime-checkpoint
 protocol_version: 2
 current_phase: Phase 1.5A
 current_release: v0.2.0
-current_task: V02-T04
-current_milestone: V02-T04-M04
+current_task: V02-T05
+current_milestone: V02-T05-M02
 state: verification
-last_updated: 2026-08-24
-baseline_commit: 7c54efeaf73019e97691c6d714fa680c28666ef1
-baseline_integrity: committed_clean_planning_baseline
-worktree_disposition: v02_t04_m04_verified_review_approved
-gate_status: m04_all_gates_passed
-plan_alignment: fit
-review_status: independent_review_approved
-rollback_ref: 7c54efeaf73019e97691c6d714fa680c28666ef1
+plan_alignment: ADAPT
+stop_reason: v02_t05_m02_source_stage_complete_manual_gui_candidate_av_pending
+interrupt_time: 2026-08-24 Asia/Shanghai
+last_updated: 2026-09-07
+baseline_commit: 5744b9db53028c0bcbed48c37fac9fc6d3fe2d1e
+baseline_integrity: v02_t05_candidate_checkpoint_committed_clean_source
+worktree_disposition: protected_existing_dirty_plus_m02_verification_unstaged
+gate_status: m02_source_automated_gates_passed_manual_gui_matrix_unverified_candidate_av_pending
+review_status: m02_source_review_no_blocker_manual_visual_review_unverified
+rollback_ref: 5744b9db53028c0bcbed48c37fac9fc6d3fe2d1e
 pending_decision: none
 decision_prompt: none
-decision_result: DEC-V02-T01-M01-GATE-BASELINE_approved
-resume_milestone: V02-T04-M04
-authorization_scope: V02-T04_allowed_paths
+decision_result: REPLAN
+resume_milestone: V02-T05-M02
+authorization_scope: V02-T05-M02_limited_gui_research_code_tests_i18n_docs_project_verification
 code_authorized: true
 branch_authorized: false
-local_commit_authorized: true
+local_commit_authorized: false
 external_actions_authorized: false
+state_entrypoint: D:/TransRealm/DEVELOPMENT_STATE.md
+verification_python: D:/TransRealm/.venv/Scripts/python.exe
+environment_status: locked_venv_reverified_m02_baseline_recorded
+legacy_cleanup_status: external_delete_blocked_by_execution_policy
 ---
+
+## DEC-V03-PROJECT-STORAGE 提前架构裁决（2026-09-07，Asia/Shanghai）
+
+- **触发与结果：** 虽然 frontmatter 的 `pending_decision: none`，用户本轮明确要求提前规划新功能，故触发 `DEC-V03-PROJECT-STORAGE`。唯一裁决为 **APPROVE_ONE_PROJECT_ONE_WORKSPACE**：一次一个活动 `ProjectSession`，每个 Project 对应一个开放目录工作区和一份 `project.sqlite`；受管工作区与外部开放目录共享同一 manifest/数据库契约；`.aiproject` 只作传输快照，必须隔离校验并安装到可写工作区后编辑，禁止原地编辑归档。完整比较与理由见 `D:/TransRealm/08_Architecture_Review.md` §17，实施任务见 `D:/TransRealm/07_Developer_Task_List.md` V03-T00～T06。
+- **当前门禁不变：** 本裁决只完成 v0.3 架构/产品/门禁设计，不代表 v0.3 已开工，不覆盖 v0.2.0 当前 `decision_result=REPLAN` 的签收前修复历史含义。`current_task=V02-T05`、`current_milestone=V02-T05-M02`、`state=verification` 和 `resume_milestone=V02-T05-M02` 保持；必须先完成同一新候选的 GUI/人工矩阵、候选门禁、AV/适用外部签收和用户签发决定，之后另获 v0.3 代码/测试授权，才可把恢复点推进为 `V03-T01-M01`。
+- **数据与配置契约：** 应用级配置只含界面语言、最近/上次 Project、受管工作区根、日志级别等非业务偏好；Project SQLite 继续自包含 Project、文档/Segment、Run/Attempt/Revision、current/lock、Glossary、Workflow、Model Profile、Provider Connection 非敏感字段和 Prompt Override。secret 仍只存在于环境变量或 Windows Credential Manager，Project/日志/绿色版数据包/`.aiproject` 只保存 `env:`/`wincred:` 引用。不得引入全局业务索引库或跨库外键。
+- **路径契约：** data-dir 解析优先级固定为：显式 `--data-dir` → Portable 包程序旁 `data/` → 本机已保存的自定义数据目录指针 → `%LOCALAPPDATA%/TransRealm`。选定目录不存在、不可写、不是目录或空间不足时 fail closed 并要求重选，不静默回退。受管工作区位于 `<data-dir>/projects/`；外部开放目录必须通过既有 manifest/hash/schema/单 Project 校验并可写，不可写时只允许导入副本。UNC/网络盘不作为 v0.3 活动 SQLite 写工作区，跨机使用 `.aiproject`。
+- **旧库迁移：** `~/.transrealm/project.sqlite` 只作迁移源，不原地声明为单 Project 容器。先只读盘点和完整性/外键检查，再用 SQLite Backup API 建一致性恢复快照；在隔离 staging 中逐 Project 拆分，复制该 Project 全部从属数据，并为保持旧体验向每个目标复制旧库全部非敏感 Connection/Profile/Prompt Override/Workflow；逐库验证关联闭包、行数、六格式载体、Revision/current/lock、Attempt 和凭据引用，全部通过后才原子更新应用入口。旧库、恢复快照和迁移映射不得自动删除；任一失败不更新入口，可幂等重试。
+- **应用 seam：** `ProjectSession` 只负责当前工作区/数据库身份、会话写锁、打开/关闭/切换生命周期和向既有 Application Service 提供 `db_path`；不改写领域模型。切换前停止接收新工作，运行中要求完成或取消，等待 worker/SQLite connection 收敛后再校验并替换上下文；不得把前一 Project 的文档、Profile、Revision、草稿或错误状态带入下一 Project。
+- **待确认事实：** v0.3 Reality Check 必须只读盘点实际旧库 Project 数、零 Project 但有配置的特殊库、已存在容器/归档版本、目标文件系统/权限/空间和 Portable 标记来源。若发现外键损坏、未知 schema、孤立业务记录或无法建立一致性备份，停在迁移前并 REPLAN；这些事实不改变本次一 Project 一工作区的架构裁决。
+- **本轮文件/GitHub 授权：** 用户明确授权修改文件并将当前文件上传 GitHub 备份。该授权仅覆盖本次决策 Markdown 与完整当前 Git 工作树的一次性备份；不授权业务实现、测试/GUI/构建/AV/发布、真实端点、merge/tag/Release 或推进 `origin/master`。备份完成后记录远端 ref/commit；不得把这次备份提交冒充 v0.2 候选 checkpoint 或签收证据。
+- **开发恢复提示：** 只有在 V02-T05 完成且用户另行授权 v0.3 开发后，读取本节、`07` V03-T00～T06、`08` §17 和 `03` §10.2；先做只读 Reality Check，确认实际现场相对裁决为 FIT/ADAPT/REPLAN。若 FIT，仅从 `V03-T01-M01` 的 data-dir/Portable 与应用配置分离开始；不得顺带实现 ProjectSession、旧库迁移 GUI、容器 GUI、RAG/TM、构建或发布。全部输出留在 `D:/TransRealm/`，每个 Milestone 完成适用门禁后停止在任务单指定恢复点。
+
+## V02-T05-M02 本次源码阶段结果（2026-08-28，Asia/Shanghai）
+
+- **授权与范围：** 已按新的独立授权实施 `V02-T05-M02`。用户明确补充“本地服务由用户自行启动；应用只提供 API 地址填写处”，因此 UI/文档不启动或管理 `llama-server`，只说明 OpenAI-compatible API base URL。当前 `branch=master`、HEAD/base/rollback=`5744b9db53028c0bcbed48c37fac9fc6d3fe2d1e`、无 staged；既有 dirty 与未跟踪 `AGENTS.md` 保留。`decision_result=REPLAN` 的历史含义不变；本轮实现相对修订计划记录为 **ADAPT**，未发生范围冲突。
+- **实际修改：** `src/transrealm/ui/page_base.py`（共享安全错误呈现）；`src/transrealm/ui/settings_page.py`、`project_page.py`、`translation_page.py`、`main_window.py`（首次配置语义、缺配置恢复入口、active Profile/重开上下文和完成状态）；`src/transrealm/ui/i18n/transrealm_en.ts`、`transrealm_zh_CN.ts` 及对应 `.qm`；新增 `tests/test_v02_t05_m02.py`；同步 `docs/user-guide.md`、`docs/known-issues.md`。设计参考、命令原始结果、旅程、安全/范围、GUI 矩阵和 Review 均在 `D:/TransRealm/.local/verification/v02-t05-m02/20260828-145021/`。未改 Application/Domain/Infrastructure、Repository、schema/migration、依赖、公共 transport 契约、构建/活动 `dist` 或原始 `SIGNOFF.md`/`error.png`。
+- **设计参考：** 以官方 [llama.cpp `llama-server` 文档](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md)确认命令行 OpenAI-compatible 服务契约，并以 [Open WebUI OpenAI-Compatible 文档](https://docs.openwebui.com/getting-started/quick-start/connect-a-provider/starting-with-openai-compatible/)参考连接/模型字段分组与可恢复提示；适配差异已写入 `design-reference.md`。
+- **自动化验证：** M02 新增测试 `6 passed`；指定旧回归 `25 passed`；最终全量 `pytest -q` 为 `1391 passed, 1 skipped`；Ruff `All checks passed!`；mypy `Success: no issues found in 151 source files`；pip check `No broken requirements found.`；Qt `.qm` 编译生成各 `114 translation(s), 0 unfinished`；`git diff --check` exit 0。合成 loopback journey 经默认 production adapter/`StdlibHttpTransport` 请求 `/v1/chat/completions`，导出译文和重开 Profile/文档断言通过。
+- **异常/安全：** 重复 Connection 名称映射为换名/编辑既有记录；SQL、数据库路径、用户名和凭据式值在 UI 错误边界脱敏；未知/空错误有安全兜底；不改变唯一性、引用保护、Revision/current/lock 或 worker/SQLite 线程边界。测试数据库、合成输入、loopback endpoint 和导出均隔离，未读取真实用户数据或真实凭据。
+- **GUI 与未覆盖：** Windows Computer Use 在目标窗口选择前初始化失败两次（kernel assets 路径不存在），因此 English/zh_CN × `1280x720 @100%`、`1920x1080 @150%` 的实际 GUI 交互、显示参数/DPR、截图、焦点/滚动/视觉 Review 仍为 **未验证**；没有用历史 `2560x1440 @150%` 截图替代，也未修改原人工证言。自动旅程使用既有 `ProjectPage.import_file` 合成 fixture seam，不替代人工文件对话框验收。真实用户启动的 `llama-server`、冻结候选、AV 和正式外部签收均未执行，不得记为通过。
+- **Review/停止点：** 源码与自动化独立复核无 P0/P1 blocker；人工视觉复核因工具阻塞未签收。保持 `current_task=V02-T05`、`current_milestone=V02-T05-M02`，`code_authorized=true` 仅表示本次已授权范围，不新增授权。`local_commit_authorized=false`、`external_actions_authorized=false`；本次不暂存、不提交、不构建、不 push/merge/tag/Release。下一步需独立获得 checkpoint 与候选构建授权，随后在同一新候选上完成目标 GUI/人工矩阵；AV 仍是外部签收条件。
+- **恢复动作：** 保留当前现场和本轮脱敏证据；若需回退，先停止相关进程，按固定 `rollback_ref=5744b9db53028c0bcbed48c37fac9fc6d3fe2d1e` 和明确授权隔离撤销本 M02 增量，禁止整树 reset/restore/clean，禁止覆盖既有 dirty/未跟踪内容。
+
+## V02-T05-M02 签收前修复计划决策（2026-08-28，Asia/Shanghai；当前有效）
+
+- **decision_id / decision_result：** `DEC-V02-T05-M02-SIGNOFF-REPAIR` / **REPLAN**。本次只完成计划裁决；没有实现、测试、构建或人工复测。下方历史 FIT、completed、连续开发/提交授权及“下一动作仅外部签收”的记录均只说明当时现场，不覆盖本节和 frontmatter。
+- **计划偏差：** 原假设是内部 Candidate Gate 完成后可直接进入外部签收；人工记录表明首次配置入口与 Connection/Profile 语义未被理解，第一次翻译未完成，错误界面还暴露用户名、数据库绝对路径和原始 SQL。需新增产品可用性/安全修复与验证切片，不能作为原构建 Gate 的内部 ADAPT，也不能仅靠文档 FIT 放行。完整裁决见 `D:/TransRealm/08_Architecture_Review.md` §35；任务与验收见 `D:/TransRealm/07_Developer_Task_List.md` 的 `V02-T05-M02`。
+- **证据判读：** `D:/TransRealm/.local/verification/manual-signoff/SIGNOFF.md` 的 `GUI 结果: PASS` 与“首次翻译未完成”冲突；保留原始记录，不改写签收人证言，完整人工 smoke 判为 **INCOMPLETE / 未通过**。create/import 仅“可能成功”；中英文启动图仅证明 `2560x1440 @150%` 的启动观察，不证明目标矩阵或成功闭环。错误图仅限内部缺陷证据，不作为对外截图。本轮未读取真实数据库或复验候选 hash；hash 一致沿用所给事实及已有记录。
+- **当前指针：** `current_task=V02-T05`；`current_milestone=V02-T05-M02`（候选签收前：首次配置、闭环与错误脱敏）；`state=blocked`，直接阻塞为缺少新的代码/测试授权。M02 任务定义为 `proposed`；内部 `V02-T05-CANDIDATE-GATE` 历史完成事实保留，T05 总体重新打开，当前候选不是正式可发布版本。
+- **最小范围变化：** 在 v0.2.0 内插入一个 M02，保留现有 Connection → Profile → Project active Profile 依赖、Application Service/worker 边界与数据契约。只补可发现的入口、双语语义/就近引导、本地 fake endpoint 合成数据完整旅程、用户可理解且脱敏的错误，以及必要测试/文档/截图；不重新打开已完成 T01–T04 做全面重构。具体未来 allowed paths、非目标、前置条件、测试矩阵与证据清单以 M02 任务单为准；该范围上限不是执行授权。
+- **GUI 设计偏好：** 按用户补充要求，后续优先参考成熟应用的连接管理、模型配置与首次使用流程，再做最小适配；不从零设计通用向导或整套 UI。本轮未外查或选定具体参考产品；后续扩展参考资料范围须获授权，并在实现前记录来源、借鉴点、差异与受限交互方案，不能据参考设计扩大功能或依赖。
+- **Git 与现场：** 只读核对 branch=`master`，HEAD/base/rollback_ref=`5744b9db53028c0bcbed48c37fac9fc6d3fe2d1e`，无 staged。受保护既有 dirty：`.gitignore`、`06_AI_Development_Guide.md`、`07_Developer_Task_List.md`、`08_Architecture_Review.md`、`09_Unattended_Development_Governance.md`、`DEVELOPMENT_STATE.md`、`README.md`、`USER_GUIDE.md`、`docs/data-safety.md`、`docs/known-issues.md`、`docs/third-party-licenses.md`、`docs/user-guide.md`；未跟踪 `AGENTS.md` 保留。本轮仅增量修改获准的三个计划/状态文件，不覆盖既有内容，不清理、暂存或提交。
+- **本轮 allowed paths：** 仅 `D:/TransRealm/DEVELOPMENT_STATE.md`、`D:/TransRealm/07_Developer_Task_List.md`、`D:/TransRealm/08_Architecture_Review.md`。禁止源码、测试、依赖、配置、候选、签收原件及其他文档修改；不运行产品/自动测试/GUI/构建/AV，不做环境整理、外部目录迁移或删除。全部后续开发输出仍须在 `D:/TransRealm/` 内。
+- **分层解除阻塞：** (1) 用户单独授权 M02 的限定代码、测试、i18n 资源编译、必要文档与项目内验证后，重做 Reality Check、确认锁定环境/受保护现场/输出隔离，再从 `blocked` 转 `ready/in_progress`；AV 缺失不阻止这个本地修复阶段。(2) M02 源码自动/GUI/异常安全/独立 Review 门禁通过，只能记为源码验证完成；仍须另获本地 checkpoint 与候选构建授权，不能从历史提交授权推导。(3) 从新 clean commit 重建并通过候选 Gate 后，在同一新候选上完成双语目标矩阵和人工完整旅程；AV 另由用户在具备能力的环境扫描该候选并记录结果。缺证据一律未通过。
+- **外部条件：** AV 未执行（本机杀毒软件完全禁用），独立保留为外部签收阻塞，不由代码修复、hash 或 fake endpoint 测试替代；不改变本机 AV 设置。真实端点 smoke 仍未执行、未授权，不纳入本 M02、不视为通过，也不作为本地修复准入条件；正式签发前其适用性/授权须单独裁决，不能默默豁免。
+- **失败与恢复：** 无授权停在计划；范围/公共契约/新依赖冲突停在最小冲突处并 REPLAN。后续测试失败保持 `in_progress/verification` 并保留脱敏失败证据；不伪报完成。需要回退时先停止本轮测试进程并保留合成数据库/备份、补丁和候选证据，仅在明确授权后撤销本 M02 的可识别改动或从 checkpoint 在项目内隔离复现；禁止 reset/clean/restore 覆盖既有 dirty 或删除外部目录。固定 `rollback_ref=5744b9db53028c0bcbed48c37fac9fc6d3fe2d1e`，不以未提交现场替代。
+- **下一状态与停止点：** 当前停止于“计划已修订，等待 M02 代码/测试授权”。获准后只执行 M02；源码验证后停止等待 checkpoint/构建授权；后续顺序为 `V02-T05-CANDIDATE-GATE` 重新验证 → `V02-T05-EXTERNAL-SIGNOFF`，条件未齐保持 blocked/incomplete；全部适用签收条件齐备后仍停在用户签发决策前。不自动进入 v0.3/`DEC-V03-PROJECT-STORAGE`、签发、push、merge、tag、Release 或任何远程资源动作。
+- **切回开发 Agent 提示（仅在用户另行明确授权后使用）：** 读取本状态顶部、`07` 的 M02 与 `08` §35，确认授权覆盖文件和验证输出；保留 master、固定 rollback_ref、全部既有 dirty/未跟踪文件。先只读核验实际代码和测试 seam，记录相对新计划的 FIT/ADAPT/REPLAN；仅在无冲突且获准时实现 M02，并按任务单产出原始结果和脱敏证据。不要沿用历史连续开发/本地提交授权，不构建或提交，完成源码阶段后停止并报告剩余签收条件。
+
+## V02-T05-M02 开工 Reality Check（2026-08-28，Asia/Shanghai）
+
+- **本轮授权：** 用户以新的独立授权解除 M02 的代码/测试权限阻塞，允许成熟 GUI 设计调研、限定 UI 修复、必要 i18n 编译、测试、必要文档同步和项目内验证；不授权 checkpoint、候选构建、提交、发布、真实端点或 AV 操作。
+- **基线核验：** HEAD/base/rollback=`5744b9db53028c0bcbed48c37fac9fc6d3fe2d1e`；branch=`master`；staged 为空；既有 dirty 文件与未跟踪 `AGENTS.md` 保留；锁定解释器为 `D:/TransRealm/.venv/Scripts/python.exe`，Python 3.12.10、pytest 9.1.1、Ruff 0.16.0、mypy 2.3.0，`pip check` clean。基线证据位于 `D:/TransRealm/.local/verification/v02-t05-m02/20260828-145021/baseline.md`。
+- **Reality Check：** 相对 §35 与 `07` M02 的新计划为 **FIT**。现有 Connection/Profile/Project active Profile、Application Service/worker 线程边界、六格式与 i18n seam 可复用；未发现必须改变 service/domain/repository/schema/migration、公共契约或依赖的冲突。历史 `decision_result=REPLAN` 仍表示本 M02 的计划裁决，不被本次执行 Reality Check 改写。
+- **执行指针：** `current_task=V02-T05`、`current_milestone=V02-T05-M02`；state=`in_progress`；本轮允许路径以 `07` M02 为上限，验证输出限定在 `D:/TransRealm/.local/verification/v02-t05-m02/20260828-145021/`；源码阶段完成后停止，等待独立 checkpoint/候选构建授权。
+- **停止条件：** 若需修改 forbidden path、公共服务契约、schema/migration、依赖、活动 `dist`/`build`、真实数据或项目外路径，立即停止冲突部分并提出最小追加决策；不以测试通过替代目标 GUI/安全/Review 证据，不把本 M02 结果当候选发布通过。
+
+## V02-T05 外部人工签收复核（2026-08-28，Asia/Shanghai）
+
+- **证据位置：** `D:/TransRealm/.local/verification/manual-signoff/SIGNOFF.md` 及其 `screenshots/`。候选 ZIP/EXE SHA-256 与 `D:/TransRealm/dist/build_manifest.json` 一致：ZIP=`a4da4eff71facc38064b33042bae45a2ab5a578fdc679cf9c636ac001f9ca498`，EXE=`d77eb0f83fb8a5825ba80ef981573e7fe8f1c313276c11479720a447f2c16e17`。
+- **人工结果：** Windows 11 x64、`2560x1440 @150%` 下已保留英文/简体中文启动截图及错误截图；项目数据库创建与文件导入被记录为可能成功，但首次翻译未完成，当前不能把 create/import/translate/export 人工 smoke 记为通过。
+- **真实阻塞：** AV 未执行，记录原因为本机杀毒软件完全禁用；翻译配置入口和“连接/配置”语义不清，未能完成 llama.cpp API 配置与翻译。因此外部人工签收保持 **BLOCKED / INCOMPLETE**，不推进候选签发、真实端点或正式发布。
+- **证据安全：** `error.png` 含本机用户名、用户目录下的数据库绝对路径和原始 SQL；仅作为内部缺陷复现证据，不得作为对外发布截图。后续若需共享，应使用脱敏副本；不得上传真实数据库、凭据或真实用户数据。
+- **解除条件：** 在具备 AV 的环境完成当前 ZIP/onedir 扫描；使用合成测试数据和授权的本地 fake endpoint 完成应用内 create/import/translate/export、关闭重开及恢复路径；补充脱敏的成功/失败证据后，再由用户决定是否签发。解除前保留当前 `5744b9db53028c0bcbed48c37fac9fc6d3fe2d1e` checkpoint 与工作树现场。
+- **范围结论：** 本次没有业务代码修改、依赖变更、外部动作或 checkpoint；不因人工反馈自动进入 v0.3，也不把 UX 反馈转化为当前候选 Gate 范围外的修复任务。
+
+## V02-T05 候选 Gate Review 修复与最终复核（2026-08-28，Asia/Shanghai）
+
+- **Reality Check：** **FIT**。首轮独立只读 Review 发现两个 P1（dirty source 可构建、冻结 smoke 可取错 ZIP）和两个 P2（v0.2 文档与实际 GUI/候选身份漂移）；均落在当前候选 Gate 的脚本、测试和必要文档范围内。未改变产品行为、公共契约、数据库、依赖或发布边界，无 REPLAN。
+- **复现与解除：** dirty checkout 原先只写入 `manifest.git_dirty`、不拒绝构建，且测试未断言 `false`；现由 `scripts/build_release.py` 的 `_ensure_clean_source()` 在 PyInstaller 前拒绝 dirty source，并由 `tests/test_p1_t05_m04.py` 覆盖。冻结 fixture 现按 manifest 的 `candidate` 选择 ZIP；`docs/user-guide.md`、`docs/known-issues.md`、`docs/data-safety.md`、`docs/third-party-licenses.md` 已与六格式 GUI、历史修订入口和 v0.2.0 身份同步。
+- **checkpoint：** `5744b9db53028c0bcbed48c37fac9fc6d3fe2d1e`（`fix(release): enforce clean candidate gate`），仅含 `scripts/build_release.py`、`tests/test_p1_t05_m04.py`；作者/提交者 `BFRKQSB7 <226671264+BFRKQSB7@users.noreply.github.com>`。README、`docs/` 其余既有 dirty 内容、治理文件和 `AGENTS.md` 未跟踪入口均未纳入。
+- **候选身份：** 从项目内 clean detached worktree 重建；`D:/TransRealm/dist/build_manifest.json` 的 `git_commit=5744b9db53028c0bcbed48c37fac9fc6d3fe2d1e`、`git_dirty=false`、版本 `0.2.0`；ZIP `48091679` bytes，SHA-256=`a4da4eff71facc38064b33042bae45a2ab5a578fdc679cf9c636ac001f9ca498`；EXE SHA-256=`d77eb0f83fb8a5825ba80ef981573e7fe8f1c313276c11479720a447f2c16e17`；12 migrations、双语资源、8 类 Qt 插件和 `platforms/qwindows.dll` 均在候选中。
+- **最终验证：** 候选/文档/版本专项 `10 passed in 1.88s`；指定 V1.0 T05 M01–M05 + v0.2 M01 回归 `43 passed in 22.69s`；最终全量 pytest `1385 passed, 1 skipped in 146.40s`；Ruff `All checks passed!`；mypy `Success: no issues found in 150 source files`；pip check `No broken requirements found`；candidate hygiene、manifest/EXE/ZIP hash、自定义 source secret/path/unsafe-operation 扫描和 `git diff --check` 均通过。
+- **GUI/异常/安全结论：** 冻结候选 unzip→启动→12 migration→WM_CLOSE→外置数据保留/删除程序目录 smoke 通过；自动旅程仍只使用本地 fake endpoint。唯一 skip 是 Windows `WinError 1314` symlink 权限；AV 扫描、冻结应用内完整 create/import/translate/export 最终人工 smoke、真实端点和正式发布仍未执行，均不等于通过。
+- **独立 Review：** 首轮 Review 的 P1/P2 已按上项修复并复验；最终独立只读复审以当前 checkpoint、候选和文档为对象，结论 **APPROVE / NO-BLOCKER**。当前 `master` 无 staged；本 checkpoint 之外的治理/候选文档 dirty 现场继续保留，不覆盖、不清理、不 push/merge/tag/Release。
+- **下一精确动作：** 用户在具备 AV 的 Windows 11 x64 环境扫描当前 ZIP/onedir，按授权执行最终人工 GUI smoke 并决定是否签发；在此之前不继续写业务代码、不改变 v0.2.0 release、不得自动进入 v0.3/`DEC-V03-PROJECT-STORAGE`。
+
+## V02-T05 候选 Gate 完成与 release 前停止（2026-08-28，Asia/Shanghai）
+
+- **结果：** 当前 v0.2.0 release 内部候选 Gate 已完成；未进入候选签发、push、merge、tag、Release、真实端点或真实用户数据。停止原因是下一动作属于外部 AV/真实端点/正式签发授权边界。
+- **最终候选：** `D:/TransRealm/dist/transrealm-0.2.0-win-x64.zip`；manifest `D:/TransRealm/dist/build_manifest.json`；版本 `0.2.0`；`git_commit=09b8bcbc81b2d2ac39aed1b69d94644f6b0c76cf` 与 HEAD 一致；`git_dirty=false`；ZIP SHA-256=`e4c7c4eb60e73d7b41f111d56a70309915120a1abfeaa9c904de80c47da9df9d`，ZIP=`48090535` bytes；EXE SHA-256=`006e5d116b7c4642a3ba46d49d87cac343796df321bd85c614114a6fca79f064`；onedir=`119255668` bytes；12 migrations、`transrealm_en.qm`/`transrealm_zh_CN.qm`、8 类 Qt 插件及 `platforms/qwindows.dll` 均在 manifest/候选中。
+- **原始验证结果：** 最终候选专项 `9 passed in 1.89s`；V1.0 T05 M01–M05 + v0.2 M01 回归 `42 passed in 23.23s`；受影响 T01/T02/T04 与 T05 回归 `58 passed in 25.20s`；迁移/备份/回滚/容器安全子集 `105 passed in 8.83s`；最终全量 pytest `1384 passed, 1 skipped in 147.94s`；Ruff `All checks passed!`；mypy `Success: no issues found in 150 source files`；pip check `No broken requirements found`；candidate hygiene passed；`verify_task.py` `outside_scope=[]`、baseline `15 passed`、new candidate `4 passed`；manifest EXE/ZIP hash 与 size 自校验通过；secret/path 扫描无命中，`git diff --check` clean。
+- **冻结/异常/安全结论：** 首次未隔离 PATH 的候选通过 console 复现 `QtCore ImportError`，根因是 Codex Poppler/libheif native DLL 污染；`scripts/build_release.py` 现仅在 PyInstaller 调用期间隔离 PATH 并在 `finally` 恢复，正常环境重建候选后冻结 unzip→启动→12 migration→WM_CLOSE→外置数据保留/删除程序目录 smoke 通过。候选 ZIP 无用户数据/嵌套 artifact/`.work`/陈旧 manifest；自动旅程仅使用本地 fake endpoint。
+- **兼容性/回滚：** `APP_VERSION` 名称保留并复用 `transrealm.__version__`；项目元数据、运行时、桌面入口和候选均为 `0.2.0`。rollback_ref 与 checkpoint 均为 `09b8bcbc81b2d2ac39aed1b69d94644f6b0c76cf`；此前 M01 checkpoint 为 `1e4714b10ea76975707d987fa431257f262710de`。主工作树所有既有治理改动、`AGENTS.md` 和当前必要候选文档改动均保留，未覆盖、未清理、未暂存。
+- **独立 Review：** 已调用只读 Review Agent 两轮检查，任务完成且未返回错误或文件修改；宿主未暴露其最终文本。基于其只读执行状态、候选证据、逐文件 diff 和本地复核，未观察到 P0/P1 阻塞；该事实透明保留，不把 Review Agent 当作验收替代。
+- **未覆盖项：** 1 个 symlink 测试因 Windows `WinError 1314` 保持 skip；Windows Defender/AV 扫描仍需用户在具备 AV 能力的环境执行；冻结应用内 create/import/translate/export 最终人工 smoke 尚未执行；真实端点 smoke 与正式发布未执行。上述未覆盖不等于通过。
+- **文档与现场：** `README.md`、`docs/data-safety.md`、`docs/known-issues.md`、`docs/third-party-licenses.md`、`docs/user-guide.md` 已同步当前候选身份和 hash，但保持未暂存以避免混入/改写既有现场；其中 `known-issues.md` 与 `user-guide.md` 的 hash 与 manifest 当前一致。`dist/`、clean detached worktree、构建/验证临时目录均位于 `D:/TransRealm/`，失败候选另保存在 `.local/verification/`。
+- **下一精确动作：** 由用户在具备 AV 的 Windows 11 x64 环境扫描当前 ZIP/onedir，按授权执行最终人工 GUI smoke 并决定是否签发；在此之前不继续写业务代码、不改变当前 release、不得自动进入 v0.3/`DEC-V03-PROJECT-STORAGE`。
+
+## V02-T05 候选 checkpoint 后恢复（2026-08-28，Asia/Shanghai）
+
+- **checkpoint：** 已在当前 `master` 创建 `09b8bcbc81b2d2ac39aed1b69d94644f6b0c76cf`（`feat(release): harden v0.2 candidate gate`），作者/提交者为 `BFRKQSB7 <226671264+BFRKQSB7@users.noreply.github.com>`。提交文件仅为 `scripts/build_release.py` 及 `tests/test_v02_t01_m02.py`、`test_v02_t02_m02.py`、`test_v02_t04_m02.py`、`test_v02_t04_m03.py`、`test_v02_t04_m04.py`；未纳入 README、`docs/`、`DEVELOPMENT_STATE.md`、既有治理改动或 `AGENTS.md`。
+- **checkpoint 后 Reality Check：** **FIT**。HEAD/base/rollback=`09b8bcbc81b2d2ac39aed1b69d94644f6b0c76cf`；branch=`master`；无 staged；既有受保护 dirty 文件仍为 `.gitignore`、`06_AI_Development_Guide.md`、`07_Developer_Task_List.md`、`08_Architecture_Review.md`、`09_Unattended_Development_Governance.md`、`DEVELOPMENT_STATE.md`、`USER_GUIDE.md`，本次候选文档 dirty 文件为 `README.md` 与 `docs/` 四文件，`AGENTS.md` 仍为既有未跟踪入口；均保留归属，不覆盖、不暂存。
+- **checkpoint 内容理由：** `scripts/build_release.py` 在 PyInstaller 调用期间隔离 PATH，阻止外部 Poppler/libheif native DLL 污染 Qt；`finally` 恢复原 PATH。5 个测试仅补 `mypy src tests` 的既有返回值/Optional 窄化与准确 ignore code，不改变行为断言。受影响旧回归 `58 passed`；全量 pytest `1384 passed, 1 skipped`；Ruff、mypy `150 source files`、pip check 均通过。
+- **候选 artifact 恢复动作：** 当前 `dist/` 候选必须从新 checkpoint clean detached worktree 重建，使 manifest `git_commit==HEAD` 且 `git_dirty=false`。候选用户文档已同步到上一候选 hash，但最终重建会重新产生 hash；重建后只更新 `docs/user-guide.md` 与 `docs/known-issues.md` 的 hash 字段，README/其他文档保留已同步身份。候选输出与临时目录均在 `D:/TransRealm/`；不 push、merge、tag、Release、真实端点或用户数据。
+- **前置证据与缺口：** 首次未隔离 PATH 的候选冻结导入 QtCore 失败（console 复现 `ImportError: DLL load failed while importing QtCore`，污染来源为 Codex Poppler/libheif native 目录）；隔离 PATH 构建的冻结包已启动并创建 12 migration，候选测试 `4 passed`。最终 artifact 重建后必须重新运行候选 m04/m05、manifest/hash、candidate hygiene 和适用专项验证。
+- **FIT/ADAPT/REPLAN：** FIT；仅采用范围内可逆 ADAPT（构建进程 PATH 隔离）保护 Windows 冻结候选硬约束；无 REPLAN。
+
+## V02-T05 候选 Gate 连续模式恢复（2026-08-28，Asia/Shanghai）
+
+- **指针与范围：** 当前指针推进为 `current_task=V02-T05`、`current_milestone=V02-T05-CANDIDATE-GATE`。这是 `07_Developer_Task_List.md` 中 V02-T05 的任务级候选 Gate 状态标识，不是新增产品 Milestone，不延伸到下一 release、未批准构想或范围外清理。V02-T05-M01 已由本地 checkpoint `1e4714b10ea76975707d987fa431257f262710de` 恢复。
+- **推进后 Reality Check：** **FIT**。HEAD、`baseline_commit`、`rollback_ref` 均为 `1e4714b10ea76975707d987fa431257f262710de`；branch=`master`；无 staged；`.gitignore`、`06_AI_Development_Guide.md`、`07_Developer_Task_List.md`、`08_Architecture_Review.md`、`09_Unattended_Development_Governance.md`、`DEVELOPMENT_STATE.md`、`USER_GUIDE.md` 为既有受保护改动，`AGENTS.md` 为既有未跟踪入口文件，均不得覆盖、暂存或纳入候选 checkpoint。Python、锁定依赖、pytest/Ruff/mypy/pip check 基线已满足；`pending_decision=none`；无 REPLAN 冲突。
+- **本阶段授权：** 当前 release 已授权连续实施；候选 Gate 可执行既定 `scripts/build_release.py`、候选专属验收、旧回归、全量质量门禁、适用的 GUI/异常/安全/迁移/回滚验证和只读独立 Review。候选构建输出、临时工作目录与验证证据仅写入 `D:/TransRealm/`；不 push、merge、tag、Release、创建远程资源、调用真实/付费模型或操作真实用户数据。
+- **恢复动作：** 因主工作树含受保护改动，候选必须从上述 clean checkpoint 使用项目内隔离 detached worktree 读取源码；不创建、切换或删除分支。artifact 输出到项目内 `dist/`，临时工作目录在项目内 `.local/`；先执行候选构建，再按 T05 既定验收与门禁推进。候选 Gate 全部门禁通过后，只创建仅含本候选 Gate 产物/必要状态的本地 checkpoint（如有可跟踪变更），随后停止在发布/签发前。
+- **FIT/ADAPT/REPLAN 记录：** FIT；仅采用可逆的隔离工作树 ADAPT 以保护既有 dirty 现场，不改变产品行为、公共契约、数据格式、依赖、安全边界或发布范围；无 REPLAN。
+- **下一恢复点：** `V02-T05-CANDIDATE-GATE`，解除条件为候选构建、候选验收、旧回归、全量质量门禁、适用专项验证及只读独立 Review 均有原始通过证据；若只剩候选签发、push、merge、tag 或 Release，则按本授权停止。
+
+## V02-T05-M01 连续模式 checkpoint 前复核（2026-08-28，Asia/Shanghai）
+
+- **授权与指针：** 用户授权当前 release 连续实施，并授权每个 Milestone 通过门禁后创建仅含该 Milestone 的本地 checkpoint；当前仍为 `V02-T05-M01`，无 pending decision，Reality Check **FIT**。禁止 push/merge/tag/Release、候选发布外部动作和范围外修改。
+- **checkpoint 范围：** 本次只暂存 `pyproject.toml`、`src/transrealm/__init__.py`、`src/transrealm/ui/main_window.py`、`tests/test_smoke.py`、`tests/test_v02_t05_m01.py`；已有治理/入口/状态文档现场不暂存、不覆盖，保留归属。
+- **门禁复核：** 版本四点均为 `0.2.0`；定向 `12 passed`；全量 `1380 passed, 5 skipped`；Ruff/mypy/pip check、秘密/路径/版本残留和 `git diff --check` clean；独立 Review **APPROVE**。提交前复核 staged 文件、作者、HEAD/rollback 和状态指针。
+
+## V02-T05-M01 最终完成交接（2026-08-27，Asia/Shanghai）
+
+- **结果：** M01 已完成；用户批准的版本来源裁决已落地。`pyproject.toml`、`transrealm.__version__`、桌面入口 `APP_VERSION` 和候选构建读取值均为 `0.2.0`。仅完成版本基线，不启动后续候选 Gate。
+- **本次修改：** `pyproject.toml`、`src/transrealm/__init__.py`、`src/transrealm/ui/main_window.py`（仅版本来源接线）、`tests/test_smoke.py`、`tests/test_v02_t05_m01.py`，以及本状态、`07_Developer_Task_List.md`、`08_Architecture_Review.md` 的授权/裁决/结果同步。无其他产品、服务、数据库、迁移、依赖或构建脚本修改。
+- **最终验证：** 定向版本/旧回归 `12 passed`；全量 pytest `1380 passed, 5 skipped`（`186.37s`，exit 0）；Ruff clean；mypy `src` 81 files clean；pip check clean；活动版本残留扫描、秘密扫描、本机路径/端点扫描和 `git diff --check` clean；独立 Review **APPROVE**。
+- **未覆盖/未执行：** 5 个 skip 为 symlink `WinError 1314` 1 项及候选 EXE/ZIP/manifest 未构建 4 项；候选构建、冻结 EXE、AV、真实端点、发布及下一 T05 Gate 仍未执行，符合 M01 边界。
+- **checkpoint：** 无。用户明确要求不得暂存/提交；未创建分支、未 push/merge/tag/Release。`HEAD`/`rollback_ref` 仍为 `9dfd2dedb9463434d9d9c54889564855a473a4c1`。
+- **下一状态：** 等待后续独立授权进入 V02-T05 候选 Gate；候选构建前必须从 clean commit 开始并重新执行候选专属门禁。
+
+## V02-T05-M01 授权恢复与版本来源裁决（2026-08-27，Asia/Shanghai）
+
+- **用户授权：** 用户批准此前 Review 发现的版本来源裁决，并授权将 `src/transrealm/ui/main_window.py` 纳入本 M01；仅允许版本来源接线，保留 `APP_VERSION` 名称，改为复用 `transrealm.__version__`，不维护独立版本字面量。不得构建、暂存、提交、发布或扩大范围。
+- **allowed_paths：** `pyproject.toml` 版本元数据；`src/transrealm/__init__.py` 版本元数据；`src/transrealm/ui/main_window.py` 仅 `APP_VERSION` 版本来源接线；`tests/test_smoke.py` 与 `tests/test_v02_t05_m01.py` 直接版本验收；本 M01 必需的 `DEVELOPMENT_STATE.md`、`07_Developer_Task_List.md`、`08_Architecture_Review.md` 裁决/状态同步。其他既有改动均为受保护现场，不得覆盖、删除或重写。
+- **裁决：** `DEC-V02-T05-M01-VERSION-SOURCE` approved。项目元数据、包运行时元数据和桌面入口统一由 `transrealm.__version__` 表示；`APP_VERSION` 作为兼容名称保留，仅做别名接线；候选构建继续读取 `pyproject.toml`，本 M01 不改构建脚本和输出契约。
+- **恢复 Reality Check：** **FIT**。解除条件已满足；目标、公共契约、依赖、数据库和发布边界不变。恢复动作是只改上述接线、补验收，随后执行既定回归、质量门禁和独立 Review。
+- **恢复现场：** branch=`master`；HEAD/base/rollback=`9dfd2dedb9463434d9d9c54889564855a473a4c1`；无 staged；既有治理/交接文档改动、`AGENTS.md` 和 M01 已有版本改动保留。完成后不暂存、不提交，等待后续明确授权。
+
+## V02-T05-M01 开工核验（2026-08-27，Asia/Shanghai）
+
+- **Reality Check：** **FIT**。`pyproject.toml` 的 `[project].version` 是候选构建版本来源，`src/transrealm/__init__.py` 的 `__version__` 是运行时版本元数据；开工核验时两者均为 `0.1.0`，与已批准的 `v0.2.0` 目标不一致。最小闭环是同步这两个版本值，并新增直接验收测试验证运行时、项目元数据和候选读取值一致；不改构建脚本、产品行为、数据库、依赖锁或公共契约。无 ADAPT/REPLAN。
+- **恢复前核验：** branch=`master`；HEAD=`9dfd2dedb9463434d9d9c54889564855a473a4c1`；`baseline_commit`/`rollback_ref` 与 HEAD 一致；staged 为空。既有 unstaged 路径为 `.gitignore`、`06_AI_Development_Guide.md`、`07_Developer_Task_List.md`、`08_Architecture_Review.md`、`09_Unattended_Development_Governance.md`、`DEVELOPMENT_STATE.md`、`USER_GUIDE.md`，均属受保护治理/交接改动；未跟踪 `AGENTS.md` 属既有入口文件；开工核验时尚无源码/测试改动。
+- **依赖与基线证据：** 使用 `D:/TransRealm/.venv/Scripts/python.exe`；Python `3.12.10`；`pip check` 为 `No broken requirements found`；`requirements.lock` 24 项与已记录的精确环境一致；既有环境全量证据为 `1379 passed, 5 skipped`、Ruff clean、mypy `81 source files clean`。本次版本相关旧回归 `tests/test_p1_t05_m01.py`：`7 passed`；`git diff --check` clean。上述旧证据不替代版本修改后的门禁。
+- **本次执行边界：** 仅允许 `V02-T05-M01` 的版本元数据、直接版本验收测试和必要状态文档；不构建候选、不启动冻结 EXE、不做 AV/真实端点/发布，不修改锁文件，不触碰范围外既有改动。完成后按当前用户指令复跑门禁并停止交接。
+- **本次实施：** 按 FIT 同步 `pyproject.toml` `[project].version` 与 `src/transrealm/__init__.py.__version__` 为 `0.2.0`；更新 `tests/test_smoke.py` 的直接版本断言；新增 `tests/test_v02_t05_m01.py` 验证项目元数据、运行时元数据和候选构建读取值一致。未修改构建脚本、依赖锁、数据库、产品行为或既有受保护改动。
+- **本次验证原始结果：** 定向版本/旧回归 `12 passed`；全量 `pytest -q -rs` **1380 passed, 5 skipped**（约 144.42 秒，exit 0）；Ruff `All checks passed!`；mypy `src` `Success: no issues found in 81 source files`；pip check `No broken requirements found`；`git diff --check` clean。5 个 skip 为既有 Windows symlink `WinError 1314` 1 项和未构建候选 EXE/ZIP/manifest 4 项；本 M01 明确禁止候选构建，因此未强行消除。
+- **独立 Review 结论：** **BLOCKED / 不批准 checkpoint**。复现命令：`D:/TransRealm/.venv/Scripts/python.exe -c "import sys; sys.path.insert(0, 'src'); from transrealm import __version__; from transrealm.ui.main_window import APP_VERSION; print(__version__, APP_VERSION)"`；原始结果 `package=0.2.0`、`main_window=0.1.0`。`src/transrealm/ui/main_window.py:32` 的 `APP_VERSION` 被 `main()` 传入所有服务，仍会以 `0.1.0` 写入运行/迁移元数据。该文件不在当前 M01 `allowed_paths`；擅自修改会违反本轮范围，因此保留缺口并停止。已排除依赖损坏、测试失败、候选解析不一致、秘密/本机路径命中和 diff 空白问题；GUI/异常/安全专项对本次纯版本元数据变更不适用。
+- **真实阻塞与解除条件：** 阻塞是活动运行时版本源在 `src/transrealm/ui/main_window.py`，但不属于当前允许路径；需要用户/决策 Agent 明确把该文件纳入 M01 或裁定 `APP_VERSION` 保持旧值的兼容语义，并相应更新验收范围。解除后恢复动作：只读重新核对 HEAD/改动归属 → 在批准路径内统一运行时入口版本 → 增加/修正对应验收 → 重跑指定旧回归、全量 pytest、Ruff、mypy、pip check、范围/安全 Review → 再判断 checkpoint。
+- **当前交接：** 已保留现场，未暂存、未提交、未构建候选、未创建/切换分支、未 push/merge/tag/Release、未调用真实端点或操作真实用户数据。`HEAD`/`rollback_ref` 仍为 `9dfd2dedb9463434d9d9c54889564855a473a4c1`；下一状态为等待范围裁决，不能将 M01 标记 completed。
+
+## 环境整理与直接开发交接（2026-08-27，Asia/Shanghai，最新）
+
+- **用户授权与当前恢复点：** 用户已批准上一轮列明的六个残留目录整理、必要环境验证、满足条件后的删除及忽略配置/交接文档更新，并明确要求后续能直接切到开发 Agent 继续。项目内环境验证已完成；后续开发 Agent 可按单次受控范围直接继续 `V02-T05-M01` 的版本身份/版本基线工作，无须再次申请代码、测试和必要文档授权。当前整理 Agent 不实施产品功能；不恢复连续无人开发，不授予分支变更、构建、暂存/提交、push/tag/Release、真实端点或真实用户数据操作。
+- **Git 与改动归属：** `master`，HEAD/rollback 仍为 `9dfd2dedb9463434d9d9c54889564855a473a4c1`。既有七份 Markdown 的目录裁决/入口改动全部保留，本轮另改 `.gitignore`（增加 `.local/` 忽略），并补充 `USER_GUIDE.md` 的环境前置、`07_Developer_Task_List.md` 的 M01 恢复范围及本交接。合计受保护的八个路径为 `.gitignore`、`AGENTS.md`、`06_AI_Development_Guide.md`、`07_Developer_Task_List.md`、`08_Architecture_Review.md`、`09_Unattended_Development_Governance.md`、`DEVELOPMENT_STATE.md`、`USER_GUIDE.md`；没有源码、测试、构建脚本、pyproject 或 lock 改动，没有 staged 文件或新提交。工作树不是 clean，不得直接构建候选。
+- **新环境：** `D:/TransRealm/.venv/Scripts/python.exe`，Python 3.12.10、Windows AMD64、`include-system-site-packages=false`。现有 `requirements.lock` 的 24 项依赖全部精确匹配。首次联网安装因大包下载缓慢主动停止；只读找到本机既有缓存中的 24 个精确版本 wheel，复制到 `.local/cache/wheels/` 后使用 pip `--no-index --find-links D:/TransRealm/.local/cache/wheels --only-binary=:all: -r requirements.lock` 离线安装成功。缓存文件名的两个多 Python tag 包已按其 WHEEL 元数据恢复兼容标签，没有修改包内容或依赖版本。
+- **保留数据：** 旧候选完整复制到 `D:/TransRealm/.local/archive/TransRealm-v0.1.0-candidate-archive-20260823/`（253 文件，189703537 字节）；GUI 数据完整复制到 `D:/TransRealm/.local/verification/TransRealm-v02-t03-m01-gui-20260823/`（12 文件，1032192 字节）。每个文件的大小及 SHA-256 与原件一致；12 个 SQLite 数据库/备份均以只读 immutable 连接执行 `PRAGMA quick_check`，全部返回 ok。活动 `dist/` 仍不存在，未运行旧候选 EXE。
+- **本轮环境验证实测：** 新环境执行 `python -m pytest -q -rs`：**1379 passed, 5 skipped，144.38 秒，exit 0**；Ruff `check src tests` clean；mypy `src` **81 source files clean**；pip check **No broken requirements found**；24 项锁定依赖逐项比对一致。五个 skip 为符号链接权限 `WinError 1314` 一项、未构建候选 EXE/ZIP 三项、缺候选 manifest 一项；未把失败改为 skip。测试使用项目内 TEMP/TMP/USERPROFILE/APPDATA/LOCALAPPDATA 和 Qt offscreen；不代表可见 GUI/冻结候选/AV 或 M01 版本修改后的门禁通过。
+- **证据位置：** `D:/TransRealm/.local/verification/cleanup-20260827/` 内的 `install.log`（中止的联网尝试）、`install-offline.log`、`environment.json`、`pytest.log`、`ruff.log`、`mypy.log`、`pip-check.log`、`quality-status.json`、`copy-verification.json`、`sqlite-check.json`、`predelete.json` 及三个旧 `pyvenv.cfg` 副本。环境、wheel 缓存、归档及验证数据均在 `.venv/` 或 `.local/` 内，并已由 Git 忽略；构建脚本的现有资源收集只指向源码 migrations/i18n，ZIP 范围为构建 bundle，本轮未改分发逻辑。
+- **未完成：外部删除被运行策略拒绝。** 六个原目录经进程/PATH 引用、重解析点和逐文件独占读取检查未发现占用；但实际 PowerShell 删除命令在启动前被执行环境以 `blocked by policy` 拒绝，未执行任何删除。用户授权并未缺失，不得换工具、改写命令或生成脚本绕过策略。原目录仍在 D 盘根目录，未释放其空间；用户可通过文件管理器手动删除下表六个精确目录。手动删除前若已启动其中程序，须先关闭。
+
+| 仍待手动删除的原目录 | 已具备的替代或保留位置 |
+|---|---|
+| `D:/TransRealm-v02-t01-m01-venv-20260823` | `.venv/`，已通过锁与质量验证 |
+| `D:/TransRealm-v02-t02-m01-venv-20260823` | `.venv/`，不再继承系统包 |
+| `D:/TransRealm-v02-t02-m01-lock-venv-20260823` | `.venv/`，24 个精确版本 wheel 可离线重建 |
+| `D:/TransRealm-v02-t02-m01-mypy-cache-review` | 可再生的旧缓存，后续使用项目内 `.mypy_cache/` |
+| `D:/TransRealm-v02-t03-m01-gui-20260823` | `.local/verification/TransRealm-v02-t03-m01-gui-20260823/` |
+| `D:/TransRealm-v0.1.0-candidate-archive-20260823` | `.local/archive/TransRealm-v0.1.0-candidate-archive-20260823/` |
+
+- **逐项确认后的重试（2026-08-27）：** 用户再次授权并逐项确认上述六个精确原目录；重新核对路径、无重解析点、文件数量/总大小、独占读取和原件/保留副本 SHA-256 均通过。通过正常 PowerShell `Remove-Item -LiteralPath` 对已确认六路径发起删除，仍在进程启动前被执行环境 `blocked by policy` 拒绝；随后只读确认六目录全部仍存在。不是缺少用户确认，不应继续要求相同确认或换方式绕过；保留手动清理项及既有 M01 开发授权。
+
+- **直接开发的边界：** 环境和引用已切换到项目内；仍存在但不再使用的外部副本不阻止 M01 源码工作。`pending_decision: none`，不需要重议目录裁决或重建环境。外部清理保持未完成，不能以开发可继续为由标记清理完成或重新使用外部环境。不得因状态记录中保留历史路径而回退到旧 venv。
+- **开发 Agent 恢复提示（使用这一条，不使用下方历史提示）：**
+
+```text
+模式：继续执行已授权的单次 V02-T05-M01，不做连续无人开发。
+读取 D:/TransRealm/DEVELOPMENT_STATE.md 顶部最新交接、07_Developer_Task_List.md 的 V02-T05-M01，以及 USER_GUIDE.md 的本机环境前置。代码、直接相关测试和必要文档已获授权；使用 D:/TransRealm/.venv/Scripts/python.exe，不再使用任何 D 盘根目录旧 venv。保留当前八个已确认归属的治理/忽略/交接文件改动，不 reset、覆盖或删除。先核验 master/HEAD/rollback、工作树归属与 FIT/ADAPT/REPLAN，然后从候选版本身份与 v0.2.0 版本基线开始；源码当前仍为 0.1.0，M01 尚未实施。所有新输出放在项目内，环境已验证，无须再为环境整理申请授权。六个外部旧目录删除被执行环境策略拒绝，保留待用户手动清理，不影响使用新环境推进 M01，也不得绕过限制或将清理标为完成。完成当前 M01 的实现与获准验证后停止并交接；不得构建、暂存/提交、创建/切换分支、发布或调用真实端点。环境验证结果不能替代本轮代码修改后的测试/Review，后续构建仍需 clean commit 和单独授权。
+```
+
+## 目录边界裁决交接（2026-08-27，历史；授权及恢复提示以顶部最新交接为准）
+
+- **本次授权：** 用户批准目录边界裁决及状态入口约定的 Markdown 修改；不包含实体目录整理、代码、测试、脚本、配置、构建、验收、暂存或提交。代码和提交授权字段收紧为 false；2026-08-24 的中断仍有效，`state: ready` 仅表示技术恢复点，不代表已重新获准开发。
+- **裁决：** `DEC-DEV-OUTPUT-ROOT` approved，完整决策包见 `08_Architecture_Review.md` §32；`pending_decision: none`。历史 `DEC-V02-T01-M01-GATE-BASELINE` 的锁定环境和候选保留要求继续有效，但其仓库外归档位置要求已被替代。
+- **固定入口：** `D:/TransRealm/DEVELOPMENT_STATE.md`，根目录文件名为 `DEVELOPMENT_STATE.md`。提示词使用正斜杠与代码格式，下划线前不添加反斜杠；输入与入口不同且未要求迁移时，先核对根目录实际文件，不反复猜路径或建立第二份状态。
+- **输出契约：** 所有项目开发环境、缓存、临时文件、GUI 验证数据、截图及候选/归档输出均留在 `D:/TransRealm/`；位置与例外边界见 `09_Unattended_Development_Governance.md` §6.1。仅 Git clean/allowed paths 通过不能证明外部未写入。
+- **只读来源核查：** `D:/TransRealm-v02-t01-m01-venv-20260823`、`D:/TransRealm-v02-t02-m01-venv-20260823`、`D:/TransRealm-v02-t02-m01-lock-venv-20260823` 为虚拟环境，三个配置记录了项目外创建命令，其中第二个继承系统包；`D:/TransRealm-v02-t02-m01-mypy-cache-review` 的标签标明 mypy 缓存；`D:/TransRealm-v02-t03-m01-gui-20260823` 包含 SQLite/备份和应用数据，不能未经确认当作垃圾；`D:/TransRealm-v0.1.0-candidate-archive-20260823` 含旧 EXE/ZIP/manifest。本轮未执行这些程序或打开数据库，未新增 hash/完整性验收结果。
+- **Git 与改动归属：** 本轮开始时为 `master`，HEAD/rollback=`9dfd2dedb9463434d9d9c54889564855a473a4c1`，仅本文件已有未提交中断交接修改；该记录保留。新增改动限于本文件、`08_Architecture_Review.md`、`09_Unattended_Development_Governance.md`、`USER_GUIDE.md`、必要联动的 `06_AI_Development_Guide.md`/`07_Developer_Task_List.md`，以及新建入口文件 `AGENTS.md`；不创建提交或推进产品 Milestone。
+- **兼容性与未执行项：** 产品、schema、依赖锁、真实用户数据与既有候选内容未变。实体目录迁移、重建环境、清理、测试、GUI 和候选门禁均未执行；历史 passed 不能作为新位置验收结果。
+- **恢复前置条件：** 先取得具体环境整理及非 Markdown 配置修改授权，按 §6.1 重建项目内环境、复制核对归档并切换引用。原外部目录保留；删除须另行明确授权且确认无引用/占用、数据归属及恢复能力。再取得开发授权后才恢复 `V02-T05-M01`，不自动进入 T05 构建/发布。
+- **开发 Agent 恢复提示：**
+
+```text
+读取 D:/TransRealm/DEVELOPMENT_STATE.md 的 decision_result、authorization_scope、code_authorized 和 resume_milestone，并读取 08_Architecture_Review.md §32 与 09_Unattended_Development_Governance.md §6.1。当前仅 Markdown 裁决获准，开发仍暂停；不得因 pending_decision:none 或 state:ready 自动执行。保留既有未提交修改和所有外部目录。取得具体环境整理授权后，将后续开发输出限定在 D:/TransRealm/ 内，先核对目录/缓存/临时数据重定向与忽略规则，再按锁重建环境、复制核对归档和切换引用；未经具体授权不得移动或删除外部目录。完成恢复前置条件且用户重新授权开发后，重新核验 Git、依赖和 FIT/ADAPT/REPLAN，从 V02-T05-M01 继续；构建、验收、提交、发布分别遵守当次授权。
+```
+
+## 用户主动中断交接（2026-08-24，Asia/Shanghai）
+
+- 中断原因：`user_requested_interrupt`。用户已立即撤销此前连续无人开发及自动进入下一 Task/Milestone 的授权。
+- 最后完成的 Milestone/checkpoint：`V02-T04-M04`，checkpoint `9dfd2dedb9463434d9d9c54889564855a473a4c1`（`test(ui): close workbench recovery gate`）。提交已在中断前成功创建；作者为 `BFRKQSB7 <226671264+BFRKQSB7@users.noreply.github.com>`。
+- 当前精确恢复点：`V02-T05-M01`，尚未开始；它属于 `V02-T05 — v0.2 Release Candidate Gate` 的候选版本身份/版本基线工作。未因中断补建提交。
+- 中断前现场：branch `master`；HEAD 为上述 M04 checkpoint；中断前工作区 clean，staged/unstaged/untracked 均为空；既有代码改动均归属已完成的 M04 checkpoint。交接文档本次新增的唯一改动为本文件自身，当前应视为 unstaged 的状态文档改动；无 staged 或 untracked 改动。
+- 状态与对齐：实际状态为 `ready`，`plan_alignment: FIT`；`pending_decision: none`。停止原因单独记录为用户主动中断，不是技术阻塞。
+- 最后可信验证：M04 专项 2 passed；指定恢复/长文本/T04 矩阵 178 passed；全量 pytest 1379 passed、5 skipped；Ruff clean；mypy（81 个 source files）clean；pip check clean；M04 GUI offscreen 24 张截图、双语言/双 DPI、滚动/关闭/关闭后清理均通过；M04 独立 Review 最终 `APPROVE`。以上均为中断前已完成证据。
+- 正在运行/取消的命令：无在途进程，无需取消；没有命令因本次中断被取消。T05 的实现、版本修改、测试矩阵、候选构建及 Review 均未执行，不得记为 passed。
+- 未完成的第一项工作：恢复前先核验 HEAD、branch、staged/unstaged/untracked、M04 checkpoint 归属、`base_commit`/`rollback_ref`、依赖与 `pending_decision`；随后再按 T05 权威范围处理候选版本身份（当前代码仍需核对其与 v0.2.0 目标的一致性），然后才可进入候选构建门禁。
+- 风险：T05 要求从 clean commit 构建且 manifest 的 commit/dirty 状态一致；候选构建、冻结 Windows 启动/关闭、杀毒扫描及正式签发边界尚未验证。不得把未执行的 AV/真实端点/正式发布步骤写成通过。
+- 恢复前检查：仅在用户重新授权后，先只读核验本文件与 `07_Developer_Task_List.md`/`08_Architecture_Review.md` 的 T05 范围，再确认当前工作区中本次状态文档改动的归属；不得 reset/restore/clean/覆盖/删除/移动或提交未重新确认的改动。
+- 下次入口：使用 **B. 继续执行**（单次受控推进），不要使用 **I. 连续无人开发**；本次不自动恢复。
 
 # 译境 / TransRealm — Agent 自动开工与开发状态
 
@@ -32,14 +229,14 @@ external_actions_authorized: false
 
 你正在接手 `D:\TransRealm` 的持续开发。**本文件是唯一交接入口。** 不要读取旧的 `AI_CONTEXT_INDEX.md` 或 `00_Project_Manager_Guide.md`；它们只为兼容旧链接而保留。
 
-先读取本文件 frontmatter 和“当前开发现场”，再严格执行：
+先读取本文件 frontmatter 和顶部最新交接；下方历史现场不覆盖当前授权和恢复指针。再严格执行：
 
 1. 确认工作目录为 `D:\TransRealm`，检查 Git staged、unstaged、untracked 和测试证据；不得覆盖、丢弃、reset、restore、clean 或删除既有工作。
 2. 读取 `07_Developer_Task_List.md` 中 `current_task` 的完整定义；它定义目标、非目标、依赖、修改范围和验收。
 3. 读取 `06_AI_Development_Guide.md`；它定义 FIT/ADAPT/REPLAN、最小设计门禁、实现流程和完成报告。
 4. 按当前 Task 的“输入文档”读取必要契约：产品/范围读 `01_PRD.md` 与 `02_Development_Roadmap.md`；架构读 `03_Technical_Design.md` 与 `08_Architecture_Review.md`；数据库读 `04_Database_Schema.md`；Prompt/Context/输出读 `05_Prompt_Architecture.md`；高风险、例外、发布/回滚读 `09_Unattended_Development_Governance.md`；候选发布才读 `RELEASE_CHECKLIST.md`。
 5. 在写代码前记录 FIT、ADAPT 或 REPLAN。FIT 直接执行；ADAPT 只改可逆内部实现；REPLAN 停止冲突部分并记录证据、最小替代方案、影响、回滚成本和待裁决项。
-6. 状态为 `ready`、`in_progress` 或 `verification` 且没有 REPLAN 时，直接推进当前小目标：测试/验收样例 → 最小实现 → 功能与异常测试 → Review → 文档与本文件同步。
+6. 只有用户当前已授权开发、`code_authorized: true`、授权范围覆盖当前工作且中断/恢复前置条件已解除时，状态为 `ready`、`in_progress` 或 `verification` 且没有 REPLAN 才可推进当前小目标：测试/验收样例 → 最小实现 → 功能与异常测试 → Review → 文档与本文件同步。仅 Markdown 授权或用户主动中断时不得自动推进。
 7. 完成或中断时，更新本文件中的实际结果、命令/输出、兼容性基线（受影响旧能力、旧测试、新测试和实测结果）、风险、阻塞、恢复动作和下一小目标。没有测试证据、旧功能回归、Review 或文档同步不得标记 `completed`。
 
 只有产品或架构变化、破坏性或对外操作、用户专属凭据/文件、付费调用，或无法由代码/测试/Git 消除的实质歧义才询问用户。常规可逆选择自行决定。

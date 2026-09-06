@@ -2,11 +2,50 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 
 from PySide6.QtWidgets import QWidget
 
 from transrealm.ui.worker import ServiceWorker
+
+
+def safe_error_message(error: object) -> str:
+    """Turn an internal exception into an actionable, non-sensitive UI message."""
+    raw = str(error).strip()
+    lowered = raw.lower()
+    if "unique constraint failed: provider_connections.name" in lowered:
+        return (
+            "A connection with this name already exists. "
+            "Choose another name or edit the existing connection."
+        )
+    if "unique constraint failed: model_profiles.name" in lowered:
+        return (
+            "A Model Profile with this name already exists. "
+            "Choose another name or edit the existing profile."
+        )
+    if "unique constraint failed" in lowered:
+        return "This name is already in use. Choose another name or edit the existing item."
+
+    message = re.sub(
+        r"(?is)\bSQL\s*:\s*.*$",
+        "",
+        raw,
+    )
+    message = re.sub(
+        r"(?i)(?:password|token|api[-_ ]?key|secret|credential)\s*[:=]\s*[^\s;,)]*",
+        "sensitive value redacted",
+        message,
+    )
+    message = re.sub(r"(?i)\b[A-Z]:[\\/][^;\r\n)]*", "<local path>", message)
+    message = re.sub(
+        r"(?<![/:A-Za-z0-9])/(?:[^\s;()]+/)*[^\s;()]+",
+        "<local path>",
+        message,
+    )
+    message = re.sub(r"\(\s*path\s*:\s*.*?\)", "", message, flags=re.IGNORECASE)
+    message = re.sub(r"\s+", " ", message).strip(" ;:")
+    return message or "The operation could not be completed. Check the values and try again."
 
 
 class WorkerPage(QWidget):
@@ -42,7 +81,7 @@ class WorkerPage(QWidget):
             return
         self._pending_request = None
         self._pending_action = None
-        self._handle_error(error)
+        self._handle_error(safe_error_message(error))
 
     def _handle_action(self, action: str, result: object) -> None:
         raise NotImplementedError

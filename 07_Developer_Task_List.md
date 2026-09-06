@@ -2,6 +2,8 @@
 
 # Developer Task List V5
 
+所有 Task 的环境、缓存、临时数据、证据和 artifact 目录选择均受 `09_Unattended_Development_Governance.md` §6.1 的 `D:/TransRealm/` 输出边界约束。历史“仓库外归档”仅是过去事实；“可自主决定 artifact 目录”不包含项目外位置。恢复入口统一为 `D:/TransRealm/DEVELOPMENT_STATE.md`，文档裁决不授予开发或环境整理权限。
+
 ## 0. v0.2 / v0.3 当前批准任务
 
 v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成前不启动 Phase 2 的 RAG、TM 或 Character Data。v0.3 只在 `DEC-V03-PROJECT-STORAGE` 裁决后实施 Project 工作区与容器 GUI。
@@ -112,20 +114,144 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 
 ### V02-T05 — v0.2 Release Candidate Gate
 
-- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P0 Release-blocking；High；pending。依赖 V02-T01 至 T04。
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P0 Release-blocking；High；blocked（2026-08-28 REPLAN：新增 M02，等待独立代码/测试授权；内部候选 Gate 历史完成保留，人工 smoke 未通过、AV 未执行，当前候选不可正式发布）。依赖 V02-T01 至 T04；M02 为 proposed。
 - **Reality Audit：** REFINE——复用 P1-T05 并增加视觉/i18n/六格式 GUI/删除恢复门禁。
 - **目标：** 形成可定位、可恢复、可人工签核的 Windows 11 v0.2 候选。
 - **硬约束：** 从 clean commit 构建，manifest `git_dirty=false` 且 commit==HEAD；中英文资源、Qt 插件和 migration 全收集；自动旅程仅 fake endpoint；未经授权不 push/tag/Release。
 - **Gate：** 全量 pytest/Ruff/mypy、candidate hygiene、六格式冻结 GUI、删除备份恢复、Connection/Profile、Auto/Workbench、中英文+DPI 截图、旧 v0.1 数据升级、zip/manifest/hash、干净 Windows 启动/关闭/清理、独立 Review。
 - **完成条件：** release-blocking 项全部布尔通过、证据归档且无 P0/P1；AV、真实端点、正式发布缺外部环境时保持未通过或提交用户明确裁决。
+- **历史内部候选完成证据（不覆盖新增 M02/人工签收）：** 首轮 Review 的 clean-source、manifest ZIP 选择和候选文档漂移问题已在允许范围内修复；checkpoint=`5744b9db53028c0bcbed48c37fac9fc6d3fe2d1e`，候选 `0.2.0` manifest `git_dirty=false` 且 commit==HEAD，12 migrations、双语资源、Qt 插件、EXE/ZIP hash/size 与文档一致；候选/文档/版本专项 `10 passed`，指定 V1.0 T05 M01–M05 + v0.2 M01 回归 `43 passed`，最终全量 pytest `1385 passed, 1 skipped`，Ruff/mypy/pip check/candidate hygiene/manifest/hash 均通过；Windows 冻结启动、迁移、关闭、外置数据保护与删除程序目录 smoke 通过。未覆盖项如实保留：symlink 权限 skip、AV 扫描、冻结应用完整人工旅程、真实端点和正式发布。
+
+#### V02-T05-M01 — 候选版本身份与版本基线
+
+- **恢复范围：** 延续 2026-08-24 交接中尚未开始的 M01，不在环境整理轮执行。开发 Agent 先核对 `pyproject.toml`、`src/transrealm/__init__.py` 与候选构建读取的版本来源，按既定 v0.2.0 目标消除版本身份不一致；不改变产品行为、数据库、依赖锁或构建输出契约。
+- **允许路径：** `pyproject.toml` 的版本元数据、`src/transrealm/__init__.py` 的版本元数据、`src/transrealm/ui/main_window.py` 中仅 `APP_VERSION` 到 `transrealm.__version__` 的版本来源接线、直接相关的版本验收测试，以及本 Milestone 必需的状态/版本文档。此前用户批准的目录治理 Markdown 与 `.gitignore` 改动作为受保护的既有基线逐项核对，不得 reset、删除或覆盖。
+- **门禁与边界：** 版本来源/目标一致性、相关旧回归、全量 pytest、Ruff、mypy、pip check 和独立 Review；环境整理的通过结果不代替版本修改后的验证。M01 不构建候选、不启动冻结 EXE、不做 AV/真实端点/发布，不把后续 T05 Gate 标记通过。
+- **交接：** 完成当前单次 M01 后停止并更新状态；本地 checkpoint 是否允许以当次状态授权为准，不恢复连续无人开发。后续候选构建仍须 clean commit 与明确构建授权。
+
+#### V02-T05-M02 — 候选签收前：首次配置、闭环与错误脱敏
+
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P0 Release-blocking（首次翻译/完整人工 smoke 未完成），错误信息暴露为 P1 安全；High；`verification`（源码实现与自动化门禁完成；目标 GUI 矩阵、候选、AV 与签发仍未授权/未验证）。
+- **decision_id / decision_result / Reality Audit：** `DEC-V02-T05-M02-SIGNOFF-REPAIR` / **REPLAN** / REFINE。内部 Gate 的通过证据不覆盖首次使用失败；新增一个受限修复 Milestone，不扩大 release 或重开整个 UI 架构。决策理由与不变契约见 `08_Architecture_Review.md` §35；即时指针/授权只在 `DEVELOPMENT_STATE.md`。
+- **输入与事实依据：** 本次只使用 `DEVELOPMENT_STATE.md`、本文件、`08_Architecture_Review.md`、`09_Unattended_Development_Governance.md`、`RELEASE_CHECKLIST.md`、`.local/verification/manual-signoff/SIGNOFF.md`、`AGENTS.md` 和本轮用户事实。人工 create/import 仅可能成功、translate 未完成；原记录的 GUI PASS 不构成完整旅程通过。未查代码根因，不能预称“配置流程已修复”。
+- **base_commit / rollback_ref：** 均固定为 `5744b9db53028c0bcbed48c37fac9fc6d3fe2d1e`；内部候选 Gate 是历史依赖，不是 M02 验收结果。保持用户当前 `master`，不创建/切换/删除分支。
+- **目标：** 首次用户通过应用可见入口和简短说明，理解并完成 Connection、Model Profile 与 Project active Profile 配置；能填写 llama.cpp 的 OpenAI-compatible API 所需连接与模型信息。本轮后续验证仅以本地 fake HTTP endpoint 模拟该兼容接口，不启动真实 llama.cpp 模型。用合成数据从空状态完成 create → import → translate → export → close/reopen；保留既有六格式和 Auto/Workbench 能力；错误可理解、可恢复且脱敏。
+- **非目标 / 变更预算：** 不做通用向导框架、全局导航/主题重写、配置系统重建、模型下载/管理或自动探测；不涉及 v0.3/`DEC-V03-PROJECT-STORAGE`、ProjectSession/一项目一库/容器 GUI；schema/migration、公共契约、依赖新增/升级、Prompt/输出契约、重试策略变更预算均为零。无真实模型/端点/用户数据、外部目录整理、签发或任何远程动作。若最小修复需要上述变化，停止冲突部分另作明确决策，不借本 M02 扩权。
+- **前置依赖：** 复用 T01 的 shell/i18n、T02 的六格式/数据保护、T03 的 CRUD/引用保护、T04 的 Auto/Workbench/恢复，以及 T05-M01 和内部候选 Gate；旧完成记录只作可定位基线。开始前获独立代码/测试授权，核对实际 seam、指定旧测试与锁定环境，记录运行命令、原始结果及全部受保护改动；无法复现的依赖先标缺口，不降门禁。环境修复、额外文件或新依赖不得顺带执行。
+- **数据与网络前置：** 合成源文件、数据库、导出、日志、缓存、用户配置隔离、临时文件全部在项目内；fake server 仅绑定 loopback，使用生产 transport 与既有兼容协议，固定成功/故障响应，记录脱敏请求计数。不能只用绕过 HTTP/GUI 的 service mock 证明完整旅程。不得读取真实用户目录数据库、`x.db`、真实源文件或凭据；若既有测试/GUI 无法隔离输出位置，停止该验证并报告，不默许写到项目外。
+
+**本轮源码阶段结果（2026-08-28，Asia/Shanghai；不等同候选签收）**
+
+- 实施范围保持在本 M02 allowed paths：首次配置提示明确 Connection / Model Profile / Project active Profile 依赖；用户自行启动命令行 `llama-server`，应用仅填写/保存 API base URL；补充缺配置导航、重开项目/文档恢复、完成状态稳定显示和 UI 错误脱敏。
+- 设计参考已保存至 `D:/TransRealm/.local/verification/v02-t05-m02/20260828-145021/design-reference.md`；命令原始结果、合成旅程、安全范围、GUI 矩阵和 Review 见同目录 `commands.log`、`journey.md`、`security-scope.md`、`gui-matrix.md`、`review.md`。
+- 最终自动化结果：M02 `6 passed`；指定旧回归 `25 passed`；全量 pytest `1391 passed, 1 skipped`；Ruff、mypy（151 source files）、pip check、`git diff --check` 均通过；Qt en/zh_CN `.qm` 各生成 114 条完成翻译。
+- 源码 Review 无 P0/P1 blocker；Windows GUI 工具在目标窗口选择前初始化失败，English/zh_CN × `1280x720 @100%`、`1920x1080 @150%` 的实际交互/截图/DPR/视觉 Review 均保持未验证。真实 llama-server、冻结候选、AV 和外部签收不继承旧证据，仍未执行。
+- 当前状态仅推进为 `verification`；不标记 `completed`，不推进 Task/Milestone，不暂存或提交。下一步需独立 checkpoint/候选构建授权，再对同一候选执行人工 GUI/AV 签收。
+
+**GUI 设计方法：优先参考成熟设计（用户补充要求）**
+
+- 后续先选取 1–2 个成熟应用公开的连接管理/模型配置/首次使用流程作为参考，复用可识别的分组、字段说明、依赖提示、主操作与错误反馈模式，只做与现有三页、数据模型及双语/DPI 约束相容的最小调整；不凭个人偏好重新设计整套交互，不复制品牌资产或引入新框架。
+- 本轮已在授权范围内选定并记录官方 `llama.cpp` `llama-server` 文档与 Open WebUI OpenAI-compatible 文档；来源/访问日期、借鉴点、适配差异、最短流程与页面草案见 `D:/TransRealm/.local/verification/v02-t05-m02/20260828-145021/design-reference.md`。参考设计不能替代用户可理解性和实际 GUI 验收，也不形成新的架构/数据契约。
+
+**交互语义与最短路径（交付验收目标，非已实现声明）**
+
+1. Settings 显示“连接 / Connection”：说明“服务在哪里、怎样连接”，承载 API base URL、超时/重试和可选的 `env:`/`wincred:` 凭据引用；明确 llama.cpp 使用现有 OpenAI-compatible 方式，base URL 与 API 路径如何填写、模型标识由何处获得。示例只能是受控 loopback fake endpoint/合成模型名，确切 URL 拼接须由后续实际 transport 测试核对，不新增猜测协议。
+2. 显示“模型配置 / Model Profile”，避免孤立的“配置”：说明“用哪个模型、按什么参数/模板翻译”；必须选择已有 Connection。一个 Connection 可被多个 Profile 使用；保存连接不等于选好模型，保存 Profile 不等于已给当前 Project 启用。高级字段仍折叠，普通路径不要求理解 capability/JSON。
+3. 最短可见路径：Project 创建项目并导入 → 缺配置提示直接到 Settings 的目标区域 → 新建 Connection → 新建并关联 Model Profile → 回到该 Project 选择 active Profile → Translation 翻译 → 导出 → 关闭重开。已有配置时复用，不强迫重复创建；无 Connection/无 Profile/无 active Profile 分别说明缺哪一步和下一动作，不允许绕过依赖的开始操作。
+4. Project 与 Translation 显示当前 active Profile 及关联 Connection 的可理解摘要，返回配置后刷新可见状态；不显示秘密/系统路径。连接测试若沿用现有能力，只能由用户显式触发；保存、切页、启动不得隐式发送探测请求。配置存在/连接测试成功均不等同于完整翻译成功。
+5. 重复连接名称等错误说明对象/原因/下一动作（例如换名或编辑已有连接），不能直接展示异常字符串、SQL、数据库绝对路径或用户名；未知错误给安全通用说明和恢复动作，不吞错、不报成功。只改变呈现/就近引导，不改变唯一性、RESTRICT、凭据引用或历史快照语义。
+
+**allowed_paths（未来独立授权后的上限；本轮仅三个计划文件）**
+
+- UI：`src/transrealm/ui/settings_page.py`、`src/transrealm/ui/project_page.py`、`src/transrealm/ui/translation_page.py`，仅本旅程的标签、说明、入口、依赖/状态呈现与错误反馈；`src/transrealm/ui/main_window.py` 仅页面跳转/上下文接线；`src/transrealm/ui/page_base.py`、`src/transrealm/ui/worker.py` 仅既有错误传递/呈现边界的最小脱敏。不得改变线程、状态机、服务调用契约或版本来源；不为此次修复拆分所有页面。
+- i18n：`src/transrealm/ui/i18n/**`，仅本次新改文案及对应 en/zh_CN `.ts/.qm`，资源编译需包含于新授权，不能顺带修改无关翻译。
+- 测试：优先扩展 `tests/test_v02_t03_m01.py`、`tests/test_v02_t03_m02.py`、`tests/test_v02_t04_m01.py` 和 `tests/test_v02_t02_m01.py`；跨页面新旅程确无自然归属时才增 `tests/test_v02_t05_m02.py`，复用已有 pytest-qt/fake server fixture，不建平行测试框架。不放宽旧断言或隐藏失败。
+- 必要文档：`docs/user-guide.md`（双语最短步骤/字段语义/失败恢复）、`docs/known-issues.md`（如实更新未覆盖/签收阻塞）、`DEVELOPMENT_STATE.md`、`07_Developer_Task_List.md`；仅决策发生变化时改 `08_Architecture_Review.md`。所有路径相对于 `D:/TransRealm/`，已有 dirty 内容只可在核对归属后增量编辑，不覆盖。
+- 验证输出：`D:/TransRealm/.local/verification/v02-t05-m02/<run-id>/`、`D:/TransRealm/.local/tmp/`、`D:/TransRealm/.local/cache/` 和既有项目内质量缓存；只可用于本 M02。后续候选人工/AV 证据路径见下表，但不因列出就授权执行。
+- **forbidden_paths：** 上述之外的源码（含 Application/Domain/Infrastructure/repositories/migrations）、依赖锁/项目配置、构建脚本、活动 `dist/`/`build/`、现有签收原件、真实数据、项目外目录。若错误分类无法在既有 UI/worker 边界安全完成，先记录最小 service seam 需求和兼容性影响，另行决策并授权；不能直接放大到 `src/**`。
+
+**验收矩阵（全部为待执行；源码验证与冻结候选签收分别记录）**
+
+| 类别 | 必须观察的结果、数据状态与恢复要求 |
+|---|---|
+| 首次配置/自动 GUI 测试 | 从空合成库经可见控件完成 Connection → Profile → active Profile；缺项分别提示/禁用，返回后正确刷新；已有配置可复用，编辑重开保持值，切换语言不改数据。不得用直接写库/调用私有页面入口替代入口可发现性测试。至少新增对应的引导与脱敏回归用例。 |
+| 完整闭环 | 使用真实应用服务、worker、生产 HTTP transport 与 loopback fake server，从 GUI create/import 到 translate/export，再实际关闭/重开；验证输出为预期译文、不是源文回退，Project/文档/Connection/Profile/active 关联、Revision/current/lock 保留，无重复翻译已完成段或残留 processing。自动复跑 TXT/JSON/SRT/ASS/SSA/VTT 六格式成功与保真/失败保护，人工至少用固定 TXT 合成样本完成全旅程。 |
+| 异常/数据恢复 | 重复 Connection/Profile 名称、非法 endpoint/model/参数、缺 Connection/Profile/active/凭据引用、引用保护删除；无效输入不落库、不误切 active、不改既有记录。fake server 注入 connection refused、timeout、401、429/5xx、截断/无效响应，保持既有 retryable 规则；错误可恢复，取消/关闭/重开不挂死，不覆盖 completed/locked Revision；不可写导出和未完成译文导出均不覆盖目标，修正后可重试。 |
+| 安全 | 用合成用户名、绝对 DB 路径、原始 SQL、假 token 的异常注入，检查状态横幅/对话框/tooltip/可复制详情及新日志/截图无敏感回显；未知异常有安全兜底。不得复制原始 error.png 到公开文档。保留凭据引用、UI 不直接查库、worker/SQLite 线程边界和输出目录限制；检查 fake server 仅 loopback 且无真实端点调用。 |
+| 双语 GUI/视觉 | Windows 11 x64 下 English/zh_CN × `1280x720 @100%` / `1920x1080 @150%` 四组合；覆盖主壳、Settings、Project、Auto、Workbench 的适用空/缺配置、运行/禁用、错误、成功及关闭重开状态。每格有实际交互与截图，检查截断/重叠、滚动可达、Tab/焦点、标签语义、禁用原因与恢复动作。无适用场景的格须给理由并由独立 Review 确认；不得用代表图宣称全组合通过。记录屏幕/窗口像素与有效 DPR，离屏截图只能补充；无目标显示环境记为未验证。既有 `2560x1440 @150%` 不能替代。 |
+| 人工签收 | 新用户/原测试人员仅按修订后的应用提示与用户文档操作，无开发者临时口头指路，能说明 Connection/Profile/active 的区别并完成配置和完整闭环；逐步记录实际结果、失败/未覆盖、环境、时间、执行者及证据。无真实 llama.cpp 调用，不声称验证了真实模型质量/兼容性。冻结候选须重新跑该项和目标视觉矩阵，不能套用源码截图。 |
+| 质量/旧回归/Review | 受影响旧测试及全量 pytest、Ruff、mypy、pip check、范围/秘密/输出路径检查通过；独立行为、安全与视觉 Review 无未解决 P0/P1。测试未跑/skip 不等于通过；每项 skip 必须说明适用性，当前核心闭环/脱敏/GUI 缺证据不得豁免。旧“1385 passed”只作历史，不预填新结果。 |
+| 独立外部 AV | 不属于代码修复结果；用户在具备 AV 能力的环境对最终同一候选 ZIP 和解压 onedir 扫描，保存引擎/病毒库版本、时间、候选 hash、扫描范围、原始结果与执行者。AV 不可用保持 BLOCKED，不能用 hash、安全单测、fake endpoint 或启动成功替代，也不授权更改本机防护。 |
+
+- **兼容性基线/命令：** 后续先核对文档所列测试是否存在及 nodeid；旧回归至少包括 `tests/test_v02_t03_m01.py`、`tests/test_v02_t03_m02.py`、`tests/test_v02_t02_m01.py`、`tests/test_v02_t04_m01.py` 至 `test_v02_t04_m04.py`、`tests/test_p0_t08_m05.py`、`tests/test_p1_t03_m04.py`、`tests/test_p1_t03_m05.py`、`tests/test_p1_t04_m04.py`、`tests/test_p1_t04_m05.py`、`tests/test_model_profile.py`、`tests/test_p0_t03_m03.py` 与 `tests/test_p1_t05_m02.py`/`test_p1_t05_m03.py`。按实际存在的路径记录定向 `python -m pytest -q <明确文件/nodeid列表>` 命令及结果；缺失项不悄悄跳过，先报告并核对等价旧覆盖。全量门禁用 `D:/TransRealm/.venv/Scripts/python.exe -m pytest -q`、同解释器 `-m ruff check src tests`、`-m mypy src tests`、`-m pip check`，加 `git diff --check`；全量不能替代上述受影响旧回归。运行前隔离缓存/临时/用户配置输出，不改机器设置。
+- **冻结候选依赖与停止点：** M02 源码验证后，另获 checkpoint 和构建授权，才能将已验证的限定变更形成 clean commit，并用既有构建流程重新进入 `V02-T05-CANDIDATE-GATE`。构建前可逆保留旧候选及其 manifest/hash 到项目内归档（仅后续获准时）；新 manifest `git_dirty=false`、目标 commit 与构建源 HEAD 一致，重跑候选专项/版本/插件/资源/六格式/迁移恢复/安全等适用 Gate。不得用旧 ZIP 验证新 UI，旧 hash/AV 结果不得继承；构建或旧回归失败立即停止签收推进。候选构建不属于 M02 代码授权自动附带的动作。
+
+**证据文件（本轮只规划，不创建、不覆盖原始签收记录）**
+
+| 位置 | 必须内容 |
+|---|---|
+| `D:/TransRealm/.local/verification/v02-t05-m02/<run-id>/baseline.md` | HEAD/base/固定 rollback、受保护 dirty 清单、允许路径、环境/锁版本、旧测试 nodeid、fixture 与输出隔离路径。 |
+| 同目录 `design-reference.md` | 本轮已实际记录的成熟设计来源、借鉴点/差异、最短流程与范围内页面草案。 |
+| 同目录 `commands.log`、`results.md`、`journey.json` | 实际命令/退出码/原始测试结果、缺口；合成输入与预期导出、请求计数、各步前后状态、关闭重开证据；记录源码身份，不伪称候选结果。 |
+| 同目录 `negative-security.md`、`gui-matrix.md`、`screenshots/<language>/<display>/<page>-<state>-<step>.png` | 故障注入/恢复/脱敏结果；逐格证据索引、系统/显示/DPR/窗口尺寸、截图对应源码身份；成功与失败图都先检查敏感信息。 |
+| 同目录 `review.md`、`recovery.md` | 独立行为/安全/视觉 Review 的发现与复核；失败恢复步骤、合成数据/备份核对、未覆盖项及下一授权，不预写 APPROVE。 |
+| `D:/TransRealm/.local/verification/manual-signoff/v02-t05-m02/<candidate-id>/RESULT.md`、`gui-matrix.md`、`screenshots/`、`candidate-identity.json` | 后续重建候选的实际 commit/ZIP/EXE hash/manifest、逐步人工与目标双语显示矩阵、签收人/时间/失败项。candidate-id 必须绑定实际构建身份；原 `SIGNOFF.md` 与 `error.png` 只保留内部原件。 |
+| `D:/TransRealm/.local/verification/manual-signoff/av/<candidate-id>/RESULT.md`、`scan.log` | 后续由用户提供的独立 AV 证据；明确候选身份和原始结果，未执行不生成 PASS。 |
+
+- **解除条件与下一状态：** 新代码/测试授权 + 现场/环境准入后才进入 M02 实施；源码/GUI/异常安全/旧回归/独立 Review 完成后只记“源码验证完成，冻结候选签收待完成”，停止请求 checkpoint/构建授权。重建候选 Gate 及同候选人工闭环/视觉证据通过，才可将本修复交付记 completed 并推进外部 AV/最终签收；缺 AV 不改写为代码失败，也不放行 T05。真实端点仍是未执行且范围外的独立待裁决项，不能作为本地修复阻塞或已通过证据。
+- **失败恢复/升级：** 先保留失败证据与合成数据，暂停本次进程；不改写原签收证言，不删除日志来获得通过。只在明确授权后撤销本 M02 可识别改动，或在项目内隔离复现固定 checkpoint；保留原候选、数据库/备份和全部既有 dirty，不做整树 reset/restore/clean。若发现业务核心/公共契约/新依赖/路径隔离超界需求，停冲突部分 REPLAN，附最小额外路径和影响，未获新决策不实现。
+- **最终停止点：** 本轮计划文档修改后立即停止；后续不得自动沿用旧连续开发或本地提交权限。AV/人工签收/真实端点适用性/正式签发各自未决即如实记录；即使全部适用门禁通过，也只交用户做签发决策，绝不自动发布、push、merge、tag、Release、创建远程资源或进入 v0.3。
 
 ### V03-T00 — `DEC-V03-PROJECT-STORAGE` 决策门禁
 
-- **Phase/Release / Priority / Risk / 状态：** Phase 1.5B / v0.3.0 planning；P0 Architecture；High；proposed。默认依赖 V02-T05，只做决策与文档。
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5B / v0.3.0 planning；P0 Architecture；High；completed（2026-09-07）。本节点只完成提前决策与文档，实施仍依赖 V02-T05 完成和新的 v0.3 开发授权。
 - **问题：** GUI 全局 SQLite 可含多个 Project，而开放目录/`.aiproject` 要求数据库内恰有一个 Project；必须统一 ProjectSession、应用配置、受管目录、导入语义和旧库迁移。
 - **不可变约束：** 不丢数据；旧库先备份并保留只读恢复点；六格式载体、Revision/current/lock、Attempt、Profile/Connection 和秘密边界不退化；不原地编辑 `.aiproject`；不静默删除外部文件。
-- **推荐方向：** 一次一个活动 ProjectSession + 一 Project 一 SQLite 工作区；应用级语言/最近 Project 独立保存；`.aiproject` 导入可写工作区；旧库按关联闭包拆分并逐库验证。
-- **完成条件：** 输出唯一推荐/否决理由、迁移/回滚、portable/data-dir、Application/UI seam 和验收矩阵；裁决后才创建 V03-T01，未裁决不得写容器 GUI/旧库拆分代码。
+- **唯一裁决：** `APPROVE_ONE_PROJECT_ONE_WORKSPACE`。一次一个活动 ProjectSession + 一 Project 一 SQLite 工作区；应用级语言/最近 Project 独立保存；`.aiproject` 导入可写工作区；旧库按关联闭包拆分并逐库验证。否决“全局库 + 克隆/ID 重映射”（双身份和覆盖/删除/恢复语义持续冲突）与“全局索引库 + Project 库”（新增跨库一致性和恢复故障域）。完整契约见 `03` §10.2、`04` §7.1、`08` §17。
+- **兼容性/安全/迁移：** 复用现有以 `db_path` 为入口的 Application Service 和容器/归档/SQLite Backup API；Profile/Connection 非敏感配置保留在 Project 库，secret 只保留引用。旧库先只读盘点和一致性备份，在 staging 逐 Project 拆分；全部目标通过前不切换入口、不删除旧库。UNC/网络盘不作为活动写工作区。
+- **完成证据与停止点：** 已输出唯一推荐、否决理由、portable/data-dir、Application/UI seam、迁移/回滚、验收矩阵和 V03-T01～T06。当前恢复点仍为 `V02-T05-M02`，不得因 T00 completed 自动开工；V02-T05 完成并获得代码/测试授权后才进入 `V03-T01-M01`。
+
+### V03-T01 — 数据根与应用配置分离
+
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5B / v0.3.0；P0；High；proposed。`base_commit` 待 V02-T05 正式签收 checkpoint 固定；代码未授权。
+- **目标/用户价值：** 实现 `--data-dir` → Portable `data/` → 本机自定义指针 → `%LOCALAPPDATA%/TransRealm` 的唯一解析；把语言、最近/上次 Project、受管根和日志级别写入 data-root 的应用配置。程序目录不可写时给可操作选择，不把业务数据静默写到未知位置。
+- **范围上限：** 启动/配置基础设施、最小 Settings/启动错误 UI、对应测试、i18n、用户/安全文档和状态；不创建 ProjectSession、不迁移旧库、不接容器 GUI、不构建候选。优先复用 Qt/stdlib，不新增依赖。
+- **验收/回滚：** 覆盖四级优先级、Windows Unicode/长路径、不可写/非目录/磁盘满、配置原子保存、旧 QSettings 语言兼容读取、Portable 移动；失败不改旧设置。回滚删除新建的空配置载体即可，旧值保留。完成后停在 `V03-T02-M01` 前。
+
+### V03-T02 — 单活动 `ProjectSession` 生命周期
+
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5B / v0.3.0；P0；High；proposed；依赖 V03-T01。
+- **目标/用户价值：** 用一个 Session 统一当前工作区、数据库路径、单 Project 身份、写会话锁和打开/关闭/切换；现有 Service 继续消费 `db_path`，UI 不直接访问数据库。
+- **范围上限：** Application session seam、MainWindow/page/worker 的当前 Session 接线、会话锁、行为/线程/GUI 测试及必要文档；不做旧库拆分和 `.aiproject` GUI。
+- **验收/回滚：** 运行中切换要求完成或取消；worker/lease/connection 有界收敛；非法/损坏目标不替换当前 Session；双实例写入被拒绝；切换后无前一 Project 的文档/Profile/Revision/草稿泄漏。保留旧固定 `db_path` 兼容 seam 直到本 Task 验收，失败可回退路由。完成后停在 `V03-T03-M01` 前。
+
+### V03-T03 — 旧全局数据库拆分迁移
+
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5B / v0.3.0；P0 Data Migration；Critical；proposed；依赖 V03-T01～T02。
+- **目标/用户价值：** 将旧 `~/.transrealm/project.sqlite` 安全拆成一 Project 一工作区，用户无需手工导出重建且可恢复。
+- **范围上限：** 只读预检、SQLite 一致性备份、隔离 staging 拆分、迁移映射/报告、原子入口切换、故障注入测试与恢复文档；不删除或原地修改旧库，不处理真实用户库，除非另获具体授权。
+- **验收/回滚：** 固定多 Project/shared Profile/Connection/Workflow fixture，逐目标核对行数、外键闭包、Run/Attempt/Revision/current/lock、Glossary、六格式载体和 credential reference；备份/权限/空间/崩溃/校验失败均不切换入口且可幂等重试。零 Project 有配置、未知 schema、孤立记录或外键损坏 fail closed/REPLAN。旧库、快照和映射长期保留；完成后停在 `V03-T04-M01` 前。
+
+### V03-T04 — Project Manager 与工作区 GUI
+
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5B / v0.3.0；P0 UX/Data Safety；High；proposed；依赖 V03-T01～T03。
+- **目标/用户价值：** 提供最近 Project、新建、打开、定位移动目录、移除最近记录、受管工作区和外部开放目录入口。
+- **范围上限：** Project Manager/导航 UI、既有 open-directory service 接线、worker、i18n、行为/GUI/异常测试和用户文档；不实现只读编辑、网络共享写入、自动扫描整盘或删除外部目录。
+- **验收/回滚：** “移除最近记录”与“删除 Project 数据”分离；缺失路径可定位且不重建；外部目录先校验 manifest/hash/schema/单身份并验证可写，不可写只提供导入副本；中英文/DPI/键盘/错误状态可达。失败保持当前 Session 和目标目录不变。完成后停在 `V03-T05-M01` 前。
+
+### V03-T05 — `.aiproject` 导入导出 GUI
+
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5B / v0.3.0；P0 Security/Data Portability；High；proposed；依赖 V03-T04。
+- **目标/用户价值：** 将已有归档、隔离导入、向前迁移和原子安装服务接入桌面；明确归档是传输快照而非活动文件。
+- **范围上限：** 导入/导出/冲突/进度/凭据缺失 UI 与对应 Application glue、测试、i18n、文档；不改变 manifest format/schema/资源限额或秘密边界，若确需改变则另行决策。
+- **验收/回滚：** 开放目录 → `.aiproject` → 新数据根工作区 → 重开/再导出闭环；tamper、路径穿越、压缩炸弹、未知版本、未声明成员、目标冲突和迁移失败均在安装前拒绝；源归档和既有目标不变，覆盖前保留 `.pre-replace` 恢复副本。完成后停在 `V03-T06-M01` 前。
+
+### V03-T06 — 集成恢复与候选门禁
+
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5B / v0.3.0；P0 Release Gate；High；proposed；依赖 V03-T01～T05。
+- **目标/用户价值：** 收束数据根、迁移、Project 切换、容器、跨机和恢复为可签收 v0.3 候选。
+- **范围上限：** 旧/新回归、端到端/故障注入、Windows GUI 中英文 × 目标 DPI/分辨率、Portable 候选数据目录、文档、独立 Review；候选构建、AV、外部签收、commit/push/tag/Release 分别遵守当次授权。
+- **完成条件：** 全量质量门禁与专项矩阵通过；安装/删除程序目录不误删外置 Project；网络盘明确不支持；真实端点不作前置（使用本地 fake endpoint）；AV 和人工签收如未完成保持 blocked/incomplete。全部适用门禁齐备后停在用户签发决定前。
 
 ## 1. Task规范
 

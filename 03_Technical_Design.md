@@ -383,9 +383,13 @@ Project 删除属于 High risk 用户数据操作：删除前创建 SQLite 一�
 
 当前桌面入口使用一个全局 SQLite 保存多个 Project，而 `export_database_archive`、开放目录和 `.aiproject` 容器要求数据库内恰有一个 Project。该差异在服务测试中可隔离，但无法安全地靠 GUI 按钮消除；v0.2 因此不接入容器 GUI。
 
-v0.3 开工前必须由决策 Agent 裁决：Project session 生命周期、应用级配置位置、受管工作区、外部开放目录、`.aiproject` 导入语义、旧全局库拆分以及 portable/data-dir 优先级。推荐方案是“一次一个活动 ProjectSession + 一 Project 一 SQLite 工作区”；`.aiproject` 是传输快照，导入后安装到可写工作区；最近 Project、界面语言等应用级配置独立保存；凭据仍仅使用 `env:`/`wincred:` 引用。
+`DEC-V03-PROJECT-STORAGE` 于 2026-09-07 提前裁决为 `APPROVE_ONE_PROJECT_ONE_WORKSPACE`：一次一个活动 `ProjectSession`，一 Project 一 SQLite 开放目录工作区。`ProjectSession` 持有工作区路径、数据库路径、单 Project 身份、写会话锁和打开/关闭/切换状态，只向既有 Application Service/worker 提供当前 `db_path`；不新增领域模型副本或全局业务索引库。切换前停止接受新任务，运行中要求完成或取消，通过现有 lease/有界关闭语义等待所有 worker 和 SQLite connection 收敛，再验证目标 manifest/hash/schema/单 Project 身份并原子替换 UI 上下文；前一 Project 的文档、Profile、Revision、草稿或错误状态不得泄漏到新 Session。同一工作区同时只允许一个 TransRealm 写会话。
 
-旧库迁移必须先做一致性备份，按 Project 拆分并验证关联闭包、行数、Revision/current/lock、Profile/Connection 引用和六格式保真；全部新工作区验证成功前保留旧库只读恢复点。不得原地把多 Project 数据库声明为单 Project 容器，也不得自动删除旧库或外部文件。
+应用级设置与 Project 数据分离。data-root 下的应用设置只保存界面语言、最近/上次 Project、受管工作区根、日志级别和非业务 UI 偏好；Project SQLite 继续自包含 Project、SourceDocument/Segment、Run/Attempt/Revision、current/lock、Glossary、Workflow、Model Profile、Provider Connection 非敏感字段和 Prompt Override，以保持历史外键闭包及 `.aiproject` 跨机可解释。secret 继续只存在于环境变量或 Windows Credential Manager，所有持久化/归档仅保存 `env:`/`wincred:` 引用。既有 QSettings 语言值只做一次兼容读取，不删除旧值。
+
+data-dir 解析优先级固定为：显式 `--data-dir` → Portable 包程序旁 `data/` → 本机保存的自定义数据目录指针 → `%LOCALAPPDATA%/TransRealm`。选中目录不存在、不可写、不是目录或空间不足时 fail closed 并要求重新选择，不得静默写入别处。受管工作区位于 `<data-dir>/projects/`；外部开放目录可原地打开，但必须通过既有容器校验并可写，不可写时只允许导入副本。UNC/网络盘不作为 v0.3 活动 SQLite 写工作区；跨机使用 `.aiproject`。`.aiproject` 仍是传输快照，“打开”实际为隔离解包→完整校验→向前迁移→原子安装到可写工作区，源归档不变。
+
+旧 `~/.transrealm/project.sqlite` 只作迁移源，不原地声明为单 Project 容器。迁移先只读盘点、完整性/外键检查和 SQLite Backup API 一致性恢复快照，再在隔离 staging 中逐 Project 建库：复制该 Project 及全部从属 Document/Segment/Run/Attempt/Revision/Glossary，并为保持旧版全局配置体验向每个目标复制全部非敏感 Connection/Profile/Prompt Override/Workflow。逐库验证关联闭包、行数、Revision/current/lock、Attempt、六格式保真载体和凭据引用，全部工作区成功后才原子更新应用入口。旧库、快照和迁移映射不得自动删除；任一失败不更新入口并允许幂等重试。投入新工作区后的新增数据不承诺自动反向合并到旧全局库，降级前应导出当前 `.aiproject`。
 
 P0-T08 的 GUI 仅为核心 TXT 翻译闭环提供薄桌面入口；UI 只能调用 Application Service，解析、数据库和模型请求必须在可控 worker 中执行并返回 DTO。每个 worker/thread 拥有自己的 SQLite connection 生命周期，不跨线程传递 connection/cursor；关闭时先停止接收新工作，再通过 P0-T07 的取消/lease 语义收敛，不能以强杀线程伪装成功。P1-T04 先补齐 Project Profile 选择与基础 Glossary，P1-T03 再增加自动模式与工作台模式的默认策略、参数暴露和交互差异；两种模式继续复用同一状态机、Validator、Application Service 和 Revision 保护。运行中 Run 不因 UI 模式切换改变 Profile/Workflow/参数；用户必须选择继续当前 Run 或取消后以新配置创建后续 Run。
 

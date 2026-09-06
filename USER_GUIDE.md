@@ -1,8 +1,33 @@
 # TransRealm Agent 操作提示词
 
-项目目录：`D:\TransRealm`
+项目目录：`D:/TransRealm`
+
+## 路径与目录约定（所有模板适用）
+
+- 唯一状态入口是 `D:/TransRealm/DEVELOPMENT_STATE.md`，即项目根目录下的 `DEVELOPMENT_STATE.md` 文件。不要在 `DEVELOPMENT` 与 `_STATE.md` 之间添加目录分隔符。
+- 复制下方 `text` 代码块中的提示词；路径统一用正斜杠，下划线保持原样，不手工添加 Markdown 转义反斜杠。若旧提示词路径有歧义，先核对实际文件名，不反复增删斜杠试错，不创建别名或第二份状态。
+- 开发环境、缓存、临时文件、GUI 数据/截图和候选归档只能写入项目内，具体规则见 `09_Unattended_Development_Governance.md` §6.1。旧外部目录移动/删除须获得具体授权；本段路径约定本身不授予环境整理或开发权限，以状态入口记录的最新用户授权为准。
 
 所有模板都以 `DEVELOPMENT_STATE.md` frontmatter、当前 Task/Milestone、权威编号文档和 Git 现场为准。本文件只定义“这一次允许 Agent 做什么”，不保存版本进度。
+
+### 本机开发命令的环境前置
+
+执行已获准的 Python/测试/质量命令时，使用 `D:/TransRealm/.venv/Scripts/python.exe`，不要使用共享 `py` 解释器或已归档的外部 venv 路径。先在当前 PowerShell 进程设置以下输出位置；不写入用户级或机器级环境变量：
+
+```powershell
+Set-Location -LiteralPath 'D:/TransRealm'
+$env:TEMP = 'D:/TransRealm/.local/tmp'
+$env:TMP = $env:TEMP
+$env:PIP_CACHE_DIR = 'D:/TransRealm/.local/cache/pip'
+$env:MYPY_CACHE_DIR = 'D:/TransRealm/.mypy_cache'
+$env:RUFF_CACHE_DIR = 'D:/TransRealm/.ruff_cache'
+$env:PYTHONPATH = 'D:/TransRealm/src'
+$env:PYTHONUTF8 = '1'
+```
+
+仅在执行获准的自动测试/合成 GUI 旅程时，再将当前进程的 `USERPROFILE`、`APPDATA`、`LOCALAPPDATA` 分别指向项目内 `.local/verification/runtime-home/`、`.local/verification/appdata/`、`.local/verification/localappdata/`，避免写入真实用户数据。使用 `QT_QPA_PLATFORM=offscreen` 的结果只能说明离屏检查，不代表可见 GUI 验收；可见窗口证据须另按 Task 门禁执行。路径须先存在，且不得指向项目外的目录联接。不要将本段测试隔离设置用作真实用户启动配置。
+
+`.venv/`、`.local/` 已排除 Git 跟踪；历史归档不放回活动 `dist/`。本节只约定工具环境，不授予构建、发布或超出当前 Task 的权限。
 
 ## 先选模式
 
@@ -38,7 +63,7 @@
 
 ```text
 模式：授权并执行当前代码 Milestone。
-读取 D:\TransRealm\DEVELOPMENT_STATE.md，并按“唯一 Agent 交接入口”处理当前 Task/Milestone。本消息明确授权 current_task/current_milestone 的 allowed paths 内代码、测试和必要文档修改；不授权任何范围外修复。
+读取 D:/TransRealm/DEVELOPMENT_STATE.md，并按“唯一 Agent 交接入口”处理当前 Task/Milestone。本消息明确授权 current_task/current_milestone 的 allowed paths 内代码、测试和必要文档修改；不授权任何范围外修复。
 
 先核验 HEAD、branch、staged/unstaged/untracked、既有改动归属、依赖、测试证据、planning baseline 和 rollback_ref。若状态为 proposed/code_authorized:false，只有在任务定义完整、依赖满足、基线可恢复且没有 REPLAN 冲突时，才把授权状态推进为 ready 并记录实际 base_commit；否则不写业务代码，只报告缺失条件。
 
@@ -56,7 +81,7 @@
 
 ```text
 模式：继续执行，不改变任何授权或任务定义。
-读取 D:\TransRealm\DEVELOPMENT_STATE.md，核验 Git、current_task/current_milestone、authorization_scope、既有改动归属和恢复动作。
+读取 D:/TransRealm/DEVELOPMENT_STATE.md，核验 Git、current_task/current_milestone、authorization_scope、既有改动归属和恢复动作。
 
 只在现有 allowed paths 内继续，从尚未完成的第一个验收点接上；不得重新激活 Task、扩大范围、修改硬约束或顺手修复范围外失败。先确认已有 FIT/ADAPT/REPLAN 是否仍与现场一致；新证据冲突时停止冲突部分并记录 REPLAN。
 
@@ -72,9 +97,9 @@
 
 ```text
 模式：恢复验证基线，不改业务实现或测试语义。
-读取 D:\TransRealm\DEVELOPMENT_STATE.md 中已裁决的 Gate 阻塞、环境基线、artifact 处置、回滚要求和 resume_milestone。
+读取 D:/TransRealm/DEVELOPMENT_STATE.md 中已裁决的 Gate 阻塞、环境基线、artifact 处置、回滚要求和 resume_milestone。
 
-允许：只读诊断；创建/重建隔离验证环境；严格按既有 lock 恢复依赖；把明确陈旧且不属于当前候选的 ignored artifact 连同 manifest/hash 可逆归档到仓库外；更新当前请求必需的 Markdown 证据。
+允许：只读诊断；在 D:/TransRealm/ 内创建/重建隔离验证环境；严格按既有 lock 恢复依赖；将项目内明确陈旧且不属于当前候选的 ignored artifact 连同 manifest/hash 可逆归档到 D:/TransRealm/.local/archive/，与活动 dist/ 分开；更新当前请求必需的 Markdown 证据。缓存、临时目录和验证数据也必须在项目内；先核对忽略及分发排除规则，缺少配置修改授权时停止相应动作。本模板不授予现有外部目录搬移或删除权限，须另行点名来源、目标及动作授权。
 禁止：修改源码、测试、脚本、pyproject、requirements.lock 或候选内容；删除/覆盖旧 artifact；从 dirty 工作树构建候选；暂存、commit、push、tag 或发布。
 
 先记录操作前路径、hash、环境和 Git 状态；恢复后运行原失败 nodeid、全量 pytest、Ruff、mypy 及当前 Milestone 指定回归。skip 必须逐项说明为何不适用，不能把失败改成 skip。
@@ -86,7 +111,7 @@
 
 ```text
 模式：仅规划 Markdown，不授予代码开发。
-读取 D:\TransRealm\DEVELOPMENT_STATE.md。只审查和修改当前请求点名的 Markdown，以及为消除直接冲突不可缺少的权威 Markdown。
+读取 D:/TransRealm/DEVELOPMENT_STATE.md。只审查和修改当前请求点名的 Markdown，以及为消除直接冲突不可缺少的权威 Markdown。
 
 不得修改源码、测试、脚本、配置、依赖或 artifact，不运行会改变产品、Git 历史、依赖环境或外部状态的命令。核验产品范围、现场事实、依赖、allowed paths、验收、兼容性、安全、迁移/回滚和授权是否一致；不得用规划声明替代测试事实。
 
@@ -97,7 +122,7 @@
 
 ```text
 模式：独立只读 Review；不修复、不放行、不改状态。
-读取 D:\TransRealm\DEVELOPMENT_STATE.md 和当前 Task 的目标、非目标、硬约束、allowed paths 与验收。核验 Git staged/unstaged/untracked、实现 diff、测试和文档声明。
+读取 D:/TransRealm/DEVELOPMENT_STATE.md 和当前 Task 的目标、非目标、硬约束、allowed paths 与验收。核验 Git staged/unstaged/untracked、实现 diff、测试和文档声明。
 
 不得修改任何文件、依赖、artifact 或 Git 状态，不得替开发 Agent 补实现，也不得把 Task/Milestone 标为 completed。
 
@@ -108,7 +133,7 @@
 
 ```text
 模式：架构/产品/门禁决策，不做实现或验收。
-读取 D:\TransRealm\DEVELOPMENT_STATE.md 的 pending_decision；若 pending_decision:none，仅在用户本条消息明确提出决策问题时继续，否则报告“没有待决策节点”并停止。
+读取 D:/TransRealm/DEVELOPMENT_STATE.md 的 pending_decision；若 pending_decision:none，仅在用户本条消息明确提出决策问题时继续，否则报告“没有待决策节点”并停止。
 
 核验不可变约束、现场证据、待确认事实和 2-3 个可行候选。输出一个唯一推荐；只有证据不足且现在选择会造成不可逆风险时，才允许列出明确保留项和解除条件。逐项说明否决理由、兼容性、安全、迁移/回滚、验收、必须更新的权威文档和 resume_milestone。
 
@@ -121,7 +146,7 @@
 
 ```text
 模式：独立验收并决定是否放行；不修业务代码。
-读取 D:\TransRealm\DEVELOPMENT_STATE.md、当前 Milestone 验收、Review findings、兼容性基线和原始测试证据。重新核验实际 diff、allowed paths、关键命令和适用的 GUI/安全/迁移/回滚证据，不接受仅由开发 Agent 写出的完成声明。
+读取 D:/TransRealm/DEVELOPMENT_STATE.md、当前 Milestone 验收、Review findings、兼容性基线和原始测试证据。重新核验实际 diff、allowed paths、关键命令和适用的 GUI/安全/迁移/回滚证据，不接受仅由开发 Agent 写出的完成声明。
 
 不得修改源码、测试、脚本、依赖或 artifact，不得降低、删除或改写失败门禁。发现缺陷时输出 REJECT/BLOCKED 及最小返工范围，不代替开发 Agent 修复。
 
@@ -134,7 +159,7 @@
 
 ```text
 模式：立即暂停并形成可恢复交接，不再新增业务修改。
-读取并更新 D:\TransRealm\DEVELOPMENT_STATE.md，记录实际修改、命令与原始结果、兼容性基线、完成/未完成内容、风险、阻塞、工作树归属、解除条件和下一条可直接执行的恢复动作。
+读取并更新 D:/TransRealm/DEVELOPMENT_STATE.md，记录实际修改、命令与原始结果、兼容性基线、完成/未完成内容、风险、阻塞、工作树归属、解除条件和下一条可直接执行的恢复动作。
 
 不得新增或修复业务实现，不得为了整洁 reset、restore、clean、覆盖、移动或删除已有工作。仅当暂停前当前 Milestone 已通过全部门禁时，才可按既有授权创建对应本地 checkpoint；否则保持工作树原样。不得 push、merge、tag 或发布。
 
@@ -147,7 +172,7 @@
 
 ```text
 模式：当前 release 内连续无人开发。
-读取 D:\TransRealm\DEVELOPMENT_STATE.md，并从 current_task/current_milestone 的精确恢复点开始。本消息授权你连续实施 DEVELOPMENT_STATE.md.current_release 内已经由权威文档定义、依赖满足且没有待决策节点的 Task/Milestone；每个 Task 仍只能修改其自身 allowed paths 和必要状态文档。为满足既有独立审查门禁，本模板同时明确授权你为每个 Milestone 调用只读 Review Agent，但 Review Agent 不得参与实现或代替验收。不得把本授权延伸到下一 release、未批准构想或范围外清理。
+读取 D:/TransRealm/DEVELOPMENT_STATE.md，并从 current_task/current_milestone 的精确恢复点开始。本消息授权你连续实施 DEVELOPMENT_STATE.md.current_release 内已经由权威文档定义、依赖满足且没有待决策节点的 Task/Milestone；每个 Task 仍只能修改其自身 allowed paths 和必要状态文档。为满足既有独立审查门禁，本模板同时明确授权你为每个 Milestone 调用只读 Review Agent，但 Review Agent 不得参与实现或代替验收。不得把本授权延伸到下一 release、未批准构想或范围外清理。
 
 首次和每次推进指针后都重新核验 HEAD、branch、staged/unstaged/untracked、既有改动归属、base_commit、rollback_ref、authorization_scope、依赖和当前验收，记录 FIT/ADAPT/REPLAN。普通私有实现选择、可逆 ADAPT、测试 fixture、文件组织和范围内缺陷由你自行决定，不询问用户。
 
@@ -180,7 +205,7 @@
 
 保护当前 Git staged/unstaged/untracked 和所有既有改动。不得 reset、restore、clean、覆盖、删除、移动、格式化或顺手修复；不得补跑全量门禁。已经完成的命令结果如实记录，未完成/被取消的验证不得写成 passed。
 
-只允许更新 D:\TransRealm\DEVELOPMENT_STATE.md 及直接必需的交接 Markdown，记录：
+只允许更新 D:/TransRealm/DEVELOPMENT_STATE.md 及直接必需的交接 Markdown，记录：
 1. 用户主动中断时间与原因（未提供原因时写“user_requested_interrupt”）；
 2. 最后完成的 Milestone/checkpoint 和当前精确 Task/Milestone；
 3. 当前状态、plan_alignment、已改文件归属和 staged/unstaged/untracked；

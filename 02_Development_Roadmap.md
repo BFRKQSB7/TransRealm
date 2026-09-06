@@ -338,7 +338,7 @@ v0.2.0 只消费现有 Application Service、状态机和 SQLite 契约；不引
 
 ## v0.3.0：Project 工作区与容器 GUI
 
-开工前触发 `DEC-V03-PROJECT-STORAGE`，裁决当前“全局 SQLite 多 Project GUI”与“容器一库一个 Project”之间的契约差异。推荐方向是一个活动 `ProjectSession` 对应一个 Project SQLite，受管工作区与外部开放目录共享同一 Project 契约；`.aiproject` 作为传输快照导入可写工作区，不直接原地编辑压缩包。
+`DEC-V03-PROJECT-STORAGE` 已于 2026-09-07 提前裁决为 `APPROVE_ONE_PROJECT_ONE_WORKSPACE`，但实施仍依赖 V02-T05 完成和新的 v0.3 开发授权。一个活动 `ProjectSession` 对应一个 Project SQLite，受管工作区与外部开放目录共享同一 Project 契约；`.aiproject` 作为传输快照导入可写工作区，不直接原地编辑压缩包。
 
 v0.3.0 负责：
 
@@ -346,6 +346,8 @@ v0.3.0 负责：
 - 受管 Project 工作区、开放目录和 `.aiproject` 的创建、打开、pack/unpack、备份、恢复 GUI；
 - 旧 `~/.transrealm/project.sqlite` 多 Project 数据的备份、拆分迁移与可验证回滚；
 - 显式 portable/data-dir 选择和不可写目录提示。
+
+实施顺序固定为：V03-T01 数据根与应用配置分离 → V03-T02 `ProjectSession` 生命周期 → V03-T03 旧库拆分迁移 → V03-T04 Project Manager/受管与外部工作区 → V03-T05 `.aiproject` GUI → V03-T06 集成恢复与发布门禁。旧库迁移在隔离 staging 中完成，全部目标通过前不切换应用入口；网络共享盘不作为活动 SQLite 写工作区。
 
 未完成该决策与迁移门禁前，不把容器服务直接接到现有三标签 GUI。
 

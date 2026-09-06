@@ -60,7 +60,7 @@ from transrealm.domain.provider_connection import ProviderConnection
 from transrealm.domain.segment import SourceDocument
 from transrealm.domain.translation_revision import TranslationRevision
 from transrealm.ui.i18n import LanguageManager
-from transrealm.ui.page_base import WorkerPage
+from transrealm.ui.page_base import WorkerPage, safe_error_message
 from transrealm.ui.workbench import (
     WorkbenchParamEditor,
     WorkbenchPromptEditor,
@@ -80,6 +80,7 @@ class TranslationPage(WorkerPage):
     """
 
     request_project_setup = Signal()
+    request_settings_setup = Signal()
 
     def __init__(
         self,
@@ -109,6 +110,7 @@ class TranslationPage(WorkerPage):
         self._selected_workbench_id: int | None = None
         self._revision_history_segment_id: int | None = None
         self._revision_entries: list[TranslationRevision] = []
+        self._allow_initial_document_restore = True
 
         layout = QVBoxLayout(self)
         overview_section = QGroupBox("Auto overview", self)
@@ -157,6 +159,9 @@ class TranslationPage(WorkerPage):
         self._set_active_profile = QPushButton("Set active profile…", self)
         self._set_active_profile.hide()
         overview_layout.addWidget(self._set_active_profile)
+        self._configure_settings = QPushButton("Configure Connection and Model Profile…", self)
+        self._configure_settings.hide()
+        overview_layout.addWidget(self._configure_settings)
 
         # Workbench surface (P1-T03-M02): real Segment/Attempt progress, the
         # active Profile's capability, and a parameter editor presenting only
@@ -225,6 +230,7 @@ class TranslationPage(WorkerPage):
         self._cancel.clicked.connect(self._on_cancel)
         self._export.clicked.connect(self._on_export)
         self._set_active_profile.clicked.connect(self._on_request_project_setup)
+        self._configure_settings.clicked.connect(self._on_request_settings_setup)
         self._mode_switch.activated.connect(self._on_mode_switch)
         self._document_combo.activated.connect(self._on_document_selected)
         self._workbench_filter.currentIndexChanged.connect(self._on_workbench_filter_changed)
@@ -265,6 +271,7 @@ class TranslationPage(WorkerPage):
         # thread, and the current document may change (import, selector) between
         # submission and execution.
         current = self._document_id
+        allow_initial_restore = self._allow_initial_document_restore
 
         def task() -> object:
             if project_id is None:
@@ -295,11 +302,14 @@ class TranslationPage(WorkerPage):
             ) as runs:
                 documents = runs.list_source_documents(project_id=project_id)
                 # The document selector is per-project: the recorded document is
-                # kept only when it belongs to the selected project, otherwise no
-                # document is active (switching projects must not leak a stale id
-                # from another project into the progress view).
+                # kept only when it belongs to the selected project. On a fresh
+                # shell reopen, select the first persisted document so the user
+                # sees the same project journey without leaking a stale id from
+                # another project.
                 if current is not None and any(doc.id == current for doc in documents):
                     effective_id = current
+                elif current is None and allow_initial_restore and documents:
+                    effective_id = documents[0].id
                 if effective_id is not None:
                     progress = runs.list_segment_progress(source_document_id=effective_id)
             return project, active_profile, progress, override, documents, effective_id
@@ -414,6 +424,12 @@ class TranslationPage(WorkerPage):
                 params,
             )
             return
+        if self._active_profile_id is None:
+            self._translation_worker.start_translate_auto.emit(
+                self._project_id,
+                self._document_id,
+            )
+            return
         self._set_running(True)
         self._status.setText("Translating…")
         self._hide_config_missing()
@@ -486,25 +502,35 @@ class TranslationPage(WorkerPage):
         self._config_missing_label.setText(reason)
         self._config_missing_label.show()
         self._set_active_profile.show()
+        self._configure_settings.show()
+        self._translate.setEnabled(False)
 
     def _hide_config_missing(self) -> None:
         self._config_missing_label.hide()
         self._set_active_profile.hide()
+        self._configure_settings.hide()
+        if not self._running:
+            self._translate.setEnabled(True)
 
     def _on_request_project_setup(self) -> None:
         self.request_project_setup.emit()
 
+    def _on_request_settings_setup(self) -> None:
+        self.request_settings_setup.emit()
+
     def _on_progress(self, done: int, total: int, stable_key: str) -> None:
         self._progress.setRange(0, max(total, 1))
         self._progress.setValue(done)
-        if total > 0:
+        if total > 0 and self._running:
             self._status.setText(f"Translated {done}/{total} ({stable_key}).")
 
     def _on_segment_completed(self, stable_key: str, revision_id: int) -> None:
-        self._status.setText(f"Segment {stable_key} translated (revision {revision_id}).")
+        if self._running:
+            self._status.setText(f"Segment {stable_key} translated (revision {revision_id}).")
 
     def _on_segment_failed(self, stable_key: str, error: str) -> None:
-        self._status.setText(f"Segment {stable_key} failed: {error}")
+        if self._running:
+            self._status.setText(f"Segment {stable_key} failed: {safe_error_message(error)}")
 
     def _on_finished(self) -> None:
         self._set_running(False)
@@ -514,14 +540,14 @@ class TranslationPage(WorkerPage):
         # it after a run so the segments show their completed/failed outcome.
         if self._mode == MODE_WORKBENCH:
             self.refresh()
-        # A run with no pending segments never emits progress, so replace the
-        # placeholder status instead of leaving "Translating…" forever.
-        if self._status.text() == "Translating…":
-            self._status.setText("Translation finished.")
+        # Replace progress or the placeholder status with a stable terminal
+        # message. Late queued progress/completion signals are ignored because
+        # _running is already false.
+        self._status.setText("Translation finished.")
 
     def _on_failed(self, error: str) -> None:
         self._set_running(False)
-        self._status.setText(f"Translation failed: {error}")
+        self._status.setText(f"Translation failed: {safe_error_message(error)}")
 
     def _on_export(self) -> None:
         if self._document_id is None:
@@ -593,6 +619,7 @@ class TranslationPage(WorkerPage):
             assert isinstance(project, Project)
             assert isinstance(progress, list)
             assert isinstance(documents, list)
+            self._allow_initial_document_restore = False
             self._mode = project.mode
             self._mode_label.setText(
                 "Mode: workbench" if project.mode == MODE_WORKBENCH else "Mode: auto",
@@ -607,6 +634,10 @@ class TranslationPage(WorkerPage):
                 self._hide_config_missing()
             elif project.mode == MODE_AUTO:
                 self._active_profile_label.setText("Active profile: none")
+                self._on_config_missing(
+                    "Create a Connection and Model Profile in Settings, then set the "
+                    "Profile active in Project.",
+                )
             else:
                 self._active_profile_label.setText("")
             self._populate_documents(documents, effective_id, len(progress))
@@ -1173,4 +1204,4 @@ class TranslationPage(WorkerPage):
         # A failed mode change must not leave the selector showing a mode that
         # was never persisted; re-align it with the current project's mode.
         self._sync_mode_switch()
-        self._status.setText(f"Error: {error}")
+        self._status.setText(f"Error: {safe_error_message(error)}")

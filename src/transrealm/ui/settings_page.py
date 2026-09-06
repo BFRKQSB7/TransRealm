@@ -54,7 +54,7 @@ from transrealm.domain.prompt_override import PromptOverride
 from transrealm.domain.provider_connection import ProviderConnection
 from transrealm.domain.segment import SourceDocument
 from transrealm.ui.i18n import LanguageManager
-from transrealm.ui.page_base import WorkerPage
+from transrealm.ui.page_base import WorkerPage, safe_error_message
 from transrealm.ui.workbench import (
     WorkbenchParamEditor,
     WorkbenchPromptEditor,
@@ -101,6 +101,14 @@ class SettingsPage(WorkerPage):
         self._status.setWordWrap(True)
         layout.addWidget(self._status)
 
+        self._connection_count = 0
+        self._profile_count = 0
+        self._setup_hint = QLabel(self)
+        self._setup_hint.setWordWrap(True)
+        self._setup_hint.setObjectName("setup-hint")
+        self._setup_hint.setProperty("transrealm_i18n_dynamic", True)
+        layout.addWidget(self._setup_hint)
+
         language_form = QFormLayout()
         self._language_combo = QComboBox(self)
         self._language_combo.setObjectName("language-selector")
@@ -116,9 +124,18 @@ class SettingsPage(WorkerPage):
         connection_section = QGroupBox("Connections", self)
         connection_section.setObjectName("connections-section")
         connection_layout = QVBoxLayout(connection_section)
+        self._connection_help = QLabel(
+            "Connection = where/how to reach the local OpenAI-compatible service; "
+            "it does not choose a model.",
+            connection_section,
+        )
+        self._connection_help.setWordWrap(True)
+        self._connection_help.setProperty("transrealm_i18n_dynamic", True)
+        connection_layout.addWidget(self._connection_help)
         connection_form = QFormLayout()
         self._conn_name = QLineEdit(self)
         self._conn_endpoint = QLineEdit(self)
+        self._conn_endpoint.setPlaceholderText("e.g. http://127.0.0.1:<port>/v1")
         self._conn_credential = QLineEdit(self)
         self._conn_timeout = QSpinBox(self)
         self._conn_timeout.setRange(1, 3600)
@@ -161,6 +178,14 @@ class SettingsPage(WorkerPage):
         profile_section = QGroupBox("Profiles", self)
         profile_section.setObjectName("profiles-section")
         profile_layout = QVBoxLayout(profile_section)
+        self._profile_help = QLabel(
+            "Model Profile = which model and translation parameters to use; "
+            "select an existing Connection first.",
+            profile_section,
+        )
+        self._profile_help.setWordWrap(True)
+        self._profile_help.setProperty("transrealm_i18n_dynamic", True)
+        profile_layout.addWidget(self._profile_help)
         profile_form = QFormLayout()
         self._profile_name = QLineEdit(self)
         self._profile_model = QLineEdit(self)
@@ -252,7 +277,9 @@ class SettingsPage(WorkerPage):
         self._profile_advanced_toggle.toggled.connect(self._toggle_profile_advanced)
         self._language_combo.currentIndexChanged.connect(self._on_language_changed)
         self._i18n.language_changed.connect(self._sync_language_selection)
+        self._i18n.language_changed.connect(lambda _language: self._refresh_setup_copy())
         self._i18n.bind_tree(self)
+        self._refresh_setup_copy()
         self._save_connection.setEnabled(False)
         self._cancel_connection.setEnabled(False)
         self._save_profile.setEnabled(False)
@@ -690,6 +717,7 @@ class SettingsPage(WorkerPage):
             assert profile.id is not None
             item.setData(Qt.ItemDataRole.UserRole, profile.id)
             self._profiles_list.addItem(item)
+        self._show_setup_hint(len(self._connections_by_id), len(self._profiles_by_id))
 
     def _on_connection_selected(self, current: QListWidgetItem | None, _previous: object) -> None:
         if current is None:
@@ -777,4 +805,42 @@ class SettingsPage(WorkerPage):
         raw_credential = self._conn_credential.text().strip()
         if raw_credential:
             error = error.replace(raw_credential, "[credential reference]")
-        self._status.setText(f"Error: {error}")
+        self._status.setText(f"Error: {safe_error_message(error)}")
+
+    def _refresh_setup_copy(self) -> None:
+        """Retranslate the first-use explanation after a language change."""
+        self._connection_help.setText(
+            self._translate_copy(
+                "Connection = where/how to reach the local OpenAI-compatible service; "
+                "it does not choose a model.",
+            ),
+        )
+        self._profile_help.setText(
+            self._translate_copy(
+                "Model Profile = which model and translation parameters to use; "
+                "select an existing Connection first.",
+            ),
+        )
+        self._show_setup_hint(self._connection_count, self._profile_count)
+
+    def _show_setup_hint(self, connection_count: int, profile_count: int) -> None:
+        """Show the next first-use configuration step without probing the endpoint."""
+        self._connection_count = connection_count
+        self._profile_count = profile_count
+        if connection_count == 0:
+            source = (
+                "Add a Connection with the API address of your already-running "
+                "local OpenAI-compatible service."
+            )
+        elif profile_count == 0:
+            source = "Connection saved. Next, create a Model Profile and choose this Connection."
+        else:
+            source = (
+                "Connection and Model Profile are ready. Next, select the active "
+                "Profile in Project."
+            )
+        self._setup_hint.setText(self._translate_copy(source))
+
+    def _translate_copy(self, source: str) -> str:
+        """Use source copy for English and Qt translation for other languages."""
+        return source if self._i18n.current_language == "en" else self._i18n.tr(source)

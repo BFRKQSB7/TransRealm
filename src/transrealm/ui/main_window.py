@@ -140,6 +140,7 @@ class MainWindow(QMainWindow):
             self._service_worker,
             db_path=db_path,
             app_version=app_version,
+            i18n=self._i18n,
         )
         self._translation = TranslationPage(
             self._service_worker,
@@ -195,6 +196,12 @@ class MainWindow(QMainWindow):
         self._project.document_ready.connect(self._translation.set_document)
         self._translation.request_project_setup.connect(
             lambda: self._tabs.setCurrentIndex(1),
+        )
+        self._project.request_settings_setup.connect(
+            lambda: self._tabs.setCurrentIndex(0),
+        )
+        self._translation.request_settings_setup.connect(
+            lambda: self._tabs.setCurrentIndex(0),
         )
 
         self._settings.refresh()
