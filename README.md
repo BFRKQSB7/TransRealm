@@ -52,7 +52,7 @@ transrealm
 py -3.12 scripts/build_release.py
 ```
 
-产物在 `dist/`（gitignored）：`transrealm/`（onedir）、`transrealm-0.2.0-win-x64.zip`（绿色 artifact）、`build_manifest.json`（候选身份与 hash）。迁移 SQL 数据文件由脚本以 `--add-data "src/transrealm/migrations;transrealm/migrations"` 收集，否则冻结应用无法应用迁移。构建候选不等于提交、推送或发布；外部动作始终需用户单独授权。依赖锁、体积、Qt 插件与杀毒扫描仍属当前 v0.2.0 Release Gate（`03` §12）。
+产物在 `dist/`（gitignored）：`transrealm/`（onedir）、`transrealm-0.2.0-win-x64.zip`（绿色 artifact）、`build_manifest.json`（候选身份与 hash）。迁移 SQL 数据文件由脚本以 `--add-data "src/transrealm/migrations;transrealm/migrations"` 收集，否则冻结应用无法应用迁移。构建候选不等于提交、推送或发布；外部动作始终需用户单独授权。依赖锁、体积与 Qt 插件属于当前 v0.2.0 Release Gate（`03` §12）；杀毒扫描为可跳过检查，但必须按 `PASS/FAIL/NOT_RUN-SKIPPED_BY_USER` 如实留痕，`FAIL` 阻塞、明确跳过不阻塞且不等于通过。
 
 ## 开发质量检查
 

@@ -20,7 +20,7 @@
 
 ## 3. 未覆盖项（需用户/后续处理）
 
-- **杀毒扫描未执行（知情例外）。** 候选未经反病毒扫描。本机 Windows Defender 实时保护已禁用且非管理员权限，`MpCmdRun` 扫描不可执行（hr=0x80004005）。2026-08-08 用户在知情前提下授权在未扫描状态发布（`DEVELOPMENT_STATE.md` 记录）；**建议发布后在具备 AV 能力的环境对候选 zip/onedir 补扫并归档结果。**
+- **杀毒扫描未执行（`NOT_RUN-SKIPPED_BY_USER`）。** 当前 v0.2.0 候选 commit=`5744b9db53028c0bcbed48c37fac9fc6d3fe2d1e`、ZIP SHA-256=`a4da4eff71facc38064b33042bae45a2ab5a578fdc679cf9c636ac001f9ca498` 未经反病毒扫描。decision_time=`2026-09-07 Asia/Shanghai`，decision_actor=`user`，execution_actor=`none`，scan_scope/engine/signatures=`not run`。原因：本机 Windows Defender 实时保护已禁用且当前会话非管理员，既有 `MpCmdRun` 尝试返回 hr=0x80004005；用户选择把 AV 作为可跳过项。该状态本身不阻断发布，但绝不等于 `PASS`；残余风险是没有独立反恶意软件检测结论，hash、secret/hygiene 检查与功能测试不能排除此风险。若后续补扫，结果必须绑定同一候选并归档；任何 `FAIL` 都会恢复发布阻塞。2026-08-08 v0.1.0 曾在用户知情例外下未经扫描发布，作为历史事实保留。
 - **冻结应用内的完整 GUI 自动化旅程未驱动。** 受 UIAutomation 驱动 Qt 的脆弱性限制，未自动化"冻结应用内创建项目→导入→翻译→导出"全旅程；当前证据 = 冻结应用的启动/迁移/关闭 smoke + 源码级真实窗口完整旅程（P1-T03/P0-T08）。发布后的最终人工 smoke 属用户后续动作。
 - **长文本/性能指标只记录基线，不断言阈值。** 资源基线（120 段长文本：约 3.0s、峰值约 2.5MB）是证据记录而非门禁阈值；可比较基线需在候选归档时固化。
 - **远程 CI 已接入并全绿。** `quality.yml`（pytest/Ruff/mypy）与 `security.yml`（Candidate hygiene + 迁移顺序）在 push/PR 上运行；2026-08-08 修复 CI 安装步骤（`-e ".[dev]"` 之后追加 `pip install -r requirements.lock`）使锁==安装守卫在 CI 上真实有效，Quality Test/Lint/Type check 均通过（CI 因环境差异额外 skip 符号链接相关用例，非失败）。

@@ -114,12 +114,12 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 
 ### V02-T05 — v0.2 Release Candidate Gate
 
-- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P0 Release-blocking；High；blocked（2026-08-28 REPLAN：新增 M02，等待独立代码/测试授权；内部候选 Gate 历史完成保留，人工 smoke 未通过、AV 未执行，当前候选不可正式发布）。依赖 V02-T01 至 T04；M02 为 proposed。
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P0 Release-blocking；High；verification（M02 源码阶段完成；内部候选 Gate 历史完成保留，目标 GUI/人工 smoke 与重建候选签收未完成，当前候选不可正式发布）。AV 为可跳过项，当前记 `NOT_RUN-SKIPPED_BY_USER`，不单独构成阻塞。依赖 V02-T01 至 T04。
 - **Reality Audit：** REFINE——复用 P1-T05 并增加视觉/i18n/六格式 GUI/删除恢复门禁。
 - **目标：** 形成可定位、可恢复、可人工签核的 Windows 11 v0.2 候选。
 - **硬约束：** 从 clean commit 构建，manifest `git_dirty=false` 且 commit==HEAD；中英文资源、Qt 插件和 migration 全收集；自动旅程仅 fake endpoint；未经授权不 push/tag/Release。
 - **Gate：** 全量 pytest/Ruff/mypy、candidate hygiene、六格式冻结 GUI、删除备份恢复、Connection/Profile、Auto/Workbench、中英文+DPI 截图、旧 v0.1 数据升级、zip/manifest/hash、干净 Windows 启动/关闭/清理、独立 Review。
-- **完成条件：** release-blocking 项全部布尔通过、证据归档且无 P0/P1；AV、真实端点、正式发布缺外部环境时保持未通过或提交用户明确裁决。
+- **完成条件：** release-blocking 项全部布尔通过、证据归档且无 P0/P1。AV 必须三选一留痕：`PASS`、`FAIL`、`NOT_RUN-SKIPPED_BY_USER`；`FAIL` 阻塞，明确的 `NOT_RUN-SKIPPED_BY_USER` 不阻塞但不算通过。真实端点适用性和正式发布仍须提交用户明确裁决。
 - **历史内部候选完成证据（不覆盖新增 M02/人工签收）：** 首轮 Review 的 clean-source、manifest ZIP 选择和候选文档漂移问题已在允许范围内修复；checkpoint=`5744b9db53028c0bcbed48c37fac9fc6d3fe2d1e`，候选 `0.2.0` manifest `git_dirty=false` 且 commit==HEAD，12 migrations、双语资源、Qt 插件、EXE/ZIP hash/size 与文档一致；候选/文档/版本专项 `10 passed`，指定 V1.0 T05 M01–M05 + v0.2 M01 回归 `43 passed`，最终全量 pytest `1385 passed, 1 skipped`，Ruff/mypy/pip check/candidate hygiene/manifest/hash 均通过；Windows 冻结启动、迁移、关闭、外置数据保护与删除程序目录 smoke 通过。未覆盖项如实保留：symlink 权限 skip、AV 扫描、冻结应用完整人工旅程、真实端点和正式发布。
 
 #### V02-T05-M01 — 候选版本身份与版本基线
@@ -131,7 +131,7 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 
 #### V02-T05-M02 — 候选签收前：首次配置、闭环与错误脱敏
 
-- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P0 Release-blocking（首次翻译/完整人工 smoke 未完成），错误信息暴露为 P1 安全；High；`verification`（源码实现与自动化门禁完成；目标 GUI 矩阵、候选、AV 与签发仍未授权/未验证）。
+- **Phase/Release / Priority / Risk / 状态：** Phase 1.5A / v0.2.0；P0 Release-blocking（首次翻译/完整人工 smoke 未完成），错误信息暴露为 P1 安全；High；`verification`（源码实现与自动化门禁完成；目标 GUI 矩阵、候选与签发仍未授权/未验证；AV 已记 `NOT_RUN-SKIPPED_BY_USER`）。
 - **decision_id / decision_result / Reality Audit：** `DEC-V02-T05-M02-SIGNOFF-REPAIR` / **REPLAN** / REFINE。内部 Gate 的通过证据不覆盖首次使用失败；新增一个受限修复 Milestone，不扩大 release 或重开整个 UI 架构。决策理由与不变契约见 `08_Architecture_Review.md` §35；即时指针/授权只在 `DEVELOPMENT_STATE.md`。
 - **输入与事实依据：** 本次只使用 `DEVELOPMENT_STATE.md`、本文件、`08_Architecture_Review.md`、`09_Unattended_Development_Governance.md`、`RELEASE_CHECKLIST.md`、`.local/verification/manual-signoff/SIGNOFF.md`、`AGENTS.md` 和本轮用户事实。人工 create/import 仅可能成功、translate 未完成；原记录的 GUI PASS 不构成完整旅程通过。未查代码根因，不能预称“配置流程已修复”。
 - **base_commit / rollback_ref：** 均固定为 `5744b9db53028c0bcbed48c37fac9fc6d3fe2d1e`；内部候选 Gate 是历史依赖，不是 M02 验收结果。保持用户当前 `master`，不创建/切换/删除分支。
@@ -146,7 +146,7 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 - 设计参考已保存至 `D:/TransRealm/.local/verification/v02-t05-m02/20260828-145021/design-reference.md`；命令原始结果、合成旅程、安全范围、GUI 矩阵和 Review 见同目录 `commands.log`、`journey.md`、`security-scope.md`、`gui-matrix.md`、`review.md`。
 - 最终自动化结果：M02 `6 passed`；指定旧回归 `25 passed`；全量 pytest `1391 passed, 1 skipped`；Ruff、mypy（151 source files）、pip check、`git diff --check` 均通过；Qt en/zh_CN `.qm` 各生成 114 条完成翻译。
 - 源码 Review 无 P0/P1 blocker；Windows GUI 工具在目标窗口选择前初始化失败，English/zh_CN × `1280x720 @100%`、`1920x1080 @150%` 的实际交互/截图/DPR/视觉 Review 均保持未验证。真实 llama-server、冻结候选、AV 和外部签收不继承旧证据，仍未执行。
-- 当前状态仅推进为 `verification`；不标记 `completed`，不推进 Task/Milestone，不暂存或提交。下一步需独立 checkpoint/候选构建授权，再对同一候选执行人工 GUI/AV 签收。
+- 当前状态仅推进为 `verification`；不标记 `completed`，不推进 Task/Milestone，不暂存或提交。下一步需独立 checkpoint/候选构建授权，再对同一候选执行人工 GUI 签收；AV 可补扫或维持已留痕的明确跳过状态。
 
 **GUI 设计方法：优先参考成熟设计（用户补充要求）**
 
@@ -181,7 +181,7 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 | 双语 GUI/视觉 | Windows 11 x64 下 English/zh_CN × `1280x720 @100%` / `1920x1080 @150%` 四组合；覆盖主壳、Settings、Project、Auto、Workbench 的适用空/缺配置、运行/禁用、错误、成功及关闭重开状态。每格有实际交互与截图，检查截断/重叠、滚动可达、Tab/焦点、标签语义、禁用原因与恢复动作。无适用场景的格须给理由并由独立 Review 确认；不得用代表图宣称全组合通过。记录屏幕/窗口像素与有效 DPR，离屏截图只能补充；无目标显示环境记为未验证。既有 `2560x1440 @150%` 不能替代。 |
 | 人工签收 | 新用户/原测试人员仅按修订后的应用提示与用户文档操作，无开发者临时口头指路，能说明 Connection/Profile/active 的区别并完成配置和完整闭环；逐步记录实际结果、失败/未覆盖、环境、时间、执行者及证据。无真实 llama.cpp 调用，不声称验证了真实模型质量/兼容性。冻结候选须重新跑该项和目标视觉矩阵，不能套用源码截图。 |
 | 质量/旧回归/Review | 受影响旧测试及全量 pytest、Ruff、mypy、pip check、范围/秘密/输出路径检查通过；独立行为、安全与视觉 Review 无未解决 P0/P1。测试未跑/skip 不等于通过；每项 skip 必须说明适用性，当前核心闭环/脱敏/GUI 缺证据不得豁免。旧“1385 passed”只作历史，不预填新结果。 |
-| 独立外部 AV | 不属于代码修复结果；用户在具备 AV 能力的环境对最终同一候选 ZIP 和解压 onedir 扫描，保存引擎/病毒库版本、时间、候选 hash、扫描范围、原始结果与执行者。AV 不可用保持 BLOCKED，不能用 hash、安全单测、fake endpoint 或启动成功替代，也不授权更改本机防护。 |
+| 独立外部 AV（可跳过） | 不属于代码修复结果；每个最终候选必须记录 `PASS`、`FAIL` 或 `NOT_RUN-SKIPPED_BY_USER`。实际扫描时保存引擎/病毒库版本、时间、候选 hash、扫描范围、原始结果与执行者；跳过时保存决定时间/决定者、能力限制或原因及残余风险。`FAIL` 保持 BLOCKED；`NOT_RUN-SKIPPED_BY_USER` 不阻塞但不是 `PASS`。不能用 hash、安全单测、fake endpoint 或启动成功替代，也不授权更改本机防护。 |
 
 - **兼容性基线/命令：** 后续先核对文档所列测试是否存在及 nodeid；旧回归至少包括 `tests/test_v02_t03_m01.py`、`tests/test_v02_t03_m02.py`、`tests/test_v02_t02_m01.py`、`tests/test_v02_t04_m01.py` 至 `test_v02_t04_m04.py`、`tests/test_p0_t08_m05.py`、`tests/test_p1_t03_m04.py`、`tests/test_p1_t03_m05.py`、`tests/test_p1_t04_m04.py`、`tests/test_p1_t04_m05.py`、`tests/test_model_profile.py`、`tests/test_p0_t03_m03.py` 与 `tests/test_p1_t05_m02.py`/`test_p1_t05_m03.py`。按实际存在的路径记录定向 `python -m pytest -q <明确文件/nodeid列表>` 命令及结果；缺失项不悄悄跳过，先报告并核对等价旧覆盖。全量门禁用 `D:/TransRealm/.venv/Scripts/python.exe -m pytest -q`、同解释器 `-m ruff check src tests`、`-m mypy src tests`、`-m pip check`，加 `git diff --check`；全量不能替代上述受影响旧回归。运行前隔离缓存/临时/用户配置输出，不改机器设置。
 - **冻结候选依赖与停止点：** M02 源码验证后，另获 checkpoint 和构建授权，才能将已验证的限定变更形成 clean commit，并用既有构建流程重新进入 `V02-T05-CANDIDATE-GATE`。构建前可逆保留旧候选及其 manifest/hash 到项目内归档（仅后续获准时）；新 manifest `git_dirty=false`、目标 commit 与构建源 HEAD 一致，重跑候选专项/版本/插件/资源/六格式/迁移恢复/安全等适用 Gate。不得用旧 ZIP 验证新 UI，旧 hash/AV 结果不得继承；构建或旧回归失败立即停止签收推进。候选构建不属于 M02 代码授权自动附带的动作。
@@ -196,9 +196,9 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 | 同目录 `negative-security.md`、`gui-matrix.md`、`screenshots/<language>/<display>/<page>-<state>-<step>.png` | 故障注入/恢复/脱敏结果；逐格证据索引、系统/显示/DPR/窗口尺寸、截图对应源码身份；成功与失败图都先检查敏感信息。 |
 | 同目录 `review.md`、`recovery.md` | 独立行为/安全/视觉 Review 的发现与复核；失败恢复步骤、合成数据/备份核对、未覆盖项及下一授权，不预写 APPROVE。 |
 | `D:/TransRealm/.local/verification/manual-signoff/v02-t05-m02/<candidate-id>/RESULT.md`、`gui-matrix.md`、`screenshots/`、`candidate-identity.json` | 后续重建候选的实际 commit/ZIP/EXE hash/manifest、逐步人工与目标双语显示矩阵、签收人/时间/失败项。candidate-id 必须绑定实际构建身份；原 `SIGNOFF.md` 与 `error.png` 只保留内部原件。 |
-| `D:/TransRealm/.local/verification/manual-signoff/av/<candidate-id>/RESULT.md`、`scan.log` | 后续由用户提供的独立 AV 证据；明确候选身份和原始结果，未执行不生成 PASS。 |
+| `D:/TransRealm/.local/verification/manual-signoff/av/<candidate-id>/RESULT.md`、`scan.log`（如实际扫描） | AV 三态记录；明确候选身份。实际扫描绑定原始结果；未执行则只记录 `NOT_RUN-SKIPPED_BY_USER`、决定者/时间、原因与残余风险，不生成 `scan.log`，不得写成 PASS。 |
 
-- **解除条件与下一状态：** 新代码/测试授权 + 现场/环境准入后才进入 M02 实施；源码/GUI/异常安全/旧回归/独立 Review 完成后只记“源码验证完成，冻结候选签收待完成”，停止请求 checkpoint/构建授权。重建候选 Gate 及同候选人工闭环/视觉证据通过，才可将本修复交付记 completed 并推进外部 AV/最终签收；缺 AV 不改写为代码失败，也不放行 T05。真实端点仍是未执行且范围外的独立待裁决项，不能作为本地修复阻塞或已通过证据。
+- **解除条件与下一状态：** 新代码/测试授权 + 现场/环境准入后才进入 M02 实施；源码/GUI/异常安全/旧回归/独立 Review 完成后只记“源码验证完成，冻结候选签收待完成”，停止请求 checkpoint/构建授权。重建候选 Gate 及同候选人工闭环/视觉证据通过，才可将本修复交付记 completed 并推进最终签收；AV 只要求三态如实留痕，`NOT_RUN-SKIPPED_BY_USER` 不阻塞 T05，`FAIL` 仍阻塞。真实端点仍是未执行且范围外的独立待裁决项，不能作为本地修复阻塞或已通过证据。
 - **失败恢复/升级：** 先保留失败证据与合成数据，暂停本次进程；不改写原签收证言，不删除日志来获得通过。只在明确授权后撤销本 M02 可识别改动，或在项目内隔离复现固定 checkpoint；保留原候选、数据库/备份和全部既有 dirty，不做整树 reset/restore/clean。若发现业务核心/公共契约/新依赖/路径隔离超界需求，停冲突部分 REPLAN，附最小额外路径和影响，未获新决策不实现。
 - **最终停止点：** 本轮计划文档修改后立即停止；后续不得自动沿用旧连续开发或本地提交权限。AV/人工签收/真实端点适用性/正式签发各自未决即如实记录；即使全部适用门禁通过，也只交用户做签发决策，绝不自动发布、push、merge、tag、Release、创建远程资源或进入 v0.3。
 
@@ -251,7 +251,7 @@ v0.2 是 v0.1.0 可靠内核之上的桌面可用性版本。在 V02-T05 完成�
 - **Phase/Release / Priority / Risk / 状态：** Phase 1.5B / v0.3.0；P0 Release Gate；High；proposed；依赖 V03-T01～T05。
 - **目标/用户价值：** 收束数据根、迁移、Project 切换、容器、跨机和恢复为可签收 v0.3 候选。
 - **范围上限：** 旧/新回归、端到端/故障注入、Windows GUI 中英文 × 目标 DPI/分辨率、Portable 候选数据目录、文档、独立 Review；候选构建、AV、外部签收、commit/push/tag/Release 分别遵守当次授权。
-- **完成条件：** 全量质量门禁与专项矩阵通过；安装/删除程序目录不误删外置 Project；网络盘明确不支持；真实端点不作前置（使用本地 fake endpoint）；AV 和人工签收如未完成保持 blocked/incomplete。全部适用门禁齐备后停在用户签发决定前。
+- **完成条件：** 全量质量门禁与专项矩阵通过；安装/删除程序目录不误删外置 Project；网络盘明确不支持；真实端点不作前置（使用本地 fake endpoint）；人工签收未完成保持 blocked/incomplete。AV 必须记录 `PASS/FAIL/NOT_RUN-SKIPPED_BY_USER`，其中 `FAIL` 阻塞、明确跳过不阻塞。全部适用门禁齐备后停在用户签发决定前。
 
 ## 1. Task规范
 
@@ -768,10 +768,11 @@ V1.0 不包含：RAG、智能 TM、World State、节点式 Workflow 编辑器、
 
 ## 20. P1-T05 — V1.0 异常恢复与 Release Candidate Gate
 
+- **AV 口径更新（2026-09-07）：** 本节历史 Milestone 行中的“需用户在 AV 环境扫描”由 `DEC-RELEASE-AV-OPTIONAL` 取代。当前三态为 `PASS/FAIL/NOT_RUN-SKIPPED_BY_USER`；`FAIL` 阻塞，明确跳过不阻塞且不等于通过，未记录则清单不完整。
 - **Task 编号：** P1-T05
 - **Phase/Release：** Phase 1 / V1.0
 - **Priority：** P0
-- **状态：** completed（M01–M05 completed，2026-08-08——可恢复 Git 基线 `3ef991d` 已于 2026-08-08 经用户授权形成；M04 候选构建于 `dist/`；工作树改动与候选均未提交/推送。对外发布仍等待用户单独授权：杀毒扫描需用户 AV 环境执行、冻结 GUI 最终手工 smoke 需用户授权发布时执行）
+- **状态：** completed（M01–M05 completed，2026-08-08——可恢复 Git 基线 `3ef991d` 已于 2026-08-08 经用户授权形成；M04 候选构建于 `dist/`；工作树改动与候选均未提交/推送。对外发布仍等待用户单独授权和冻结 GUI 最终手工 smoke；杀毒扫描可执行或明确跳过并留痕）
 - **Reality Audit：** `REFINE + SPLIT + SIMPLIFY`。底层已有部分 migration/adapter/validator 异常测试，但没有跨 Task release matrix、长文本、正式 dependency lock、Windows artifact 或用户文档。该 Task 只收口和修复阻塞缺陷，不新增产品能力；GitHub 创建/推送/发布是单独的用户授权操作，不作为本次自动动作。
 - **目标：** 用可判定证据证明 V1.0 在支持的 Windows 11 环境中可安装/解压、启动、翻译、迁移、恢复和清理，并产出尚未对外发布的 release candidate。
 - **非目标：** 不新增功能、不开始 V1.x、不自动创建 GitHub 资源、不提交/推送/发布、不用真实付费 API 跑自动矩阵。
