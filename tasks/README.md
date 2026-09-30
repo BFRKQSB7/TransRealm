@@ -13,9 +13,9 @@ Model allocation last rechecked against Codex Radar on 2026-09-20. Radar's curre
 | [T03](T03-translation-facade-reliable-pipeline.md) | Translation facade and reliable single-segment pipeline | DONE | XL | L4 / `gpt-6-astra` | MEDIUM | T01 |
 | [T04](T04-unified-translation-workspace.md) | Unified Translation workspace | DONE | XL | L3 / `gpt-6-astra` | MEDIUM | T01, T02, T03 |
 | [T05](T05-providers-prompts-navigation.md) | Providers, Prompts, and three-page navigation | DONE | L | L3 / `gpt-6-astra` | MEDIUM | T04 |
-| [T06](T06-v1-release-candidate.md) | V1 regression and local Windows EXE/ZIP candidate | IN_PROGRESS | L | L3 / `gpt-6-astra` | MEDIUM | T05 |
+| [T06](T06-v1-release-candidate.md) | V1 regression and local Windows EXE/ZIP candidate | DONE | L | L3 / `gpt-6-astra` | MEDIUM | T05 |
 
-Recommended next task: **Continue T06 — V1 regression and local Windows EXE/ZIP candidate**. The user authorized committing the reviewed source before building and completing acceptance on this computer. AV scanning, clean Windows 11 acceptance, and additional independent review are outside the local delivery scope. Retain the clean-source build guard; commit the verified baseline, build a current candidate, and run actual local acceptance. Existing `dist/` artifacts remain prior-source evidence until replaced by the verified current candidate.
+Recommended next action: **Use the local EXE/ZIP and collect real-use feedback**. T01–T06 are complete. The reviewed source was committed before packaging; source quality, native Windows checks, the actual executable's controlled translation/recovery journey, package/data hygiene, and backup/rollback rehearsal passed on this computer. File selection was simulated with isolated project-local data as requested by the user. The current candidate is in `dist/`, and candidate-bound results are under `.local/verification/t06-local-candidate/`. The file-symlink test remains a documented privilege-related coverage limitation. AV scanning, clean Windows 11 acceptance, and additional independent review are outside the local delivery scope.
 
 ## Milestones
 
