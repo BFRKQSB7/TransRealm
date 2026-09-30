@@ -73,6 +73,7 @@ def _setup_profile(qtbot: Any, window: MainWindow, *, name: str = "general") -> 
 def _create_project(qtbot: Any, window: MainWindow, *, name: str = "Demo") -> None:
     project = window._project
     project._project_name.setText(name)
+    project._create_box.setChecked(True)
     project._create_project.click()
     qtbot.waitUntil(lambda: project._project_id is not None, timeout=5000)
     qtbot.waitUntil(lambda: project._project_combo.count() >= 1, timeout=5000)
@@ -113,7 +114,7 @@ class TestActiveProfileSelection:
         )
         project._set_active.click()
         qtbot.waitUntil(
-            lambda: "Active profile set" in project._status.text(),
+            lambda: "Selected model set" in project._status.text(),
             timeout=5000,
         )
         qtbot.waitUntil(
@@ -129,11 +130,11 @@ class TestActiveProfileSelection:
 
         project._clear_active.click()
         qtbot.waitUntil(
-            lambda: "Active profile cleared" in project._status.text(),
+            lambda: "Selected model cleared" in project._status.text(),
             timeout=5000,
         )
         qtbot.waitUntil(
-            lambda: "Active profile: none" in project._active_profile_label.text(),
+            lambda: "Selected model: none" in project._active_profile_label.text(),
             timeout=5000,
         )
 
@@ -161,7 +162,7 @@ class TestActiveProfileSelection:
         )
         project._set_active.click()
         qtbot.waitUntil(
-            lambda: "Active profile set" in project._status.text(),
+            lambda: "Selected model set" in project._status.text(),
             timeout=5000,
         )
 
@@ -363,7 +364,7 @@ class TestActionableDeletes:
         )
         project._set_active.click()
         qtbot.waitUntil(
-            lambda: "Active profile set" in project._status.text(),
+            lambda: "Selected model set" in project._status.text(),
             timeout=5000,
         )
 
@@ -371,7 +372,7 @@ class TestActionableDeletes:
         settings._profiles_list.setCurrentRow(0)
         settings._delete_profile.click()
         qtbot.waitUntil(
-            lambda: "active profile" in settings._status.text(),
+            lambda: "active model" in settings._status.text(),
             timeout=5000,
         )
         assert settings._profiles_list.count() == 1
@@ -379,7 +380,7 @@ class TestActionableDeletes:
         # Clearing the active profile releases the deletion guard.
         project._clear_active.click()
         qtbot.waitUntil(
-            lambda: "Active profile cleared" in project._status.text(),
+            lambda: "Selected model cleared" in project._status.text(),
             timeout=5000,
         )
         settings._profiles_list.setCurrentRow(0)

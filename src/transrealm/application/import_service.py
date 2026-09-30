@@ -7,6 +7,7 @@ from transrealm.infrastructure.database import create_database
 from transrealm.infrastructure.migrations.discovery import discover_migrations
 from transrealm.infrastructure.migrations.runner import MigrationRunner
 from transrealm.infrastructure.parsers.parser import ParserRegistry, default_registry
+from transrealm.infrastructure.parsers.txt_parser import LegacyTxtParser, TxtParser
 from transrealm.infrastructure.repositories.project_repository import ProjectRepository
 from transrealm.infrastructure.repositories.segment_repository import SegmentRepository
 
@@ -109,6 +110,16 @@ class ImportService:
                 f"SourceDocument with id {source_document_id} does not exist.",
             )
         parser = self._parser_registry.get(document.format)
+        if document.format == "txt":
+            if document.parser_version == LegacyTxtParser.version:
+                parser = LegacyTxtParser()
+            elif document.parser_version == TxtParser.version:
+                parser = TxtParser()
+            else:
+                raise ValueError(
+                    f"Unsupported TXT parser version {document.parser_version}; "
+                    "refusing to backfill fidelity data.",
+                )
         parsed_document, parsed_segments = parser.parse(
             file_path,
             project_id=document.project_id,

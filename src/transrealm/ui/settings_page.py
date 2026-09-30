@@ -1,13 +1,5 @@
-"""PySide6 pages for the desktop shell.
+"""Provider and model configuration through the service worker."""
 
-Each page runs every Application Service call through a :class:`ServiceWorker`
-(on a dedicated thread), so no SQLite connection or long operation ever runs on
-the Qt main thread. Pages expose programmatic entry points (``import_file``,
-``export_to``, ``translate``) so pytest-qt tests can drive them without modal
-file dialogs.
-"""
-
-# ruff: noqa: F401
 from __future__ import annotations
 
 import json
@@ -19,7 +11,6 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
-    QFileDialog,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
@@ -27,9 +18,9 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
-    QProgressBar,
     QPushButton,
     QSpinBox,
+    QTabWidget,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -39,28 +30,13 @@ from transrealm.application.credential_status import (
     CredentialStatus,
     report_credential_availability,
 )
-from transrealm.application.glossary_service import GlossaryService
-from transrealm.application.import_service import ImportService
 from transrealm.application.model_profile_service import ModelProfileService
-from transrealm.application.preset_templates import current_preset
-from transrealm.application.project_service import ProjectService
 from transrealm.application.provider_connection_service import ProviderConnectionService
-from transrealm.application.translation_run_service import TranslationRunService
-from transrealm.application.workbench import SegmentProgress, presented_parameters
-from transrealm.domain.glossary_entry import GlossaryEntry
 from transrealm.domain.model_profile import ModelCapability, ModelCapabilityError, ModelProfile
-from transrealm.domain.project import MODE_AUTO, MODE_WORKBENCH, Project
-from transrealm.domain.prompt_override import PromptOverride
 from transrealm.domain.provider_connection import ProviderConnection
-from transrealm.domain.segment import SourceDocument
 from transrealm.ui.i18n import LanguageManager
-from transrealm.ui.page_base import WorkerPage
-from transrealm.ui.workbench import (
-    WorkbenchParamEditor,
-    WorkbenchPromptEditor,
-    WorkbenchRevisionEditor,
-)
-from transrealm.ui.worker import ServiceWorker, TranslationWorker
+from transrealm.ui.page_base import WorkerPage, safe_error_message
+from transrealm.ui.worker import ServiceWorker
 
 _DEFAULT_BUDGET: dict[str, object] = {
     "total": 8192,
@@ -69,13 +45,10 @@ _DEFAULT_BUDGET: dict[str, object] = {
 }
 
 
-class SettingsPage(WorkerPage):
-    """Create and manage provider connections and model profiles.
+class ProvidersPage(WorkerPage):
+    """Manage endpoint references, models, capabilities and supported parameters."""
 
-    Extended for P1-T04-M04: connection/profile deletion with actionable
-    in-use errors and an actionable hint when a connection's credential
-    reference does not resolve on this machine.
-    """
+    configuration_changed = Signal()
 
     def __init__(
         self,
@@ -97,9 +70,20 @@ class SettingsPage(WorkerPage):
         layout = QVBoxLayout(self)
 
         self._status = QLabel("", self)
+        self._status.setProperty("transrealm_i18n_dynamic", True)
+        self._status_source = ""
+        self._status_is_error = False
         self._status.setObjectName("status-banner")
         self._status.setWordWrap(True)
         layout.addWidget(self._status)
+
+        self._connection_count = 0
+        self._profile_count = 0
+        self._setup_hint = QLabel(self)
+        self._setup_hint.setWordWrap(True)
+        self._setup_hint.setObjectName("setup-hint")
+        self._setup_hint.setProperty("transrealm_i18n_dynamic", True)
+        layout.addWidget(self._setup_hint)
 
         language_form = QFormLayout()
         self._language_combo = QComboBox(self)
@@ -112,14 +96,27 @@ class SettingsPage(WorkerPage):
             self._language_combo.setCurrentIndex(language_index)
         language_form.addRow("Language", self._language_combo)
         layout.addLayout(language_form)
+        self._sections = QTabWidget(self)
+        layout.addWidget(self._sections, 1)
 
-        connection_section = QGroupBox("Connections", self)
+        connection_section = QGroupBox("Providers", self)
         connection_section.setObjectName("connections-section")
         connection_layout = QVBoxLayout(connection_section)
+        self._connection_help = QLabel(
+            "Provider = API address and credentials for a local or online "
+            "OpenAI-compatible service.",
+            connection_section,
+        )
+        self._connection_help.setWordWrap(True)
+        self._connection_help.setProperty("transrealm_i18n_dynamic", True)
+        connection_layout.addWidget(self._connection_help)
         connection_form = QFormLayout()
         self._conn_name = QLineEdit(self)
         self._conn_endpoint = QLineEdit(self)
+        self._conn_endpoint.setPlaceholderText("e.g. http://127.0.0.1:<port>/v1")
         self._conn_credential = QLineEdit(self)
+        self._conn_credential.setPlaceholderText("env:NAME or wincred:TARGET")
+        self._conn_credential.setEchoMode(QLineEdit.EchoMode.PasswordEchoOnEdit)
         self._conn_timeout = QSpinBox(self)
         self._conn_timeout.setRange(1, 3600)
         self._conn_timeout.setValue(30)
@@ -133,53 +130,68 @@ class SettingsPage(WorkerPage):
         self._conn_retry_delay.setDecimals(2)
         self._conn_retry_delay.setValue(0.0)
         self._conn_retry_delay.setObjectName("connection-retry-delay")
-        self._add_connection = QPushButton("Add Connection", self)
-        self._edit_connection = QPushButton("Edit Selected Connection", self)
-        self._save_connection = QPushButton("Save Connection", self)
-        self._cancel_connection = QPushButton("Cancel Connection Edit", self)
+        self._add_connection = QPushButton("Add Provider", self)
+        self._edit_connection = QPushButton("Edit Selected Provider", self)
+        self._save_connection = QPushButton("Save Provider", self)
+        self._cancel_connection = QPushButton("Cancel Provider Edit", self)
         connection_form.addRow("Name", self._conn_name)
         connection_form.addRow("Endpoint", self._conn_endpoint)
         connection_form.addRow("Timeout (seconds)", self._conn_timeout)
         connection_form.addRow("Max retries", self._conn_retries)
         connection_form.addRow("Retry delay (seconds)", self._conn_retry_delay)
         connection_form.addRow("Credential ref", self._conn_credential)
-        connection_form.addRow(self._add_connection)
-        connection_form.addRow(self._edit_connection)
-        connection_form.addRow(self._save_connection)
-        connection_form.addRow(self._cancel_connection)
+        for buttons in (
+            (self._add_connection, self._edit_connection),
+            (self._save_connection, self._cancel_connection),
+        ):
+            actions = QHBoxLayout()
+            for button in buttons:
+                actions.addWidget(button)
+            connection_form.addRow(actions)
         connection_layout.addLayout(connection_form)
         self._connections_list = QListWidget(self)
         connection_layout.addWidget(self._connections_list)
-        self._delete_connection = QPushButton("Delete Selected Connection", self)
+        self._delete_connection = QPushButton("Delete Selected Provider", self)
         connection_layout.addWidget(self._delete_connection)
 
         self._credential_status = QLabel("", self)
         self._credential_status.setWordWrap(True)
         connection_layout.addWidget(self._credential_status)
-        layout.addWidget(connection_section)
+        self._sections.addTab(connection_section, "Providers")
 
-        profile_section = QGroupBox("Profiles", self)
+        profile_section = QGroupBox("Models", self)
         profile_section.setObjectName("profiles-section")
         profile_layout = QVBoxLayout(profile_section)
+        self._profile_help = QLabel(
+            "Model = model id and translation parameters. Select an existing Provider first.",
+            profile_section,
+        )
+        self._profile_help.setWordWrap(True)
+        self._profile_help.setProperty("transrealm_i18n_dynamic", True)
+        profile_layout.addWidget(self._profile_help)
         profile_form = QFormLayout()
         self._profile_name = QLineEdit(self)
         self._profile_model = QLineEdit(self)
         self._profile_connection = QComboBox(self)
-        self._add_profile = QPushButton("Add Profile", self)
-        self._edit_profile = QPushButton("Edit Selected Profile", self)
-        self._save_profile = QPushButton("Save Profile", self)
-        self._cancel_profile = QPushButton("Cancel Profile Edit", self)
+        self._add_profile = QPushButton("Add Model", self)
+        self._edit_profile = QPushButton("Edit Selected Model", self)
+        self._save_profile = QPushButton("Save Model", self)
+        self._cancel_profile = QPushButton("Cancel Model Edit", self)
         profile_form.addRow("Name", self._profile_name)
         profile_form.addRow("Model id", self._profile_model)
-        profile_form.addRow("Connection", self._profile_connection)
-        profile_form.addRow(self._add_profile)
-        profile_form.addRow(self._edit_profile)
-        profile_form.addRow(self._save_profile)
-        profile_form.addRow(self._cancel_profile)
+        profile_form.addRow("Provider", self._profile_connection)
+        for buttons in (
+            (self._add_profile, self._edit_profile),
+            (self._save_profile, self._cancel_profile),
+        ):
+            actions = QHBoxLayout()
+            for button in buttons:
+                actions.addWidget(button)
+            profile_form.addRow(actions)
         profile_layout.addLayout(profile_form)
 
         self._profile_advanced_toggle = QToolButton(self)
-        self._profile_advanced_toggle.setText("Advanced Profile Settings")
+        self._profile_advanced_toggle.setText("Advanced Model Settings")
         self._profile_advanced_toggle.setCheckable(True)
         self._profile_advanced_toggle.setChecked(False)
         self._profile_advanced_toggle.setArrowType(Qt.ArrowType.RightArrow)
@@ -191,7 +203,7 @@ class SettingsPage(WorkerPage):
         self._profile_advanced = QWidget(self)
         advanced_form = QFormLayout(self._profile_advanced)
         self._profile_template_version = QLineEdit("1.0.0", self._profile_advanced)
-        self._profile_output_protocol = QLineEdit("json", self._profile_advanced)
+        self._profile_output_protocol = QLineEdit("text", self._profile_advanced)
         self._profile_context_total = QSpinBox(self._profile_advanced)
         self._profile_context_total.setRange(1, 10_000_000)
         self._profile_context_total.setValue(8192)
@@ -233,9 +245,9 @@ class SettingsPage(WorkerPage):
 
         self._profiles_list = QListWidget(self)
         profile_layout.addWidget(self._profiles_list)
-        self._delete_profile = QPushButton("Delete Selected Profile", self)
+        self._delete_profile = QPushButton("Delete Selected Model", self)
         profile_layout.addWidget(self._delete_profile)
-        layout.addWidget(profile_section)
+        self._sections.addTab(profile_section, "Models")
 
         self._add_connection.clicked.connect(self._on_add_connection)
         self._edit_connection.clicked.connect(self._on_edit_connection)
@@ -252,7 +264,9 @@ class SettingsPage(WorkerPage):
         self._profile_advanced_toggle.toggled.connect(self._toggle_profile_advanced)
         self._language_combo.currentIndexChanged.connect(self._on_language_changed)
         self._i18n.language_changed.connect(self._sync_language_selection)
+        self._i18n.language_changed.connect(lambda _language: self._refresh_setup_copy())
         self._i18n.bind_tree(self)
+        self._refresh_setup_copy()
         self._save_connection.setEnabled(False)
         self._cancel_connection.setEnabled(False)
         self._save_profile.setEnabled(False)
@@ -269,7 +283,7 @@ class SettingsPage(WorkerPage):
             self._language_combo.setCurrentIndex(index)
 
     def refresh(self) -> None:
-        """Reload connections, profiles and credential availability."""
+        "Reload providers, models and credential availability."
         self._submit("refresh", self._refresh_task())
 
     def _refresh_task(self) -> Callable[[], object]:
@@ -293,7 +307,7 @@ class SettingsPage(WorkerPage):
         name = self._conn_name.text().strip()
         endpoint = self._conn_endpoint.text().strip()
         if not name or not endpoint:
-            self._handle_error("Connection name and endpoint are required.")
+            self._handle_error("Provider name and endpoint are required.")
             return
         credential, valid = self._read_credential_reference()
         if not valid:
@@ -339,11 +353,11 @@ class SettingsPage(WorkerPage):
     def _on_edit_connection(self) -> None:
         item = self._connections_list.currentItem()
         if item is None:
-            self._handle_error("Select a connection to edit.")
+            self._handle_error("Select a provider to edit.")
             return
         connection_id = item.data(Qt.ItemDataRole.UserRole)
         if not isinstance(connection_id, int):
-            self._handle_error("Select a valid connection to edit.")
+            self._handle_error("Select a valid provider to edit.")
             return
         self._connection_editing_id = connection_id
         self._save_connection.setEnabled(True)
@@ -352,12 +366,12 @@ class SettingsPage(WorkerPage):
     def _on_save_connection(self) -> None:
         connection_id = self._connection_editing_id
         if connection_id is None:
-            self._handle_error("Select a connection to edit.")
+            self._handle_error("Select a provider to edit.")
             return
         name = self._conn_name.text().strip()
         endpoint = self._conn_endpoint.text().strip()
         if not name or not endpoint:
-            self._handle_error("Connection name and endpoint are required.")
+            self._handle_error("Provider name and endpoint are required.")
             return
         credential, valid = self._read_credential_reference()
         if not valid:
@@ -410,6 +424,7 @@ class SettingsPage(WorkerPage):
     def _read_credential_reference(self) -> tuple[str | None, bool]:
         credential = self._conn_credential.text().strip() or None
         if credential is not None and not credential.startswith(("env:", "wincred:")):
+            self._conn_credential.clear()
             self._handle_error("Credential reference must use env: or wincred: scheme.")
             return None, False
         return credential, True
@@ -419,10 +434,10 @@ class SettingsPage(WorkerPage):
         model_id = self._profile_model.text().strip()
         connection_id = self._profile_connection.currentData()
         if not name or not model_id:
-            self._handle_error("Profile name and model id are required.")
+            self._handle_error("Model name and model id are required.")
             return
         if not isinstance(connection_id, int):
-            self._handle_error("Select a connection first.")
+            self._handle_error("Select a provider first.")
             return
         payload = self._read_profile_advanced_values()
         if payload is None:
@@ -462,11 +477,11 @@ class SettingsPage(WorkerPage):
     def _on_edit_profile(self) -> None:
         item = self._profiles_list.currentItem()
         if item is None:
-            self._handle_error("Select a profile to edit.")
+            self._handle_error("Select a model to edit.")
             return
         profile_id = item.data(Qt.ItemDataRole.UserRole)
         if not isinstance(profile_id, int):
-            self._handle_error("Select a valid profile to edit.")
+            self._handle_error("Select a valid model to edit.")
             return
         self._profile_editing_id = profile_id
         self._save_profile.setEnabled(True)
@@ -475,16 +490,16 @@ class SettingsPage(WorkerPage):
     def _on_save_profile(self) -> None:
         profile_id = self._profile_editing_id
         if profile_id is None:
-            self._handle_error("Select a profile to edit.")
+            self._handle_error("Select a model to edit.")
             return
         name = self._profile_name.text().strip()
         model_id = self._profile_model.text().strip()
         connection_id = self._profile_connection.currentData()
         if not name or not model_id:
-            self._handle_error("Profile name and model id are required.")
+            self._handle_error("Model name and model id are required.")
             return
         if not isinstance(connection_id, int):
-            self._handle_error("Select a connection first.")
+            self._handle_error("Select a provider first.")
             return
         payload = self._read_profile_advanced_values()
         if payload is None:
@@ -560,10 +575,15 @@ class SettingsPage(WorkerPage):
         total = context_budget["total"]
         reserved_output = context_budget["reserved_output"]
         reserved_prompt = context_budget["reserved_prompt"]
-        if isinstance(total, int) and isinstance(reserved_output, int) and isinstance(
-            reserved_prompt,
-            int,
-        ) and reserved_output + reserved_prompt > total:
+        if (
+            isinstance(total, int)
+            and isinstance(reserved_output, int)
+            and isinstance(
+                reserved_prompt,
+                int,
+            )
+            and reserved_output + reserved_prompt > total
+        ):
             self._handle_error("Reserved context budget must not exceed total.")
             return None
         return (
@@ -577,11 +597,11 @@ class SettingsPage(WorkerPage):
     def _on_delete_connection(self) -> None:
         item = self._connections_list.currentItem()
         if item is None:
-            self._handle_error("Select a connection to delete.")
+            self._handle_error("Select a provider to delete.")
             return
         connection_id = item.data(Qt.ItemDataRole.UserRole)
         if not isinstance(connection_id, int):
-            self._handle_error("Select a valid connection to delete.")
+            self._handle_error("Select a valid provider to delete.")
             return
         self._submit(
             "delete_connection",
@@ -601,11 +621,11 @@ class SettingsPage(WorkerPage):
     def _on_delete_profile(self) -> None:
         item = self._profiles_list.currentItem()
         if item is None:
-            self._handle_error("Select a profile to delete.")
+            self._handle_error("Select a model to delete.")
             return
         profile_id = item.data(Qt.ItemDataRole.UserRole)
         if not isinstance(profile_id, int):
-            self._handle_error("Select a valid profile to delete.")
+            self._handle_error("Select a valid model to delete.")
             return
         self._submit("delete_profile", self._delete_profile_task(profile_id))
 
@@ -620,6 +640,8 @@ class SettingsPage(WorkerPage):
         return task
 
     def _handle_action(self, action: str, result: object) -> None:
+        if action != "refresh":
+            self.configuration_changed.emit()
         if action == "refresh":
             assert isinstance(result, tuple)
             connections, profiles, statuses = result
@@ -629,22 +651,22 @@ class SettingsPage(WorkerPage):
             self._populate(connections, profiles)
             self._show_credential_status(statuses)
         elif action == "add_connection":
-            self._status.setText("Connection added.")
+            self._set_status("Provider added.")
             self.refresh()
         elif action == "update_connection":
-            self._status.setText("Connection updated.")
+            self._set_status("Provider updated.")
             self.refresh()
         elif action == "add_profile":
-            self._status.setText("Profile added.")
+            self._set_status("Model added.")
             self.refresh()
         elif action == "update_profile":
-            self._status.setText("Profile updated.")
+            self._set_status("Model updated.")
             self.refresh()
         elif action == "delete_connection":
-            self._status.setText("Connection deleted.")
+            self._set_status("Provider deleted.")
             self.refresh()
         elif action == "delete_profile":
-            self._status.setText("Profile deleted.")
+            self._set_status("Model deleted.")
             self.refresh()
         else:
             self._handle_error(f"Unknown action: {action}")
@@ -690,6 +712,7 @@ class SettingsPage(WorkerPage):
             assert profile.id is not None
             item.setData(Qt.ItemDataRole.UserRole, profile.id)
             self._profiles_list.addItem(item)
+        self._show_setup_hint(len(self._connections_by_id), len(self._profiles_by_id))
 
     def _on_connection_selected(self, current: QListWidgetItem | None, _previous: object) -> None:
         if current is None:
@@ -777,4 +800,45 @@ class SettingsPage(WorkerPage):
         raw_credential = self._conn_credential.text().strip()
         if raw_credential:
             error = error.replace(raw_credential, "[credential reference]")
-        self._status.setText(f"Error: {error}")
+        self._set_status(safe_error_message(error), error=True)
+
+    def _set_status(self, source: str, *, error: bool = False) -> None:
+        self._status_source, self._status_is_error = source, error
+        prefix = f"{self._translate_copy('Error')}: " if error else ""
+        self._status.setText(prefix + self._translate_copy(source))
+
+    def _refresh_setup_copy(self) -> None:
+        """Retranslate the first-use explanation after a language change."""
+        self._set_status(self._status_source, error=self._status_is_error)
+        self._connection_help.setText(
+            self._translate_copy(
+                "Provider = API address and credentials for a local or online "
+                "OpenAI-compatible service.",
+            ),
+        )
+        self._profile_help.setText(
+            self._translate_copy(
+                "Model = model id and translation parameters. Select an existing Provider first.",
+            ),
+        )
+        self._show_setup_hint(self._connection_count, self._profile_count)
+
+    def _show_setup_hint(self, connection_count: int, profile_count: int) -> None:
+        """Show the next first-use configuration step without probing the endpoint."""
+        self._connection_count = connection_count
+        self._profile_count = profile_count
+        if connection_count == 0:
+            source = "Add a Provider using the API address of a running OpenAI-compatible service."
+        elif profile_count == 0:
+            source = "Provider saved. Next, create a Model and choose this Provider."
+        else:
+            source = "Provider and Model are ready. Next, select the active Model in Translation."
+        self._setup_hint.setText(self._translate_copy(source))
+
+    def _translate_copy(self, source: str) -> str:
+        """Use source copy for English and Qt translation for other languages."""
+        return source if self._i18n.current_language == "en" else self._i18n.tr(source)
+
+
+# Existing integrations import this name; product navigation uses Providers.
+SettingsPage = ProvidersPage

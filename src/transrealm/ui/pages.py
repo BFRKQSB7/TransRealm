@@ -6,12 +6,15 @@ New code should import each page from its responsibility module. The legacy
 
 from transrealm.ui.page_base import WorkerPage
 from transrealm.ui.project_page import ProjectPage
-from transrealm.ui.settings_page import SettingsPage
+from transrealm.ui.prompts_page import PromptsPage
+from transrealm.ui.settings_page import ProvidersPage, SettingsPage
 from transrealm.ui.translation_page import TranslationPage
 
 __all__ = [
     "ProjectPage",
     "SettingsPage",
+    "ProvidersPage",
+    "PromptsPage",
     "TranslationPage",
     "WorkerPage",
 ]

@@ -10,22 +10,35 @@ use case.
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 
 from transrealm.adapters.dto import AdapterMessage, AdapterRequest
-from transrealm.adapters.errors import AdapterError
+from transrealm.adapters.errors import AdapterContextOverflowError, AdapterError
 from transrealm.adapters.protocol import ModelAdapter
-from transrealm.application.context import ContextBudget, ContextManifest, EstimateMethod
+from transrealm.application.context import (
+    ContextBudget,
+    ContextManifest,
+    ContextSource,
+    EstimateMethod,
+)
 from transrealm.application.context_composer import ContextComposer
 from transrealm.application.glossary_context import build_glossary_candidates
-from transrealm.application.output_parser import OutputParser
+from transrealm.application.output_parser import (
+    IssueCategory,
+    OutputParser,
+    ParseIssue,
+    ValidationReport,
+)
 from transrealm.application.preset_templates import current_preset, resolve_override_template
 from transrealm.application.prompt_renderer import PromptRenderer, RenderedPrompt
 from transrealm.application.translation_run_service import (
     BUILTIN_GENERAL_TRANSLATION_WORKFLOW,
     TranslationRunService,
+    TranslationRunServiceError,
 )
 from transrealm.domain.model_profile import ModelProfile
 from transrealm.domain.prompt_override import PromptOverride
@@ -38,6 +51,7 @@ from transrealm.infrastructure.repositories.glossary_entry_repository import (
 from transrealm.infrastructure.repositories.model_profile_repository import (
     ModelProfileRepository,
 )
+from transrealm.infrastructure.repositories.project_notes_repository import ProjectNotesRepository
 from transrealm.infrastructure.repositories.project_repository import ProjectRepository
 from transrealm.infrastructure.repositories.prompt_override_repository import (
     PromptOverrideRepository,
@@ -79,6 +93,7 @@ class TranslationService:
         self._profile_repository = ModelProfileRepository(self._db)
         self._override_repository = PromptOverrideRepository(self._db)
         self._project_repository = ProjectRepository(self._db)
+        self._notes_repository = ProjectNotesRepository(self._db)
         self._workflow_repository = WorkflowDefinitionRepository(self._db)
         self._glossary_repository = GlossaryEntryRepository(self._db)
         self._adapter = adapter
@@ -110,6 +125,7 @@ class TranslationService:
         profile_id: int,
         lease_duration_seconds: int = 60,
         max_repair_attempts: int = 1,
+        max_context_reductions: int = 3,
         extra_params: dict[str, object] | None = None,
     ) -> TranslationRevision:
         """Translate one segment end to end and return the persisted revision.
@@ -142,6 +158,8 @@ class TranslationService:
             raise TranslationServiceError(
                 f"max_repair_attempts must be non-negative: {max_repair_attempts}.",
             )
+        if max_context_reductions < 0:
+            raise TranslationServiceError("max_context_reductions must be non-negative.")
 
         run = self._run_service.get_run(run_id)
         if run is None:
@@ -188,7 +206,7 @@ class TranslationService:
                 f"Project with id {run.project_id} does not exist.",
             )
 
-        budget = self._build_budget(profile)
+        budget = self.build_context_budget(profile)
         neighbors = self._segment_repository.list_segments_by_document(
             segment.source_document_id,
         )
@@ -196,12 +214,14 @@ class TranslationService:
             self._glossary_repository.list_locked_by_project(run.project_id),
             estimate_method=budget.estimate_method,
         )
+        notes = self._notes_repository.get(run.project_id)
         manifest = self._composer.compose(
             profile_id=str(profile.id),
             template_version=profile.template_version,
             current=segment,
             neighbors=neighbors,
             glossary_candidates=glossary_candidates,
+            notes=notes,
             budget=budget,
         )
         override = self._override_repository.get_by_profile(profile.id)
@@ -217,10 +237,12 @@ class TranslationService:
             manifest=manifest,
             source_language=project.source_language,
             target_language=project.target_language,
+            output_protocol=profile.output_protocol,
         )
 
         claim_segment = segment
         repairs_used = 0
+        reductions_used = 0
         repair_reason: str | None = None
         request_params = dict(profile.default_params if extra_params is None else extra_params)
         while True:
@@ -229,7 +251,12 @@ class TranslationService:
                 segment=claim_segment,
                 profile=profile,
                 prompt_hash=rendered.prompt_hash,
-                context_summary=self._context_summary(manifest, rendered, override=override),
+                context_summary=self._context_summary(
+                    manifest,
+                    rendered,
+                    override=override,
+                    overflow_reductions=reductions_used,
+                ),
                 validator_summary=self._validator_summary(
                     rendered,
                     repairs_used=repairs_used,
@@ -246,6 +273,37 @@ class TranslationService:
                     self._build_adapter_request(profile, rendered, extra_params=request_params),
                 )
             except AdapterError as exc:
+                if isinstance(exc, AdapterContextOverflowError):
+                    reduced = self._reduce_optional_context(manifest)
+                    next_rendered = None
+                    if reduced is not None and reductions_used < max_context_reductions:
+                        next_rendered = self._renderer.render(
+                            profile_id=str(profile.id),
+                            template_version=profile.template_version,
+                            template=template,
+                            manifest=reduced,
+                            source_language=project.source_language,
+                            target_language=project.target_language,
+                            output_protocol=profile.output_protocol,
+                        )
+                        if next_rendered.prompt_hash == rendered.prompt_hash:
+                            next_rendered = None
+                    self._run_service.finalize_failure(
+                        attempt_id=attempt.id,
+                        error_type=exc.category,
+                        error_message=exc.safe_message,
+                        retryable=next_rendered is not None,
+                    )
+                    if next_rendered is not None:
+                        assert reduced is not None
+                        claim_segment = self._run_service.retry_failed(segment_id=segment_id)
+                        manifest = reduced
+                        rendered = next_rendered
+                        reductions_used += 1
+                        continue
+                    raise TranslationServiceError(
+                        "Provider context overflow persists after optional context reduction."
+                    ) from exc
                 self._run_service.finalize_failure(
                     attempt_id=attempt.id,
                     error_type=exc.category,
@@ -269,22 +327,54 @@ class TranslationService:
                 ) from exc
             latency_ms = max(0, int((self._clock() - started).total_seconds() * 1000))
 
-            report = self._parser.parse(
-                response.content,
-                output_contract=rendered.output_contract,
-                raw_response=response.raw_response,
-            )
+            if rendered.output_protocol == "text":
+                report = self._parser.parse_text(
+                    response.content,
+                    output_contract=rendered.output_contract,
+                    source_text=segment.source_text,
+                    prompt_text=rendered.prompt_text,
+                    finish_reason=response.finish_reason,
+                    raw_response=response.raw_response,
+                )
+            elif response.finish_reason not in (None, "stop"):
+                report = ValidationReport(
+                    candidates=(),
+                    issues=(
+                        ParseIssue(
+                            IssueCategory.TRUNCATED, "Provider output did not finish normally."
+                        ),
+                    ),
+                )
+            else:
+                report = self._parser.parse(
+                    response.content,
+                    output_contract=rendered.output_contract,
+                    raw_response=response.raw_response,
+                )
             if report.is_valid:
                 candidate = report.candidates[0]
-                _, revision = self._run_service.finalize_success(
-                    attempt_id=attempt.id,
-                    translated_text=candidate.translation,
-                    expected_current_revision_id=claim_segment.current_revision_id,
-                    request_id=response.request_id or "",
-                    input_tokens=response.usage.prompt_tokens if response.usage else 0,
-                    output_tokens=response.usage.completion_tokens if response.usage else 0,
-                    latency_ms=latency_ms,
-                )
+                try:
+                    _, revision = self._run_service.finalize_success(
+                        attempt_id=attempt.id,
+                        translated_text=candidate.translation,
+                        expected_current_revision_id=claim_segment.current_revision_id,
+                        request_id=response.request_id or "",
+                        input_tokens=response.usage.prompt_tokens if response.usage else 0,
+                        output_tokens=response.usage.completion_tokens if response.usage else 0,
+                        latency_ms=latency_ms,
+                    )
+                except TranslationRunServiceError:
+                    # The response is fenced out. If our lease is still valid,
+                    # release it without creating a Revision. Expired claims
+                    # are handled only by the existing recovery path.
+                    try:
+                        self._run_service.cancel_attempt(
+                            attempt_id=attempt.id,
+                            reason="Provider result rejected by finalization fencing.",
+                        )
+                    except TranslationRunServiceError:
+                        self._run_service.recover_expired_leases()
+                    raise
                 return revision
 
             first = report.issues[0]
@@ -309,32 +399,46 @@ class TranslationService:
                 retryable=False,
             )
             raise TranslationServiceError(
-                f"Model output failed validation: {first.category.name}: "
-                f"{first.message}",
+                f"Model output failed validation: {first.category.name}: {first.message}",
             )
 
     def recover_expired_leases(self) -> int:
         """Converge stale leases before a desktop worker begins new work."""
         return self._run_service.recover_expired_leases()
 
+    @staticmethod
+    def _reduce_optional_context(manifest: ContextManifest) -> ContextManifest | None:
+        """Remove the farthest selected neighbor; retain target, glossary and Notes."""
+        selected = list(manifest.selected)
+        for index in range(len(selected) - 1, -1, -1):
+            if selected[index].source == ContextSource.NEIGHBOR_SEGMENT:
+                removed = selected.pop(index)
+                return replace(
+                    manifest,
+                    selected=tuple(selected),
+                    pruned=(removed, *manifest.pruned),
+                )
+        return None
+
     def finish_run(self, *, run_id: int, status: str) -> TranslationRun:
         """Persist the terminal status for a desktop translation run."""
         return self._run_service.finish_run(run_id=run_id, status=status)
 
-    def _build_budget(self, profile: ModelProfile) -> ContextBudget:
+    @classmethod
+    def build_context_budget(cls, profile: ModelProfile) -> ContextBudget:
         """Build the ContextBudget declared by a profile, or raise."""
         raw = profile.context_budget
         if "total" not in raw:
             raise TranslationServiceError(
                 f"Profile {profile.id} has an invalid context_budget: {raw!r}.",
             )
-        total = self._budget_int(raw["total"], "total", profile.id)
-        reserved_output = self._budget_int(
+        total = cls._budget_int(raw["total"], "total", profile.id)
+        reserved_output = cls._budget_int(
             raw.get("reserved_output", 0),
             "reserved_output",
             profile.id,
         )
-        reserved_prompt = self._budget_int(
+        reserved_prompt = cls._budget_int(
             raw.get("reserved_prompt", 0),
             "reserved_prompt",
             profile.id,
@@ -382,6 +486,10 @@ class TranslationService:
             model_id=profile.model_id,
             messages=(AdapterMessage(role="user", content=rendered.prompt_text),),
             extra_params=dict(profile.default_params if extra_params is None else extra_params),
+            structured_output=(
+                rendered.output_protocol == "json"
+                and profile.get_capability().supports_structured_output
+            ),
         )
 
     def _context_summary(
@@ -390,6 +498,7 @@ class TranslationService:
         rendered: RenderedPrompt,
         *,
         override: PromptOverride | None = None,
+        overflow_reductions: int = 0,
     ) -> dict[str, object]:
         """Build the T07 attempt audit record for context selection."""
         summary: dict[str, object] = {
@@ -397,6 +506,20 @@ class TranslationService:
             "pruned_count": len(manifest.pruned),
             "selected_sources": [candidate.source.name for candidate in manifest.selected],
             "prompt_hash": rendered.prompt_hash,
+            "overflow_reductions": overflow_reductions,
+        }
+        notes = next(
+            (
+                candidate.content
+                for candidate in manifest.selected
+                if candidate.source == ContextSource.JOB_NOTES
+            ),
+            "",
+        )
+        summary["notes"] = {
+            "present": bool(notes),
+            "characters": len(notes),
+            "sha256": hashlib.sha256(notes.encode("utf-8")).hexdigest() if notes else None,
         }
         if override is not None:
             summary["override_parent_version"] = override.parent_template_version
@@ -418,6 +541,7 @@ class TranslationService:
         summary: dict[str, object] = {
             "output_contract_items": len(rendered.output_contract.items),
             "status": "pending",
+            "output_protocol": rendered.output_protocol,
         }
         if repairs_used > 0:
             summary["repair_attempt"] = repairs_used

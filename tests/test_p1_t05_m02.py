@@ -58,6 +58,8 @@ from transrealm.domain.model_profile import ModelCapability
 from transrealm.domain.segment import Segment
 from transrealm.domain.translation_revision import TranslationRevision
 from transrealm.infrastructure.database import create_database
+from transrealm.infrastructure.parsers.parser import ParserRegistry
+from transrealm.infrastructure.parsers.txt_parser import LegacyTxtParser
 from transrealm.infrastructure.repositories.segment_repository import SegmentRepository
 from transrealm.infrastructure.repositories.translation_revision_repository import (
     TranslationRevisionRepository,
@@ -327,10 +329,16 @@ def _create_project(path: Path, name: str = "M02") -> int:
         return project.id
 
 
-def _import_txt(path: Path, project_id: int, content: str) -> list[Segment]:
+def _import_txt(
+    path: Path, project_id: int, content: str, *, legacy: bool = False
+) -> list[Segment]:
     txt_path = path.parent / "source.txt"
     txt_path.write_text(content, encoding="utf-8")
-    with ImportService(path, app_version=APP_VERSION) as service:
+    registry = None
+    if legacy:
+        registry = ParserRegistry()
+        registry.register(LegacyTxtParser())
+    with ImportService(path, app_version=APP_VERSION, parser_registry=registry) as service:
         _document, segments = service.import_txt(project_id, txt_path, name="source.txt")
     return segments
 
@@ -1014,7 +1022,8 @@ class TestLongTextJourney:
     ) -> None:
         path = tmp_path / "project.sqlite"
         project_id = _create_project(path)
-        segments = _import_txt(path, project_id, _LONG_TEXT)
+        # Keep this fixed resource baseline on its original 1.0 mapping.
+        segments = _import_txt(path, project_id, _LONG_TEXT, legacy=True)
         assert len(segments) == LONG_TEXT_SEGMENT_COUNT
         stable_keys = [s.stable_key for s in segments]
         translations = {key: f"译文-{i}" for i, key in enumerate(stable_keys, 1)}

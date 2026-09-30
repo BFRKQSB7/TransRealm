@@ -78,7 +78,7 @@ class TestConnectionEditing:
         settings._conn_retries.setValue(3)
         settings._conn_retry_delay.setValue(1.5)
         settings._save_connection.click()
-        _wait_status(qtbot, settings, "Connection updated")
+        _wait_status(qtbot, settings, "Provider updated")
 
         with ProviderConnectionService(
             settings._db_path,
@@ -198,7 +198,7 @@ class TestProfileEditing:
         settings._profile_supports_structured.setChecked(True)
         settings._profile_supported_parameters.setText("temperature, top_p, max_tokens")
         settings._save_profile.click()
-        _wait_status(qtbot, settings, "Profile updated")
+        _wait_status(qtbot, settings, "Model updated")
 
         with ModelProfileService(settings._db_path, app_version=APP_VERSION) as service:
             saved = service.get_profile(profile_id)

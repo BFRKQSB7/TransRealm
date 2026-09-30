@@ -381,6 +381,29 @@ class TxtExporter(FidelityExporter):
                     f"{content_encoding}: {exc}",
                 ) from exc
             plan.append((start, end, new_bytes))
+        from transrealm.infrastructure.parsers.txt_parser import (
+            TXT_SEGMENTATION_POLICY,
+            LegacyTxtParser,
+            TxtParser,
+            extract_v2_segments,
+        )
+
+        version = envelope.get("parser_version")
+        if version == TxtParser.version:
+            if envelope.get("segmentation") != TXT_SEGMENTATION_POLICY:
+                raise ExportError("TXT segmentation policy metadata does not match this parser.")
+            text = raw_bytes.decode(self._decode_codec(envelope))
+            bom = envelope.get("bom")
+            bom_len = bom_length(bom if isinstance(bom, str) else None)
+            expected_segments, expected_spans = extract_v2_segments(
+                text, content_encoding, bom_len
+            )
+            if spans != expected_spans or [
+                (s.sequence, s.stable_key, s.source_text) for s in segments
+            ] != [(s.sequence, s.stable_key, s.source_text) for s in expected_segments]:
+                raise ExportError("TXT segment mapping differs from its versioned source bytes.")
+        elif version != LegacyTxtParser.version:
+            raise ExportError("Unsupported TXT parser version in fidelity metadata.")
         return plan
 
 

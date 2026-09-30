@@ -44,11 +44,11 @@ class TestAutoOverview:
     ) -> None:
         window = window_factory()
         translation = window._translation
-        qtbot.waitUntil(lambda: translation._mode_label.text() == "Mode: auto", timeout=5000)
+        assert not hasattr(translation, "_mode_switch")
 
-        overview = translation.findChild(QGroupBox, "auto-overview-section")
+        overview = translation.findChild(QGroupBox, "translation-controls")
         assert overview is not None
-        assert overview.title() == "Auto overview"
+        assert overview.title() == "Translation"
         assert translation._status.objectName() == "status-banner"
         assert translation._workbench_container.isHidden()
         assert not translation._translate.isHidden()
@@ -72,6 +72,6 @@ class TestAutoOverview:
         assert not translation._workbench_container.isVisible()
 
         window._i18n.set_language("zh_CN")
-        overview = translation.findChild(QGroupBox, "auto-overview-section")
+        overview = translation.findChild(QGroupBox, "translation-controls")
         assert overview is not None
-        assert overview.title() == "自动总览"
+        assert overview.title() == "翻译"

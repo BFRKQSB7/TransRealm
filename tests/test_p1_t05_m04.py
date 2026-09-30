@@ -21,7 +21,6 @@ import json
 import os
 import shutil
 import subprocess
-import tempfile
 import time
 import zipfile
 from pathlib import Path
@@ -36,7 +35,7 @@ BUNDLE = DIST / "transrealm"
 EXE = BUNDLE / "transrealm.exe"
 MANIFEST = DIST / "build_manifest.json"
 SRC_MIGRATIONS = REPO / "src" / "transrealm" / "migrations"
-MIGRATION_COUNT = 12
+MIGRATION_COUNT = 13
 RUN_PY = REPO / "run.py"
 BUILD_SCRIPT = REPO / "scripts" / "build_release.py"
 
@@ -45,7 +44,13 @@ WM_CLOSE = 0x0010
 
 
 def _candidate_ready() -> bool:
-    return EXE.is_file() and MANIFEST.is_file()
+    # A source migration changes the build inputs. An older frozen candidate
+    # remains useful as an archive but is not a candidate for this checkout.
+    return (
+        EXE.is_file()
+        and MANIFEST.is_file()
+        and _load_manifest().get("migration_files") == MIGRATION_COUNT
+    )
 
 
 def _load_manifest() -> dict[str, object]:
@@ -107,6 +112,10 @@ def _migration_count(db_path: Path) -> int:
 def _launch(exe: Path, data_root: Path) -> subprocess.Popen[str]:
     env = dict(os.environ)
     env["USERPROFILE"] = str(data_root)
+    env["APPDATA"] = str(data_root / "appdata")
+    env["LOCALAPPDATA"] = str(data_root / "localappdata")
+    # Source regression may use offscreen Qt; the frozen app must show a real window.
+    env["QT_QPA_PLATFORM"] = "windows"
     return subprocess.Popen(
         [str(exe)],
         env=env,
@@ -183,7 +192,7 @@ def test_candidate_built_and_manifest_matches_artifact() -> None:
     ):
         assert key in manifest, f"manifest missing {key!r}"
 
-    # Candidate identity must be a verifiable baseline (09 §6 / RELEASE_CHECKLIST §1).
+    # Candidate identity must be a verifiable baseline (docs/RELEASE.md §1).
     head = (
         subprocess.run(
             ["git", "rev-parse", "HEAD"], cwd=REPO, capture_output=True, text=True
@@ -260,7 +269,9 @@ def test_candidate_artifact_contains_no_user_data(candidate_zip: Path) -> None:
     not (candidate_zip and _candidate_ready()),
     reason="candidate zip not built — run `py -3.12 scripts/build_release.py`",
 )
-def test_candidate_unzip_launch_provision_close_cleanup(candidate_zip: Path) -> None:
+def test_candidate_unzip_launch_provision_close_cleanup(
+    candidate_zip: Path, tmp_path: Path
+) -> None:
     """Clean unzip, launch, data-dir provisioning, graceful close and cleanup.
 
     Exercises the frozen app end to end: unzip to a clean directory, launch with
@@ -269,8 +280,10 @@ def test_candidate_unzip_launch_provision_close_cleanup(candidate_zip: Path) -> 
     close the window (graceful closeEvent path), confirm data survives the close,
     then delete the program directory and confirm external data is untouched.
     """
-    install_dir = Path(tempfile.mkdtemp(prefix="transrealm_m04_install_"))
-    data_root = Path(tempfile.mkdtemp(prefix="transrealm_m04_data_"))
+    install_dir = tmp_path / "install"
+    data_root = tmp_path / "data"
+    install_dir.mkdir()
+    data_root.mkdir()
     proc: subprocess.Popen[str] | None = None
     try:
         with zipfile.ZipFile(candidate_zip) as zf:

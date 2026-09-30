@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from transrealm.application.context import (
     BudgetEstimate,
     ContextBudget,
@@ -9,7 +11,7 @@ from transrealm.application.context import (
     ContextSource,
     EstimateMethod,
 )
-from transrealm.application.context_composer import ContextComposer
+from transrealm.application.context_composer import ContextBudgetError, ContextComposer
 from transrealm.domain.segment import Segment
 
 
@@ -160,7 +162,7 @@ class TestBudgetExhaustion:
         assert len(manifest.pruned) == 1
         assert manifest.pruned[0].source == ContextSource.NEIGHBOR_SEGMENT
 
-    def test_all_optional_pruned_when_budget_tight(self) -> None:
+    def test_locked_glossary_cannot_be_pruned_when_budget_tight(self) -> None:
         composer = ContextComposer()
         current = _segment("seg-1", "A", 1)
         glossary = _glossary("x" * 20, 20)
@@ -171,19 +173,17 @@ class TestBudgetExhaustion:
             reserved_prompt=1,
             estimate_method=EstimateMethod.CHARACTER,
         )
-        manifest = composer.compose(
-            profile_id="general",
-            template_version="v1",
-            current=current,
-            neighbors=[neighbor],
-            glossary_candidates=[glossary],
-            budget=budget,
-        )
-        assert len(manifest.selected) == 1
-        assert manifest.selected[0].source == ContextSource.CURRENT_SEGMENT
-        assert len(manifest.pruned) == 2
+        with pytest.raises(ContextBudgetError):
+            composer.compose(
+                profile_id="general",
+                template_version="v1",
+                current=current,
+                neighbors=[neighbor],
+                glossary_candidates=[glossary],
+                budget=budget,
+            )
 
-    def test_manifest_records_pruned_glossary(self) -> None:
+    def test_oversized_locked_glossary_fails_closed(self) -> None:
         composer = ContextComposer()
         current = _segment("seg-1", "A", 1)
         glossary = _glossary("x" * 50, 50)
@@ -193,14 +193,11 @@ class TestBudgetExhaustion:
             reserved_prompt=1,
             estimate_method=EstimateMethod.CHARACTER,
         )
-        manifest = composer.compose(
-            profile_id="general",
-            template_version="v1",
-            current=current,
-            glossary_candidates=[glossary],
-            budget=budget,
-        )
-        assert len(manifest.candidates) == 2
-        assert len(manifest.selected) == 1
-        assert len(manifest.pruned) == 1
-        assert manifest.pruned[0].source == ContextSource.LOCKED_GLOSSARY
+        with pytest.raises(ContextBudgetError):
+            composer.compose(
+                profile_id="general",
+                template_version="v1",
+                current=current,
+                glossary_candidates=[glossary],
+                budget=budget,
+            )

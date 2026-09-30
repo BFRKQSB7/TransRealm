@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from PySide6.QtCore import QCoreApplication, QSettings
 
 from transrealm.adapters.dto import AdapterRequest, AdapterResponse, AdapterUsage
 from transrealm.adapters.errors import AdapterServerError
@@ -574,6 +575,9 @@ class TestWorkbenchParamEditor:
 def window_factory(qtbot: Any, tmp_path: Path) -> Any:
     """Build MainWindows against a shared database path and per-window adapters."""
     created: list[MainWindow] = []
+    settings = QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat)
+    settings.setValue("language", "en")
+    settings.sync()
 
     def make(db_path: Path | None = None) -> tuple[MainWindow, dict[str, Any]]:
         holder: dict[str, Any] = {}
@@ -581,6 +585,7 @@ def window_factory(qtbot: Any, tmp_path: Path) -> Any:
             db_path or (tmp_path / "project.sqlite"),
             app_version=APP_VERSION,
             adapter_factory=lambda profile_id: holder["adapter"],
+            settings=settings,
         )
         qtbot.addWidget(window)
         created.append(window)
@@ -607,6 +612,9 @@ def _wait_finished(qtbot: Any, worker: Any) -> None:
 
     worker.finished.connect(mark)
     qtbot.waitUntil(lambda: done[0], timeout=20000)
+    # The callback can run on the worker before queued GUI slots are delivered.
+    QCoreApplication.processEvents()
+    worker.finished.disconnect(mark)
 
 
 def _setup_profile(qtbot: Any, window: MainWindow) -> None:
@@ -648,6 +656,7 @@ def _setup_workbench_project(
     translation = window._translation
 
     project._project_name.setText("Demo")
+    project._create_box.setChecked(True)
     project._create_project.click()
     qtbot.waitUntil(lambda: project._project_id is not None, timeout=5000)
     assert project._project_id is not None
@@ -755,7 +764,7 @@ class TestWorkbenchSurface:
         assert translation._param_editor is not None
         assert translation._param_editor.values()["temperature"] == 0.9
 
-    def test_auto_mode_hides_workbench(
+    def test_old_auto_mode_keeps_unified_edit_controls(
         self,
         qtbot: Any,
         window_factory: Any,
@@ -767,6 +776,7 @@ class TestWorkbenchSurface:
         translation = window._translation
 
         project._project_name.setText("Demo")
+        project._create_box.setChecked(True)
         project._create_project.click()
         qtbot.waitUntil(lambda: project._project_id is not None, timeout=5000)
         _activate_profile(window, qtbot)
@@ -776,9 +786,9 @@ class TestWorkbenchSurface:
         project.import_file(source)
         qtbot.waitUntil(lambda: translation._document_id is not None, timeout=5000)
 
-        qtbot.waitUntil(lambda: "Mode: auto" in translation._mode_label.text(), timeout=5000)
-        assert translation._workbench_container.isHidden()
-        assert translation._param_editor is None
+        qtbot.waitUntil(lambda: translation._active_profile_id is not None, timeout=5000)
+        assert not translation._workbench_container.isHidden()
+        assert translation._param_editor is not None
 
     def test_workbench_without_active_profile_shows_guidance(
         self,
@@ -792,6 +802,7 @@ class TestWorkbenchSurface:
         translation = window._translation
 
         project._project_name.setText("Demo")
+        project._create_box.setChecked(True)
         project._create_project.click()
         qtbot.waitUntil(lambda: project._project_id is not None, timeout=5000)
         assert project._project_id is not None
@@ -806,6 +817,6 @@ class TestWorkbenchSurface:
             lambda: not translation._config_missing_label.isHidden(),
             timeout=5000,
         )
-        assert "active profile" in translation._config_missing_label.text().lower()
+        assert "model" in translation._config_missing_label.text().lower()
         assert translation._param_editor is None
         assert translation._active_profile_id is None

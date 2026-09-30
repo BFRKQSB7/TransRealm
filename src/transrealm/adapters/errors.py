@@ -100,6 +100,12 @@ class AdapterValidationError(AdapterError):
     category = "validation_error"
 
 
+class AdapterContextOverflowError(AdapterValidationError):
+    """Provider rejected a request because its context window was exceeded."""
+
+    category = "context_overflow"
+
+
 class AdapterResponseError(AdapterError):
     """Malformed or unexpected provider response. Not retryable."""
 
@@ -130,6 +136,15 @@ def classify_http_error(
     Returns:
         A normalized AdapterError subclass.
     """
+    if status_code in {400, 413, 422} and str(provider_code).lower() in {
+        "context_length_exceeded",
+        "context_window_exceeded",
+        "max_context_length_exceeded",
+        "prompt_too_long",
+    }:
+        return AdapterContextOverflowError(
+            "Provider context window was exceeded.", provider_code=provider_code
+        )
     if status_code == 401:
         return AdapterAuthenticationError(
             message,

@@ -23,6 +23,7 @@ def build_stylesheet() -> str:
     t = LIGHT_TOKENS
     return f"""
     QWidget {{
+        background: {t["surface"]};
         color: {t["text"]};
         font-family: "Segoe UI";
         font-size: 13px;
@@ -49,6 +50,16 @@ def build_stylesheet() -> str:
         border: 1px solid {t["border"]};
         border-radius: 10px;
         top: -1px;
+    }}
+    QTabWidget::pane {{
+        background: {t["surface"]};
+        border: 1px solid {t["border"]};
+    }}
+    QGroupBox {{
+        border: 1px solid {t["border"]};
+        border-radius: 6px;
+        margin-top: 8px;
+        padding-top: 12px;
     }}
     QTabBar::tab {{
         background: {t["surface"]};

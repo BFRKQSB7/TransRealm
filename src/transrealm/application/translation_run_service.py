@@ -365,9 +365,9 @@ class TranslationRunService:
     def cancel_attempt(self, *, attempt_id: int, reason: str) -> SegmentAttempt:
         """Cancel an in-flight attempt and release its segment back to pending.
 
-        The attempt must still hold a valid lease; the segment returns to
-        ``pending`` so it can be claimed again. Existing revisions and the
-        current revision are preserved.
+        The attempt must still hold a valid lease. A locked current revision
+        remains completed; otherwise the segment returns to pending. Existing
+        revisions and the current revision are preserved.
         """
         attempt = self._attempt_repository.get_by_id(attempt_id)
         if attempt is None:
@@ -439,8 +439,7 @@ class TranslationRunService:
             )
         if not last_attempt.retryable:
             raise TranslationRunServiceError(
-                f"Cannot retry segment {segment_id}: last failure is permanent "
-                "(not retryable).",
+                f"Cannot retry segment {segment_id}: last failure is permanent (not retryable).",
             )
         now = self._clock()
         try:
@@ -450,6 +449,25 @@ class TranslationRunService:
         updated = self._segment_repository.get_by_id(segment_id)
         assert updated is not None
         return updated
+
+    def requeue_segment(self, *, segment_id: int) -> Segment:
+        """Explicitly retranslate one idle, unlocked segment, preserving its history."""
+        with transaction(self._db):
+            cursor = self._db.execute(
+                "UPDATE segments SET status = 'pending', version = version + 1, "
+                "updated_at = ? WHERE id = ? AND status != 'processing' "
+                "AND NOT EXISTS (SELECT 1 FROM translation_revisions r "
+                "WHERE r.id = segments.current_revision_id AND r.is_locked = 1)",
+                (self._clock().isoformat(), segment_id),
+            )
+            if cursor.rowcount != 1:
+                raise TranslationRunServiceError(
+                    "Cannot retranslate this segment. Unlock its translation and wait "
+                    "for any current request to finish."
+                )
+        segment = self._segment_repository.get_by_id(segment_id)
+        assert segment is not None
+        return segment
 
     def get_revision(self, revision_id: int) -> TranslationRevision | None:
         """Fetch a revision by id."""
@@ -533,8 +551,7 @@ class TranslationRunService:
             )
         if segment.status == "processing":
             raise TranslationRunServiceError(
-                f"Cannot switch current for segment {segment_id}: "
-                "a translation is in progress.",
+                f"Cannot switch current for segment {segment_id}: a translation is in progress.",
             )
         revision = self._revision_repository.get_by_id(revision_id)
         if revision is None:

@@ -25,7 +25,7 @@
 - Invariants that must remain true:
 - Existing regression tests run (file/nodeid + result):
 - New tests added (file/nodeid + result):
-- Existing tests changed or removed (reason + independent reviewer):
+- Existing tests changed or removed (reason + source review):
 - [ ] Full pytest is supplementary; it does not replace the compatibility baseline above
 - [ ] Every affected existing test passed before and after the change
 
@@ -39,5 +39,5 @@
 
 ## Review and documentation
 
-- [ ] Independent review completed for high-risk paths
-- [ ] `DEVELOPMENT_STATE.md` and affected contracts updated
+- [ ] Source review and local acceptance completed for applicable high-risk paths
+- [ ] `tasks/README.md`, the Task file, and affected contracts are updated

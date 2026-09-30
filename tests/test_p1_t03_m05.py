@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from PySide6.QtCore import QCoreApplication
 
 from transrealm.adapters.dto import AdapterRequest, AdapterResponse, AdapterUsage
 from transrealm.application.import_service import ImportService
@@ -154,6 +155,9 @@ def _wait_finished(qtbot: Any, worker: Any) -> None:
 
     worker.finished.connect(mark)
     qtbot.waitUntil(lambda: done[0], timeout=20000)
+    # The callback can run on the worker before queued GUI slots are delivered.
+    QCoreApplication.processEvents()
+    worker.finished.disconnect(mark)
 
 
 def _setup_profile(qtbot: Any, window: MainWindow) -> None:
@@ -184,6 +188,7 @@ def _setup_project_and_document(
     translation = window._translation
 
     project._project_name.setText("Demo")
+    project._create_box.setChecked(True)
     project._create_project.click()
     qtbot.waitUntil(lambda: project._project_id is not None, timeout=5000)
     assert project._project_id is not None
@@ -211,48 +216,34 @@ def _setup_project_and_document(
 
 
 def _switch_mode(qtbot: Any, translation: Any, mode: str) -> None:
-    """Drive the mode selector through the worker and wait for persistence.
-
-    Waits on the mode label (which reflects the persisted ``projects.mode``
-    after a refresh) rather than the transient status message, because the
-    refresh that follows a successful switch can overwrite the status (e.g. the
-    workbench missing-config guidance).
-    """
-    index = translation._mode_switch.findData(mode)
-    assert index >= 0
-    translation._on_mode_switch(index)
-    qtbot.waitUntil(
-        lambda: f"Mode: {mode}" in translation._mode_label.text(),
-        timeout=5000,
-    )
+    """Seed a legacy mode to check compatibility; the UI has no mode writer."""
+    with ProjectService(translation._db_path, app_version=APP_VERSION) as service:
+        service.set_mode(translation._project_id, mode)
+    translation.refresh()
+    qtbot.waitUntil(lambda: translation._pending_request is None, timeout=5000)
 
 
 class TestModeSwitching:
     """The interaction-mode selector persists and toggles the workbench surface."""
 
-    def test_mode_switch_persists_and_toggles_workbench_surface(
+    def test_legacy_modes_open_the_same_workspace(
         self,
         qtbot: Any,
         window_factory: Any,
         tmp_path: Path,
     ) -> None:
         window, _ = window_factory()
-        _setup_project_and_document(window, qtbot, tmp_path, "Alpha.\nBeta.\n")
+        project_id, _ = _setup_project_and_document(window, qtbot, tmp_path, "Alpha.\nBeta.\n")
         translation = window._translation
-        qtbot.waitUntil(lambda: "Mode: auto" in translation._mode_label.text(), timeout=5000)
+        for mode in (MODE_AUTO, MODE_WORKBENCH):
+            _switch_mode(qtbot, translation, mode)
+            assert not hasattr(translation, "_mode_switch")
+            assert not translation._workbench_container.isHidden()
+            with ProjectService(translation._db_path, app_version=APP_VERSION) as service:
+                project = service.get_project(project_id)
+                assert project is not None and project.mode == mode
 
-        _switch_mode(qtbot, translation, MODE_WORKBENCH)
-        assert translation._mode == MODE_WORKBENCH
-        assert "Mode: workbench" in translation._mode_label.text()
-        assert translation._mode_switch.currentData() == MODE_WORKBENCH
-        assert not translation._workbench_container.isHidden()
-
-        _switch_mode(qtbot, translation, MODE_AUTO)
-        assert translation._mode == MODE_AUTO
-        assert "Mode: auto" in translation._mode_label.text()
-        assert translation._workbench_container.isHidden()
-
-    def test_mode_switch_refused_while_running(
+    def test_model_and_job_controls_disabled_while_running(
         self,
         qtbot: Any,
         window_factory: Any,
@@ -260,36 +251,22 @@ class TestModeSwitching:
     ) -> None:
         window, holder = window_factory()
         _, document_id = _setup_project_and_document(
-            window,
-            qtbot,
-            tmp_path,
-            "Alpha.\nBeta.\nGamma.\n",
+            window, qtbot, tmp_path, "Alpha.\nBeta.\nGamma.\n"
         )
         segments = _segments(tmp_path / "project.sqlite", document_id)
         holder["adapter"] = SequenceAdapter(
-            [_valid_response(segments[i].stable_key, f"T{i}") for i in range(len(segments))],
+            [_valid_response(segment.stable_key, "译文") for segment in segments],
             delay=0.5,
         )
         translation = window._translation
-
         translation.translate()
-        qtbot.waitUntil(lambda: translation._running, timeout=5000)
-
-        # Attempting to switch modes mid-run is refused with a hint and the
-        # selector is restored: the running run keeps its strategy in place.
-        translation._on_mode_switch(1)
-        assert "running" in translation._status.text()
-        assert translation._mode == MODE_AUTO
-        assert "Mode: auto" in translation._mode_label.text()
-        assert translation._mode_switch.currentData() == MODE_AUTO
-
+        qtbot.waitUntil(lambda: translation._running)
+        assert not translation._model_combo.isEnabled()
+        assert not translation._job_controls.isEnabled()
         translation._on_cancel()
         _wait_finished(qtbot, window._translation_worker)
         assert not translation._running
-
-        # After the run ends the same switch is allowed.
-        _switch_mode(qtbot, translation, MODE_WORKBENCH)
-        assert translation._mode == MODE_WORKBENCH
+        assert translation._job_controls.isEnabled()
 
     def test_workbench_mode_without_active_profile_shows_guidance(
         self,
@@ -324,8 +301,7 @@ class TestModeSwitching:
         ) as svc:
             assert svc.list_runs_for_project(project_id) == []
 
-
-    def test_mode_switch_without_project_reports_error(
+    def test_empty_workspace_reports_import_guidance(
         self,
         qtbot: Any,
         window_factory: Any,
@@ -333,13 +309,9 @@ class TestModeSwitching:
     ) -> None:
         window, _ = window_factory()
         translation = window._translation
-        assert translation._mode_switch.currentData() == MODE_AUTO
-
-        # With no project the mode selector is restored to the default and a
-        # clear error is reported instead of a phantom switch.
-        translation._on_mode_switch(1)
-        assert "project" in translation._status.text().lower()
-        assert translation._mode_switch.currentData() == MODE_AUTO
+        assert not hasattr(translation, "_mode_switch")
+        translation.translate()
+        assert "Import" in translation._status.text()
 
     def test_document_switch_refused_while_running(
         self,
@@ -469,8 +441,7 @@ class TestCancelAndClose:
             assert runs[-1].id is not None
             attempts = svc.list_attempts_for_run(runs[-1].id)
             assert all(
-                attempt.status in {"succeeded", "failed", "cancelled"}
-                for attempt in attempts
+                attempt.status in {"succeeded", "failed", "cancelled"} for attempt in attempts
             )
 
 
@@ -496,10 +467,12 @@ class TestRestartPersistence:
         _switch_mode(qtbot, translation, MODE_WORKBENCH)
 
         segments = _segments(db_path, document_id)
-        holder["adapter"] = SequenceAdapter([
-            _valid_response(segments[0].stable_key, "甲"),
-            _valid_response(segments[1].stable_key, "乙"),
-        ])
+        holder["adapter"] = SequenceAdapter(
+            [
+                _valid_response(segments[0].stable_key, "甲"),
+                _valid_response(segments[1].stable_key, "乙"),
+            ]
+        )
         translation.translate()
         _wait_finished(qtbot, window1._translation_worker)
         assert translation._progress.value() == 2
@@ -533,11 +506,11 @@ class TestRestartPersistence:
         window2._project.select_project(project_id)
         translation2 = window2._translation
         qtbot.waitUntil(
-            lambda: "Mode: workbench" in translation2._mode_label.text(),
+            lambda: translation2._active_profile_id is not None,
             timeout=5000,
         )
         qtbot.waitUntil(
-            lambda: "Active profile:" in translation2._active_profile_label.text(),
+            lambda: "Model:" in translation2._active_profile_label.text(),
             timeout=5000,
         )
         qtbot.waitUntil(lambda: translation2._document_combo.count() == 1, timeout=5000)
@@ -573,6 +546,7 @@ class TestProjectSwitch:
 
         # Project A with an imported document.
         project._project_name.setText("A")
+        project._create_box.setChecked(True)
         project._create_project.click()
         qtbot.waitUntil(lambda: project._project_id is not None, timeout=5000)
         assert project._project_id is not None
@@ -587,6 +561,7 @@ class TestProjectSwitch:
 
         # Project B has no documents: the translation page must not keep A's id.
         project._project_name.setText("B")
+        project._create_box.setChecked(True)
         project._create_project.click()
         qtbot.waitUntil(lambda: project._project_id == project_a + 1, timeout=5000)
         qtbot.waitUntil(lambda: translation._document_combo.count() == 0, timeout=5000)

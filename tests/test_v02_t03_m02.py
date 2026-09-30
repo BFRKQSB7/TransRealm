@@ -66,12 +66,12 @@ class TestSettingsGroupingAndFeedback:
         profiles_section = settings.findChild(QGroupBox, "profiles-section")
         assert connections_section is not None
         assert profiles_section is not None
-        assert connections_section.title() == "Connections"
-        assert profiles_section.title() == "Profiles"
+        assert connections_section.title() == "Providers"
+        assert profiles_section.title() == "Models"
         assert settings._status.objectName() == "status-banner"
 
         _create_connection(qtbot, window)
-        _wait_status(qtbot, settings, "Connection added")
+        _wait_status(qtbot, settings, "Provider added")
         qtbot.waitUntil(
             lambda: "Set the environment variable" in settings._credential_status.text(),
             timeout=5000,
@@ -79,23 +79,23 @@ class TestSettingsGroupingAndFeedback:
         assert "TRANSREALM_M02_MISSING" in settings._credential_status.text()
 
         _create_profile(qtbot, window)
-        _wait_status(qtbot, settings, "Profile added")
+        _wait_status(qtbot, settings, "Model added")
         settings._connections_list.setCurrentRow(0)
         settings._delete_connection.click()
-        _wait_status(qtbot, settings, "Delete or repoint those profiles first")
+        _wait_status(qtbot, settings, "Delete or repoint those models first")
         assert settings._connections_list.count() == 1
         assert settings._profiles_list.count() == 1
 
         settings._profiles_list.setCurrentRow(0)
         settings._delete_profile.click()
-        _wait_status(qtbot, settings, "Profile deleted")
+        _wait_status(qtbot, settings, "Model deleted")
         qtbot.waitUntil(lambda: settings._profiles_list.count() == 0, timeout=5000)
 
         settings._connections_list.setCurrentRow(0)
         settings._delete_connection.click()
-        _wait_status(qtbot, settings, "Connection deleted")
+        _wait_status(qtbot, settings, "Provider deleted")
         qtbot.waitUntil(lambda: settings._connections_list.count() == 0, timeout=5000)
 
         settings._i18n.set_language("zh_CN")
-        assert connections_section.title() == "连接"
-        assert profiles_section.title() == "配置"
+        assert connections_section.title() == "模型提供商"
+        assert profiles_section.title() == "模型"

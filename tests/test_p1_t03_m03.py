@@ -786,6 +786,7 @@ def _setup_workbench_project(
     translation = window._translation
 
     project._project_name.setText("Demo")
+    project._create_box.setChecked(True)
     project._create_project.click()
     qtbot.waitUntil(lambda: project._project_id is not None, timeout=5000)
     assert project._project_id is not None

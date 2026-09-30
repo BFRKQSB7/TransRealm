@@ -346,7 +346,7 @@ class OpenAICompatibleAdapter:
             return None
         error = data.get("error")
         if isinstance(error, dict):
-            code = error.get("code")
+            code = error.get("code") or error.get("type")
             if isinstance(code, (str, int)):
                 return str(code)
         return None

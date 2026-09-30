@@ -20,8 +20,8 @@ from PySide6.QtWidgets import (
 from transrealm import __version__
 from transrealm.adapters.protocol import ModelAdapter
 from transrealm.ui.i18n import LanguageManager
-from transrealm.ui.project_page import ProjectPage
-from transrealm.ui.settings_page import SettingsPage
+from transrealm.ui.prompts_page import PromptsPage
+from transrealm.ui.settings_page import ProvidersPage
 from transrealm.ui.theme import LIGHT_TOKENS, build_stylesheet
 from transrealm.ui.translation_page import TranslationPage
 from transrealm.ui.worker import (
@@ -89,7 +89,7 @@ def _scroll_page(page: QWidget, object_name: str, parent: QWidget) -> QScrollAre
 
 
 class MainWindow(QMainWindow):
-    """Minimal desktop shell: Settings / Project / Translation tabs.
+    """Desktop shell: Translation / Providers / Prompts.
 
     Owns a :class:`ServiceWorker` thread for short service calls and a
     :class:`TranslationWorker` thread for the long translation loop. On close
@@ -130,16 +130,18 @@ class MainWindow(QMainWindow):
         self._translation_worker.moveToThread(self._translation_thread)
         self._translation_thread.start()
 
-        self._settings = SettingsPage(
+        self._providers = ProvidersPage(
             self._service_worker,
             db_path=db_path,
             app_version=app_version,
             i18n=self._i18n,
         )
-        self._project = ProjectPage(
+        self._settings = self._providers  # Supported internal compatibility hook.
+        self._prompts = PromptsPage(
             self._service_worker,
             db_path=db_path,
             app_version=app_version,
+            i18n=self._i18n,
         )
         self._translation = TranslationPage(
             self._service_worker,
@@ -148,6 +150,7 @@ class MainWindow(QMainWindow):
             app_version=app_version,
             i18n=self._i18n,
         )
+        self._project = self._translation._job_controls
 
         shell = MainShell(self)
         shell.setObjectName("main-shell")
@@ -174,12 +177,12 @@ class MainWindow(QMainWindow):
         tabs.setMovable(False)
         tabs.setUsesScrollButtons(False)
         tabs.tabBar().setElideMode(Qt.TextElideMode.ElideRight)
-        tabs.addTab(_scroll_page(self._settings, "settings-scroll", shell), "Settings")
-        tabs.addTab(_scroll_page(self._project, "project-scroll", shell), "Project")
         tabs.addTab(
             _scroll_page(self._translation, "translation-scroll", shell),
             "Translation",
         )
+        tabs.addTab(_scroll_page(self._providers, "providers-scroll", shell), "Providers")
+        tabs.addTab(_scroll_page(self._prompts, "prompts-scroll", shell), "Prompts")
         shell_layout.addWidget(tabs, 1)
         shell.bind_tabs(tabs)
         self._tabs = tabs
@@ -187,18 +190,39 @@ class MainWindow(QMainWindow):
         self._i18n.language_changed.connect(self._on_language_changed)
         self._i18n.bind_tree(self)
 
-        self._project.project_ready.connect(self._translation.set_project)
-        self._project.project_deleted.connect(
-            lambda _project_id: self._translation.clear_project(),
-        )
-        self._project.project_settings_changed.connect(self._translation.set_project)
-        self._project.document_ready.connect(self._translation.set_document)
         self._translation.request_project_setup.connect(
+            lambda: self._tabs.setCurrentIndex(0),
+        )
+        self._project.request_settings_setup.connect(
             lambda: self._tabs.setCurrentIndex(1),
         )
+        self._translation.request_settings_setup.connect(
+            lambda: self._tabs.setCurrentIndex(1),
+        )
+        self._translation.request_prompts_setup.connect(self._open_prompts)
+        self._tabs.currentChanged.connect(self._refresh_current_page)
+        self._settings.configuration_changed.connect(self._refresh_workspace)
+        self._prompts.configuration_changed.connect(self._refresh_workspace)
 
         self._settings.refresh()
+        self._prompts.refresh()
         self._project.refresh()
+
+    def _refresh_workspace(self) -> None:
+        self._project.refresh()
+        self._translation.refresh()
+
+    def _open_prompts(self) -> None:
+        self._prompts.choose_model(self._translation._active_profile_id)
+        self._tabs.setCurrentIndex(2)
+
+    def _refresh_current_page(self, index: int) -> None:
+        if index == 0:
+            self._refresh_workspace()
+        elif index == 1:
+            self._settings.refresh()
+        else:
+            self._prompts.refresh()
 
     def _on_language_changed(self, language: str) -> None:
         """Rebind newly-created workbench widgets after a language switch."""
@@ -226,9 +250,9 @@ class MainWindow(QMainWindow):
             return False
 
         self._service_thread.quit()
-        service_stopped = (
-            not self._service_thread.isRunning() or self._service_thread.wait(2000)
-        )
+        service_stopped = not self._service_thread.isRunning() or self._service_thread.wait(2000)
+        if service_stopped:
+            self._i18n.uninstall()
         return service_stopped
 
 

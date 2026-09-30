@@ -30,6 +30,7 @@ class IssueCategory(Enum):
     NON_STRING_TRANSLATION = auto()
     CONTAMINATION = auto()
     REPAIR_LIMIT_EXCEEDED = auto()
+    TRUNCATED = auto()
 
 
 class OutputParseError(ValueError):
@@ -148,6 +149,59 @@ def _extract_json(text: str) -> str | None:
 
 class OutputParser:
     """Parse a model response and validate it against an ``OutputContract``."""
+
+    def parse_text(
+        self,
+        text: str,
+        *,
+        output_contract: OutputContract,
+        source_text: str,
+        prompt_text: str,
+        finish_reason: str | None,
+        raw_response: dict[str, Any] | None = None,
+    ) -> ValidationReport:
+        """Normalize one plain target without accepting empty, echoed or partial output."""
+        translation = text.strip()
+        # Older text profiles used the strict JSON envelope before text output
+        # was supported. Normalize only that envelope through the existing ID
+        # validator; arbitrary JSON is never silently accepted as a wrapper.
+        if translation.startswith("{"):
+            try:
+                envelope = json.loads(translation)
+            except json.JSONDecodeError:
+                envelope = None
+            if isinstance(envelope, dict) and "items" in envelope:
+                legacy = self.parse(
+                    translation,
+                    output_contract=output_contract,
+                    raw_response=raw_response,
+                )
+                if not legacy.is_valid:
+                    return legacy
+                translation = legacy.candidates[0].translation.strip()
+        issue: ParseIssue | None = None
+        if len(output_contract.items) != 1:
+            issue = ParseIssue(IssueCategory.TYPE_ERROR, "Plain text needs exactly one target.")
+        elif finish_reason not in (None, "stop"):
+            issue = ParseIssue(IssueCategory.TRUNCATED, "Provider output did not finish normally.")
+        elif not translation:
+            issue = ParseIssue(IssueCategory.EMPTY_TRANSLATION, "Provider returned empty text.")
+        elif (
+            translation in {source_text.strip(), prompt_text.strip()}
+            or "```" in translation
+            or re.search(r"(?i)</?think>|---OUTPUT CONTRACT---|Current segment:", translation)
+        ):
+            issue = ParseIssue(
+                IssueCategory.CONTAMINATION,
+                "Provider returned echoed input, reasoning or output wrappers.",
+            )
+        if issue is not None:
+            return ValidationReport(candidates=(), issues=(issue,), raw_response=raw_response)
+        return ValidationReport(
+            candidates=(TranslationCandidate(output_contract.items[0].segment_id, translation),),
+            issues=(),
+            raw_response=raw_response,
+        )
 
     def parse(
         self,
@@ -354,13 +408,9 @@ class OutputParser:
 
             warnings = raw_item.get("warnings", [])
             notes = raw_item.get("notes", [])
-            if not isinstance(warnings, list) or not all(
-                isinstance(w, str) for w in warnings
-            ):
+            if not isinstance(warnings, list) or not all(isinstance(w, str) for w in warnings):
                 warnings = []
-            if not isinstance(notes, list) or not all(
-                isinstance(n, str) for n in notes
-            ):
+            if not isinstance(notes, list) or not all(isinstance(n, str) for n in notes):
                 notes = []
 
             candidates.append(

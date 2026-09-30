@@ -7,60 +7,41 @@ the Qt main thread. Pages expose programmatic entry points (``import_file``,
 file dialogs.
 """
 
-# ruff: noqa: F401
 from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
 
 from PySide6.QtCore import QSignalBlocker, Qt, Signal
+from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
-    QCheckBox,
     QComboBox,
     QFileDialog,
-    QFormLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QListWidget,
     QListWidgetItem,
+    QPlainTextEdit,
     QProgressBar,
     QPushButton,
-    QSpinBox,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
 
-from transrealm.application.credential_status import (
-    CredentialStatus,
-    report_credential_availability,
-)
-from transrealm.application.exporter import (
-    AssExporter,
-    JsonExporter,
-    SrtExporter,
-    SsaExporter,
-    TxtExporter,
-    VttExporter,
-)
-from transrealm.application.glossary_service import GlossaryService
-from transrealm.application.import_service import ImportService
-from transrealm.application.model_profile_service import ModelProfileService
+from transrealm.application.context import ContextSource
 from transrealm.application.preset_templates import current_preset
-from transrealm.application.project_service import ProjectService
-from transrealm.application.provider_connection_service import ProviderConnectionService
-from transrealm.application.translation_run_service import TranslationRunService
+from transrealm.application.prompt_library_service import NamedPrompt
+from transrealm.application.translation_facade import TranslationFacade
 from transrealm.application.workbench import SegmentProgress, presented_parameters
-from transrealm.domain.glossary_entry import GlossaryEntry
 from transrealm.domain.model_profile import ModelCapability, ModelCapabilityError, ModelProfile
-from transrealm.domain.project import MODE_AUTO, MODE_WORKBENCH, Project
 from transrealm.domain.prompt_override import PromptOverride
-from transrealm.domain.provider_connection import ProviderConnection
 from transrealm.domain.segment import SourceDocument
 from transrealm.domain.translation_revision import TranslationRevision
 from transrealm.ui.i18n import LanguageManager
-from transrealm.ui.page_base import WorkerPage
+from transrealm.ui.page_base import WorkerPage, safe_error_message
+from transrealm.ui.project_page import ProjectPage
 from transrealm.ui.workbench import (
     WorkbenchParamEditor,
     WorkbenchPromptEditor,
@@ -70,16 +51,11 @@ from transrealm.ui.worker import ServiceWorker, TranslationWorker
 
 
 class TranslationPage(WorkerPage):
-    """Auto-mode translation journey: import -> translate -> status -> export.
-
-    M01 ships the auto mode. The active ModelProfile is resolved from the
-    project on the translation worker thread (never from a manual picker), and
-    when the project has no active profile the page shows a single recoverable
-    step — a button that jumps to the Project tab. The workbench surface
-    (explicit profile/parameter selection) arrives in P1-T03-M02.
-    """
+    """Unified Job/files, context, translation and revision workspace."""
 
     request_project_setup = Signal()
+    request_settings_setup = Signal()
+    request_prompts_setup = Signal()
 
     def __init__(
         self,
@@ -99,8 +75,8 @@ class TranslationPage(WorkerPage):
         self._document_id: int | None = None
         self._document_name = ""
         self._document_format = "txt"
-        self._mode = MODE_AUTO
         self._running = False
+        self._deferred_document: tuple[int, str, int] | None = None
         self._active_profile_id: int | None = None
         self._param_editor: WorkbenchParamEditor | None = None
         self._prompt_editor: WorkbenchPromptEditor | None = None
@@ -109,44 +85,70 @@ class TranslationPage(WorkerPage):
         self._selected_workbench_id: int | None = None
         self._revision_history_segment_id: int | None = None
         self._revision_entries: list[TranslationRevision] = []
+        self._allow_initial_document_restore = True
 
         layout = QVBoxLayout(self)
-        overview_section = QGroupBox("Auto overview", self)
-        overview_section.setObjectName("auto-overview-section")
+        self.setAcceptDrops(True)
+        self._job_controls = ProjectPage(
+            worker, db_path=db_path, app_version=app_version, i18n=self._i18n
+        )
+        self._job_controls.project_ready.connect(self.set_project)
+        self._job_controls.project_deleted.connect(lambda _: self.clear_project())
+        self._job_controls.document_ready.connect(self.set_document)
+        self._job_controls.project_settings_changed.connect(self.set_project)
+        self._job_controls.request_settings_setup.connect(self.request_settings_setup.emit)
+        layout.addWidget(self._job_controls)
+        self._models: list[ModelProfile] = []
+        self._prompt_texts: dict[int, str] = {}
+        self._templates: list[NamedPrompt] = []
+        overview_section = QGroupBox("Translation", self)
+        overview_section.setObjectName("translation-controls")
         overview_layout = QVBoxLayout(overview_section)
         self._status = QLabel("No document imported.", self)
         self._status.setObjectName("status-banner")
         self._status.setWordWrap(True)
         overview_layout.addWidget(self._status)
 
-        self._mode_label = QLabel("Mode: auto", self)
-        overview_layout.addWidget(self._mode_label)
         self._active_profile_label = QLabel("", self)
+        self._active_profile_label.setWordWrap(True)
         overview_layout.addWidget(self._active_profile_label)
-
-        mode_row = QHBoxLayout()
-        mode_row.addWidget(QLabel("Interaction mode:", self))
-        self._mode_switch = QComboBox(self)
-        self._mode_switch.addItem("Auto", MODE_AUTO)
-        self._mode_switch.addItem("Workbench", MODE_WORKBENCH)
-        self._mode_switch.setProperty("transrealm_i18n_static_items", True)
-        mode_row.addWidget(self._mode_switch)
-        overview_layout.addLayout(mode_row)
-
+        selectors = QHBoxLayout()
+        self._provider_combo = QComboBox(self)
+        self._provider_combo.setObjectName("provider-selector")
+        self._model_combo = QComboBox(self)
+        self._model_combo.setObjectName("model-selector")
+        self._prompt_combo = QComboBox(self)
+        self._prompt_combo.setObjectName("prompt-selector")
+        for label, combo in (
+            ("Provider", self._provider_combo),
+            ("Model", self._model_combo),
+            ("Prompt", self._prompt_combo),
+        ):
+            column = QVBoxLayout()
+            column.addWidget(QLabel(label, self))
+            column.addWidget(combo)
+            selectors.addLayout(column)
+        overview_layout.addLayout(selectors)
+        self._manage_prompts = QPushButton("Manage prompts…", self)
+        self._manage_prompts.clicked.connect(self.request_prompts_setup.emit)
+        overview_layout.addWidget(self._manage_prompts)
+        self._provider_combo.activated.connect(self._on_provider_selected)
+        self._model_combo.activated.connect(self._on_model_selected)
+        self._prompt_combo.activated.connect(self._on_prompt_selected)
         doc_row = QHBoxLayout()
         doc_row.addWidget(QLabel("Document:", self))
         self._document_combo = QComboBox(self)
         doc_row.addWidget(self._document_combo)
         overview_layout.addLayout(doc_row)
 
-        form = QFormLayout()
+        form = QHBoxLayout()
         self._translate = QPushButton("Translate", self)
-        self._cancel = QPushButton("Cancel", self)
+        self._cancel = QPushButton("Stop", self)
         self._cancel.setEnabled(False)
         self._export = QPushButton("Export file…", self)
-        form.addRow(self._translate)
-        form.addRow(self._cancel)
-        form.addRow(self._export)
+        form.addWidget(self._translate)
+        form.addWidget(self._cancel)
+        form.addWidget(self._export)
         overview_layout.addLayout(form)
 
         self._config_missing_label = QLabel("", self)
@@ -154,9 +156,12 @@ class TranslationPage(WorkerPage):
         self._config_missing_label.hide()
         overview_layout.addWidget(self._config_missing_label)
 
-        self._set_active_profile = QPushButton("Set active profile…", self)
+        self._set_active_profile = QPushButton("Choose model…", self)
         self._set_active_profile.hide()
         overview_layout.addWidget(self._set_active_profile)
+        self._configure_settings = QPushButton("Configure Providers…", self)
+        self._configure_settings.hide()
+        overview_layout.addWidget(self._configure_settings)
 
         # Workbench surface (P1-T03-M02): real Segment/Attempt progress, the
         # active Profile's capability, and a parameter editor presenting only
@@ -184,12 +189,12 @@ class TranslationPage(WorkerPage):
         self._segment_detail.setProperty("transrealm_i18n_dynamic", True)
         self._segment_detail.setWordWrap(True)
         workbench_layout.addWidget(self._segment_detail)
-        workbench_layout.addWidget(QLabel("Revision history:", self._workbench_container))
+        workbench_layout.addWidget(QLabel("Translation history:", self._workbench_container))
         self._revision_history_list = QListWidget(self._workbench_container)
         self._revision_history_list.setObjectName("revision-history")
         workbench_layout.addWidget(self._revision_history_list)
         revision_actions = QHBoxLayout()
-        self._use_revision = QPushButton("Use selected revision", self._workbench_container)
+        self._use_revision = QPushButton("Use selected translation", self._workbench_container)
         self._use_revision.setObjectName("use-selected-revision")
         self._use_revision.setEnabled(False)
         revision_actions.addWidget(self._use_revision)
@@ -197,15 +202,32 @@ class TranslationPage(WorkerPage):
         self._retry_failed.setObjectName("retry-failed-segment")
         self._retry_failed.setEnabled(False)
         revision_actions.addWidget(self._retry_failed)
+        self._retranslate = QPushButton("Retranslate selected segment", self)
+        self._retranslate.clicked.connect(self._on_retranslate)
+        revision_actions.addWidget(self._retranslate)
         workbench_layout.addLayout(revision_actions)
         self._param_host = QWidget(self._workbench_container)
         self._param_layout = QVBoxLayout(self._param_host)
         self._param_layout.setContentsMargins(0, 0, 0, 0)
-        workbench_layout.addWidget(self._param_host)
+        advanced = QGroupBox("Advanced settings", self)
+        advanced.setCheckable(True)
+        advanced.setChecked(False)
+        advanced_layout = QVBoxLayout(advanced)
+        advanced_layout.addWidget(self._param_host)
+        advanced.toggled.connect(self._param_host.setVisible)
+        self._param_host.hide()
+        workbench_layout.addWidget(advanced)
         self._prompt_host = QWidget(self._workbench_container)
         self._prompt_layout = QVBoxLayout(self._prompt_host)
         self._prompt_layout.setContentsMargins(0, 0, 0, 0)
-        workbench_layout.addWidget(self._prompt_host)
+        prompt_settings = QGroupBox("Edit current prompt", self)
+        prompt_settings.setCheckable(True)
+        prompt_settings.setChecked(False)
+        prompt_layout = QVBoxLayout(prompt_settings)
+        prompt_layout.addWidget(self._prompt_host)
+        prompt_settings.toggled.connect(self._prompt_host.setVisible)
+        self._prompt_host.hide()
+        workbench_layout.addWidget(prompt_settings)
         self._segment_progress = QListWidget(self._workbench_container)
         workbench_layout.addWidget(self._segment_progress)
         self._revision_host = QWidget(self._workbench_container)
@@ -214,7 +236,50 @@ class TranslationPage(WorkerPage):
         workbench_layout.addWidget(self._revision_host)
         self._workbench_container.hide()
         layout.addWidget(overview_section)
+        self._context_preview = QPlainTextEdit(self)
+        self._context_preview.setReadOnly(True)
+        self._context_preview.setObjectName("context-preview")
+        self._context_preview.setMaximumHeight(120)
+        workbench_layout.addWidget(QLabel("Context", self))
+        workbench_layout.addWidget(self._context_preview)
         layout.addWidget(self._workbench_container)
+
+        # Keep the source/editor next to the segment list; lower-frequency
+        # history/context/settings live in internal tabs of the same workspace.
+        detail_tabs = QTabWidget(self._workbench_container)
+        detail_tabs.setMinimumHeight(280)
+        editor_panel = QWidget(detail_tabs)
+        editor_layout = QVBoxLayout(editor_panel)
+        for widget in (self._segment_detail, self._revision_host):
+            workbench_layout.removeWidget(widget)
+            editor_layout.addWidget(widget)
+        detail_tabs.addTab(editor_panel, "Current translation")
+        history_panel = QWidget(detail_tabs)
+        history_layout = QVBoxLayout(history_panel)
+        workbench_layout.removeWidget(self._revision_history_list)
+        history_layout.addWidget(self._revision_history_list)
+        workbench_layout.removeItem(revision_actions)
+        history_layout.addLayout(revision_actions)
+        detail_tabs.addTab(history_panel, "Translation history:")
+        context_panel = QWidget(detail_tabs)
+        context_layout = QVBoxLayout(context_panel)
+        workbench_layout.removeWidget(self._context_preview)
+        context_layout.addWidget(self._context_preview)
+        detail_tabs.addTab(context_panel, "Context")
+        settings_panel = QWidget(detail_tabs)
+        settings_layout = QVBoxLayout(settings_panel)
+        for widget in (advanced, prompt_settings):
+            workbench_layout.removeWidget(widget)
+            settings_layout.addWidget(widget)
+        # Keep the supported editor hook internal; prompt management has one page.
+        prompt_settings.hide()
+        detail_tabs.addTab(settings_panel, "Advanced settings")
+        workbench_layout.removeWidget(self._segment_progress)
+        self._segment_progress.setMaximumWidth(340)
+        content_row = QHBoxLayout()
+        content_row.addWidget(self._segment_progress, 1)
+        content_row.addWidget(detail_tabs, 2)
+        workbench_layout.addLayout(content_row)
 
         self._progress = QProgressBar(self)
         self._progress.setRange(0, 0)
@@ -225,7 +290,7 @@ class TranslationPage(WorkerPage):
         self._cancel.clicked.connect(self._on_cancel)
         self._export.clicked.connect(self._on_export)
         self._set_active_profile.clicked.connect(self._on_request_project_setup)
-        self._mode_switch.activated.connect(self._on_mode_switch)
+        self._configure_settings.clicked.connect(self._on_request_settings_setup)
         self._document_combo.activated.connect(self._on_document_selected)
         self._workbench_filter.currentIndexChanged.connect(self._on_workbench_filter_changed)
         self._segment_progress.itemSelectionChanged.connect(self._on_segment_selected)
@@ -246,6 +311,12 @@ class TranslationPage(WorkerPage):
 
     def set_project(self, project_id: int) -> None:
         """Record the active project id and refresh its mode/profile status."""
+        if self._project_id != project_id:
+            self._document_id = None
+            self._allow_initial_document_restore = self._project_id is None
+            self._selected_workbench_id = None
+            self._clear_revision_editor()
+            self._clear_revision_history()
         self._project_id = project_id
         self.refresh()
 
@@ -260,54 +331,46 @@ class TranslationPage(WorkerPage):
         self._submit("refresh", self._refresh_task())
 
     def _refresh_task(self) -> Callable[[], object]:
-        project_id = self._project_id
-        # Capture on the main thread at submission: the task runs on the worker
-        # thread, and the current document may change (import, selector) between
-        # submission and execution.
-        current = self._document_id
+        project_id, current = self._project_id, self._document_id
+        allow_restore = self._allow_initial_document_restore
 
         def task() -> object:
             if project_id is None:
                 return None
-            with ProjectService(
-                self._db_path,
-                app_version=self._app_version,
-            ) as projects:
-                project = projects.get_project(project_id)
-            if project is None:
-                return None
-            active_profile = None
-            override = None
-            if project.active_profile_id is not None:
-                with ModelProfileService(
-                    self._db_path,
-                    app_version=self._app_version,
-                ) as profiles:
-                    active_profile = profiles.get_profile(project.active_profile_id)
-                    if active_profile is not None and active_profile.id is not None:
-                        override = profiles.get_prompt_override(active_profile.id)
-            documents: list[SourceDocument] = []
-            progress: list[SegmentProgress] = []
-            effective_id: int | None = None
-            with TranslationRunService(
-                self._db_path,
-                app_version=self._app_version,
-            ) as runs:
-                documents = runs.list_source_documents(project_id=project_id)
-                # The document selector is per-project: the recorded document is
-                # kept only when it belongs to the selected project, otherwise no
-                # document is active (switching projects must not leak a stale id
-                # from another project into the progress view).
-                if current is not None and any(doc.id == current for doc in documents):
-                    effective_id = current
-                if effective_id is not None:
-                    progress = runs.list_segment_progress(source_document_id=effective_id)
-            return project, active_profile, progress, override, documents, effective_id
+            with TranslationFacade(self._db_path, app_version=self._app_version) as facade:
+                project = facade.open_job(project_id)
+                if project is None:
+                    return None
+                profile = facade.active_profile(project_id)
+                override = (
+                    facade.prompt_override(profile.id)
+                    if profile is not None and profile.id is not None
+                    else None
+                )
+                documents = facade.list_documents(project_id)
+                effective = current if any(doc.id == current for doc in documents) else None
+                if effective is None and allow_restore and documents:
+                    effective = documents[0].id
+                return (
+                    project,
+                    profile,
+                    facade.progress(effective) if effective is not None else [],
+                    override,
+                    documents,
+                    effective,
+                    facade.available_providers(),
+                    facade.available_models(),
+                    facade.available_prompts(),
+                )
 
         return task
 
     def set_document(self, source_document_id: int, name: str, count: int) -> None:
         """Record the imported document and surface its segment count."""
+        if self._running:
+            if source_document_id != self._document_id:
+                self._deferred_document = (source_document_id, name, count)
+            return
         self._document_id = source_document_id
         self._document_name = name
         self._document_format = Path(name).suffix.lstrip(".").lower() or "txt"
@@ -397,83 +460,46 @@ class TranslationPage(WorkerPage):
         if self._project_id is None or self._document_id is None:
             self._handle_error("Import a document first.")
             return
-        if self._mode == MODE_WORKBENCH:
-            if self._active_profile_id is None:
-                self._on_config_missing(
-                    "This project has no active profile. Set one in the Project tab.",
-                )
-                return
-            params = self._param_editor.values() if self._param_editor is not None else None
-            self._set_running(True)
-            self._status.setText("Translating…")
-            self._hide_config_missing()
-            self._translation_worker.start_translate_workbench.emit(
-                self._project_id,
-                self._document_id,
-                self._active_profile_id,
-                params,
-            )
+        if self._active_profile_id is None:
+            self._on_config_missing("Choose a Provider and model before translating.")
+            self._translation_worker.start_translate_auto.emit(self._project_id, self._document_id)
             return
         self._set_running(True)
-        self._status.setText("Translating…")
+        self._terminal_error = False
+        self._stop_clicked = False
+        self._status.setText(self._i18n.tr("Translating…"))
         self._hide_config_missing()
-        self._translation_worker.start_translate_auto.emit(
+        params = self._param_editor.values() if self._param_editor is not None else None
+        self._translation_worker.start_translate_workbench.emit(
             self._project_id,
             self._document_id,
+            self._active_profile_id,
+            params,
         )
 
     def _set_running(self, running: bool) -> None:
-        """Track an in-flight run and gate the run controls accordingly.
-
-        The document selector is gated too: switching documents mid-run would
-        show another document's progress against the running run's results.
-        """
         self._running = running
-        self._translate.setEnabled(not running)
+        self._translate.setEnabled(
+            not running and self._document_id is not None and self._active_profile_id is not None
+        )
         self._cancel.setEnabled(running)
-        self._export.setEnabled(not running)
-        self._document_combo.setEnabled(not running)
+        self._export.setEnabled(not running and self._document_id is not None)
+        self._document_combo.setEnabled(not running and self._document_combo.count() > 0)
+        for widget in (
+            self._provider_combo,
+            self._model_combo,
+            self._prompt_combo,
+            self._job_controls,
+            self._param_host,
+            self._prompt_host,
+            self._revision_host,
+        ):
+            widget.setEnabled(not running)
         self._sync_revision_actions()
 
-    def _on_mode_switch(self, index: int) -> None:
-        """Persist a mode change, refusing to change it mid-run.
-
-        While a translation is running the mode must not change in place (the
-        running run keeps its Profile/Workflow/parameters), so the attempt is
-        rejected with a hint to finish or Cancel first and the selector is
-        restored to the current persisted mode.
-        """
-        if self._running:
-            self._status.setText(
-                "A translation is running — finish or Cancel it before switching modes.",
-            )
-            self._sync_mode_switch()
-            return
-        mode = self._mode_switch.itemData(index)
-        if mode == self._mode:
-            return
-        project_id = self._project_id
-        if project_id is None:
-            self._sync_mode_switch()
-            self._handle_error("Create or select a project first.")
-            return
-        self._submit("set_mode", self._set_mode_task(project_id, mode))
-
-    def _set_mode_task(self, project_id: int, mode: str) -> Callable[[], object]:
-        def task() -> object:
-            with ProjectService(self._db_path, app_version=self._app_version) as svc:
-                return svc.set_mode(project_id, mode)
-
-        return task
-
-    def _sync_mode_switch(self) -> None:
-        """Align the mode selector with the persisted mode."""
-        index = self._mode_switch.findData(self._mode)
-        if index >= 0:
-            self._mode_switch.setCurrentIndex(index)
-
     def _on_cancel(self) -> None:
-        self._status.setText("Cancelling after the current segment…")
+        self._stop_clicked = True
+        self._status.setText(self._i18n.tr("Stopping after the current segment…"))
         self._translation_worker.request_stop()
 
     def translate(self) -> None:
@@ -484,44 +510,62 @@ class TranslationPage(WorkerPage):
         self._set_running(False)
         self._status.setText("Translation needs configuration.")
         self._config_missing_label.setText(reason)
+        self._config_missing_label.setProperty("transrealm_i18n_source", reason)
+        self._config_missing_label.setText(self._i18n.tr(reason))
         self._config_missing_label.show()
         self._set_active_profile.show()
+        self._configure_settings.show()
+        self._translate.setEnabled(False)
 
     def _hide_config_missing(self) -> None:
         self._config_missing_label.hide()
         self._set_active_profile.hide()
+        self._configure_settings.hide()
+        if not self._running:
+            self._translate.setEnabled(True)
 
     def _on_request_project_setup(self) -> None:
         self.request_project_setup.emit()
 
+    def _on_request_settings_setup(self) -> None:
+        self.request_settings_setup.emit()
+
     def _on_progress(self, done: int, total: int, stable_key: str) -> None:
         self._progress.setRange(0, max(total, 1))
         self._progress.setValue(done)
-        if total > 0:
+        if total > 0 and self._running:
             self._status.setText(f"Translated {done}/{total} ({stable_key}).")
 
     def _on_segment_completed(self, stable_key: str, revision_id: int) -> None:
-        self._status.setText(f"Segment {stable_key} translated (revision {revision_id}).")
+        if self._running:
+            self._status.setText(f"{stable_key}: {self._i18n.tr('Completed')}")
 
     def _on_segment_failed(self, stable_key: str, error: str) -> None:
-        self._status.setText(f"Segment {stable_key} failed: {error}")
+        self._terminal_error = True
+        self._status.setText(f"{stable_key}: {safe_error_message(error)}")
 
     def _on_finished(self) -> None:
         self._set_running(False)
+        deferred = getattr(self, "_deferred_document", None)
+        if deferred is not None:
+            self._deferred_document = None
+            self.set_document(*deferred)
         if not self._config_missing_label.isHidden():
             return
-        # The workbench progress list reflects the persisted state, so re-read
-        # it after a run so the segments show their completed/failed outcome.
-        if self._mode == MODE_WORKBENCH:
-            self.refresh()
-        # A run with no pending segments never emits progress, so replace the
-        # placeholder status instead of leaving "Translating…" forever.
-        if self._status.text() == "Translating…":
-            self._status.setText("Translation finished.")
+        self.refresh()
+        if getattr(self, "_terminal_error", False):
+            return
+        message = (
+            "Translation stopped. Resume to continue."
+            if getattr(self, "_stop_clicked", False)
+            else "Translation finished."
+        )
+        self._status.setText(self._i18n.tr(message))
 
     def _on_failed(self, error: str) -> None:
+        self._terminal_error = True
         self._set_running(False)
-        self._status.setText(f"Translation failed: {error}")
+        self._status.setText(f"{self._i18n.tr('Translation failed')}: {safe_error_message(error)}")
 
     def _on_export(self) -> None:
         if self._document_id is None:
@@ -547,28 +591,9 @@ class TranslationPage(WorkerPage):
         self._submit("export", self._export_task(document_id, target_path))
 
     def _export_task(self, document_id: int, target_path: Path) -> Callable[[], object]:
-        document_format = self._document_format
-
         def task() -> object:
-            exporter_types = {
-                "txt": TxtExporter,
-                "json": JsonExporter,
-                "srt": SrtExporter,
-                "ass": AssExporter,
-                "ssa": SsaExporter,
-                "vtt": VttExporter,
-            }
-            exporter_type = exporter_types.get(document_format)
-            if exporter_type is None:
-                raise ValueError(f"Unsupported document format: {document_format}")
-            exporter = exporter_type(self._db_path, app_version=self._app_version)
-            try:
-                exporter.export_document(
-                    source_document_id=document_id,
-                    target_path=target_path,
-                )
-            finally:
-                exporter.close()
+            with TranslationFacade(self._db_path, app_version=self._app_version) as facade:
+                facade.export_document(document_id, target_path)
             return None
 
         return task
@@ -576,90 +601,93 @@ class TranslationPage(WorkerPage):
     def _handle_action(self, action: str, result: object) -> None:
         if action == "refresh":
             if result is None:
-                self._mode_label.setText("Mode: auto")
-                self._active_profile_label.setText("")
-                self._sync_mode_switch()
-                self._mode_switch.setEnabled(False)
-                self._document_combo.clear()
-                self._document_combo.setEnabled(False)
                 self._document_id = None
-                self._document_name = ""
-                self._progress.setRange(0, 0)
-                self._progress.setValue(0)
+                self._document_combo.clear()
                 self._hide_workbench()
                 return
             assert isinstance(result, tuple)
-            project, active_profile, progress, override, documents, effective_id = result
-            assert isinstance(project, Project)
-            assert isinstance(progress, list)
-            assert isinstance(documents, list)
-            self._mode = project.mode
-            self._mode_label.setText(
-                "Mode: workbench" if project.mode == MODE_WORKBENCH else "Mode: auto",
-            )
-            self._mode_switch.setEnabled(True)
-            self._sync_mode_switch()
+            (
+                project,
+                profile,
+                progress,
+                override,
+                documents,
+                effective,
+                providers,
+                models,
+                templates,
+            ) = result
+            self._allow_initial_document_restore = False
             self._active_profile_id = project.active_profile_id
-            if isinstance(active_profile, ModelProfile):
-                self._active_profile_label.setText(
-                    f"Active profile: {active_profile.name} — {active_profile.model_id}",
+            self._models = models
+            self._templates = templates
+            self._provider_combo.clear()
+            for provider in providers:
+                self._provider_combo.addItem(provider.name, provider.id)
+            if profile is not None:
+                self._provider_combo.setCurrentIndex(
+                    self._provider_combo.findData(profile.provider_connection_id)
                 )
+                self._active_profile_label.setText(f"Model: {profile.name} — {profile.model_id}")
                 self._hide_config_missing()
-            elif project.mode == MODE_AUTO:
-                self._active_profile_label.setText("Active profile: none")
             else:
                 self._active_profile_label.setText("")
-            self._populate_documents(documents, effective_id, len(progress))
-            if project.mode == MODE_WORKBENCH:
-                self._populate_workbench(active_profile, progress, override)
-                if active_profile is None:
-                    self._on_config_missing(
-                        "This project has no active profile. Set one in the Project tab.",
-                    )
-            else:
-                self._hide_workbench()
-        elif action == "set_mode":
-            assert isinstance(result, Project)
-            # Reflect the persisted mode synchronously so a later failed refresh
-            # cannot leave the selector showing the pre-switch mode.
-            self._mode = result.mode
-            self._sync_mode_switch()
-            self._status.setText(f"Mode switched to {result.mode}.")
+                self._on_config_missing(
+                    "Choose a Provider and model. Configure Providers if none exist."
+                )
+            self._populate_model_selector()
+            self._populate_prompt_selector(override)
+            self._populate_documents(documents, effective, len(progress))
+            self._populate_workbench(profile, progress, override)
+            self._set_running(self._running)
+        elif action == "select_model":
+            self._job_controls.refresh()
             self.refresh()
-        elif action == "save_override":
-            self._status.setText("Prompt override saved.")
+        elif action in {"save_override", "clear_override"}:
+            self._clear_prompt_editor()
+            self._status.setText(
+                self._i18n.tr("Prompt saved." if action == "save_override" else "Prompt cleared.")
+            )
             self.refresh()
-        elif action == "clear_override":
-            self._status.setText("Prompt override cleared.")
-            self.refresh()
-        elif action == "save_revision":
-            self._status.setText("Manual translation saved.")
-            self.refresh()
-        elif action == "lock_revision":
-            self._status.setText("Current translation locked.")
-            self.refresh()
-        elif action == "unlock_revision":
-            self._status.setText("Current translation unlocked.")
+        elif action in {
+            "save_revision",
+            "lock_revision",
+            "unlock_revision",
+            "set_current_revision",
+            "retry_failed",
+        }:
+            messages = {
+                "save_revision": "Manual translation saved.",
+                "lock_revision": "Current translation locked.",
+                "unlock_revision": "Current translation unlocked.",
+                "set_current_revision": "Current translation selected.",
+                "retry_failed": "Failed segment requeued.",
+            }
+            self._status.setText(self._i18n.tr(messages[action]))
+            if action == "set_current_revision":
+                self._clear_revision_editor()
             self.refresh()
         elif action == "load_revision_history":
             assert isinstance(result, tuple)
             segment_id, revisions = result
             if segment_id != self._selected_segment_id():
                 return
-            assert isinstance(revisions, list)
             self._revision_history_segment_id = segment_id
-            self._revision_entries = [
-                revision for revision in revisions if isinstance(revision, TranslationRevision)
-            ]
+            self._revision_entries = revisions
             self._render_revision_history()
-        elif action == "set_current_revision":
-            self._status.setText("Current revision selected.")
-            self.refresh()
-        elif action == "retry_failed":
-            self._status.setText("Failed segment requeued.")
-            self.refresh()
+        elif action == "context_preview":
+            assert isinstance(result, tuple)
+            segment_id, manifest = result
+            if segment_id == self._selected_segment_id():
+                lines = [
+                    f"{self._i18n.tr('Available context budget')}: {manifest.budget.available}"
+                ]
+                for candidate in manifest.selected:
+                    if candidate.source != ContextSource.CURRENT_SEGMENT:
+                        lines.append(candidate.content)
+                self._context_preview.setPlainText("\n\n".join(lines))
         elif action == "export":
-            self._status.setText("Export written.")
+            self._status.setText(self._i18n.tr("Export written."))
         else:
             self._handle_error(f"Unknown action: {action}")
 
@@ -675,6 +703,8 @@ class TranslationPage(WorkerPage):
             assert isinstance(entry, SegmentProgress)
             items.append(entry)
         previous_id = self._selected_segment_id()
+        if previous_id is None and items and isinstance(active_profile, ModelProfile):
+            previous_id = items[0].segment_id
         revision_draft = (
             self._revision_editor.translation() if self._revision_editor is not None else None
         )
@@ -717,7 +747,7 @@ class TranslationPage(WorkerPage):
             capability = None
         if capability is None:
             self._workbench_info.setText(
-                f"Profile: {active_profile.name} — {active_profile.model_id} "
+                f"Model: {active_profile.name} — {active_profile.model_id} "
                 "(no capability snapshot — parameters unavailable).",
             )
             self._clear_param_editor()
@@ -726,7 +756,7 @@ class TranslationPage(WorkerPage):
 
         supported = ", ".join(presented_parameters(capability)) or "(none)"
         self._workbench_info.setText(
-            f"Profile: {active_profile.name} — {active_profile.model_id} · "
+            f"Model: {active_profile.name} — {active_profile.model_id} · "
             f"context {capability.context_window} · output ≤ "
             f"{capability.max_output_tokens} · supported: {supported}",
         )
@@ -754,12 +784,8 @@ class TranslationPage(WorkerPage):
                 if self._i18n.current_language != "en":
                     status = self._i18n.tr(item.status.capitalize())
                 label = f"{item.stable_key}: {status}"
-                if item.current_revision_id is not None:
-                    label += f" (rev {item.current_revision_id})"
-                if item.attempt_status is not None:
-                    label += f" · attempt {item.attempt_status}"
-                    if item.attempt_error:
-                        label += f": {item.attempt_error}"
+                if item.attempt_error:
+                    label += f": {safe_error_message(item.attempt_error)}"
                 self._segment_progress.addItem(label)
             if self._selected_workbench_id is not None:
                 for index, item in enumerate(visible):
@@ -828,11 +854,11 @@ class TranslationPage(WorkerPage):
         segment_id: int,
     ) -> Callable[[], object]:
         def task() -> object:
-            with TranslationRunService(
+            with TranslationFacade(
                 self._db_path,
                 app_version=self._app_version,
             ) as runs:
-                return segment_id, runs.list_revisions_for_segment(segment_id=segment_id)
+                return segment_id, runs.revisions(segment_id)
 
         return task
 
@@ -849,7 +875,7 @@ class TranslationPage(WorkerPage):
             selected = self._selected_segment_item()
             current_id = selected.current_revision_id if selected is not None else None
             for revision in self._revision_entries:
-                label = f"{self._i18n.tr('Revision')} {revision.id}: "
+                label = f"{self._i18n.tr('Translation')} {revision.id}: "
                 label += self._i18n.tr(revision.origin.capitalize())
                 if revision.id == current_id:
                     label += f" · {self._i18n.tr('current')}"
@@ -873,9 +899,13 @@ class TranslationPage(WorkerPage):
 
     def _sync_revision_actions(self) -> None:
         selected = self._selected_segment_item()
-        retry_enabled = (
-            selected is not None and selected.status == "failed" and not self._running
+        self._retranslate.setEnabled(
+            selected is not None
+            and not selected.revision_locked
+            and not self._running
+            and self._active_profile_id is not None
         )
+        retry_enabled = selected is not None and selected.status == "failed" and not self._running
         self._retry_failed.setEnabled(retry_enabled)
         history_item = self._revision_history_list.currentItem()
         revision_id = history_item.data(Qt.ItemDataRole.UserRole) if history_item else None
@@ -892,14 +922,11 @@ class TranslationPage(WorkerPage):
         revision_id: int,
     ) -> Callable[[], object]:
         def task() -> object:
-            with TranslationRunService(
+            with TranslationFacade(
                 self._db_path,
                 app_version=self._app_version,
             ) as runs:
-                return runs.set_current_revision(
-                    segment_id=segment_id,
-                    revision_id=revision_id,
-                )
+                return runs.select_revision(segment_id, revision_id)
 
         return task
 
@@ -917,11 +944,11 @@ class TranslationPage(WorkerPage):
 
     def _retry_failed_task(self, segment_id: int) -> Callable[[], object]:
         def task() -> object:
-            with TranslationRunService(
+            with TranslationFacade(
                 self._db_path,
                 app_version=self._app_version,
             ) as runs:
-                return runs.retry_failed(segment_id=segment_id)
+                return runs.retry_failed(segment_id)
 
         return task
 
@@ -1084,11 +1111,11 @@ class TranslationPage(WorkerPage):
 
     def _save_revision_task(self, segment_id: int, text: str) -> Callable[[], object]:
         def task() -> object:
-            with TranslationRunService(
+            with TranslationFacade(
                 self._db_path,
                 app_version=self._app_version,
             ) as runs:
-                return runs.append_user_revision(segment_id=segment_id, text=text)
+                return runs.save_manual_revision(segment_id, text)
 
         return task
 
@@ -1101,11 +1128,11 @@ class TranslationPage(WorkerPage):
 
     def _lock_revision_task(self, segment_id: int) -> Callable[[], object]:
         def task() -> object:
-            with TranslationRunService(
+            with TranslationFacade(
                 self._db_path,
                 app_version=self._app_version,
             ) as runs:
-                return runs.lock_current_revision(segment_id=segment_id)
+                return runs.lock_current(segment_id)
 
         return task
 
@@ -1118,11 +1145,11 @@ class TranslationPage(WorkerPage):
 
     def _unlock_revision_task(self, segment_id: int) -> Callable[[], object]:
         def task() -> object:
-            with TranslationRunService(
+            with TranslationFacade(
                 self._db_path,
                 app_version=self._app_version,
             ) as runs:
-                return runs.unlock_current_revision(segment_id=segment_id)
+                return runs.unlock_current(segment_id)
 
         return task
 
@@ -1135,7 +1162,7 @@ class TranslationPage(WorkerPage):
 
     def _save_override_task(self, profile_id: int, text: str) -> Callable[[], object]:
         def task() -> object:
-            with ModelProfileService(
+            with TranslationFacade(
                 self._db_path,
                 app_version=self._app_version,
             ) as profiles:
@@ -1152,7 +1179,7 @@ class TranslationPage(WorkerPage):
 
     def _clear_override_task(self, profile_id: int) -> Callable[[], object]:
         def task() -> object:
-            with ModelProfileService(
+            with TranslationFacade(
                 self._db_path,
                 app_version=self._app_version,
             ) as profiles:
@@ -1172,5 +1199,110 @@ class TranslationPage(WorkerPage):
     def _handle_error(self, error: str) -> None:
         # A failed mode change must not leave the selector showing a mode that
         # was never persisted; re-align it with the current project's mode.
-        self._sync_mode_switch()
-        self._status.setText(f"Error: {error}")
+        self._status.setText(f"Error: {safe_error_message(error)}")
+
+    def _populate_model_selector(self) -> None:
+        provider_id = self._provider_combo.currentData()
+        self._model_combo.clear()
+        for model in self._models:
+            if model.provider_connection_id == provider_id:
+                self._model_combo.addItem(f"{model.model_id} — {model.name}", model.id)
+        self._model_combo.setCurrentIndex(self._model_combo.findData(self._active_profile_id))
+
+    def _on_provider_selected(self, _index: int) -> None:
+        self._populate_model_selector()
+        if self._model_combo.count():
+            self._model_combo.setCurrentIndex(0)
+            self._on_model_selected(0)
+
+    def _on_model_selected(self, _index: int) -> None:
+        project_id, model_id = self._project_id, self._model_combo.currentData()
+        if self._running or project_id is None or not isinstance(model_id, int):
+            return
+
+        def task() -> object:
+            with TranslationFacade(self._db_path, app_version=self._app_version) as facade:
+                return facade.select_active_profile(project_id, model_id)
+
+        self._submit("select_model", task)
+
+    def _populate_prompt_selector(self, override: object) -> None:
+        self._prompt_combo.clear()
+        self._prompt_combo.addItem(self._i18n.tr("Preset prompt"), "preset")
+        selected = 0
+        for template in self._templates:
+            self._prompt_combo.addItem(template.name, template.template_id)
+            if isinstance(override, PromptOverride) and (
+                template.template_text == override.template_text
+                and template.parent_template_version == override.parent_template_version
+            ):
+                selected = self._prompt_combo.count() - 1
+        if isinstance(override, PromptOverride) and selected == 0:
+            self._prompt_combo.addItem(self._i18n.tr("Model prompt"), "current")
+            selected = self._prompt_combo.count() - 1
+        self._prompt_combo.setCurrentIndex(selected)
+
+    def _on_prompt_selected(self, _index: int) -> None:
+        profile_id = self._active_profile_id
+        if profile_id is None or self._running:
+            return
+        template_id = self._prompt_combo.currentData()
+        if not isinstance(template_id, str) or template_id == "current":
+            return
+
+        def task() -> object:
+            with TranslationFacade(self._db_path, app_version=self._app_version) as facade:
+                facade.select_prompt(profile_id, None if template_id == "preset" else template_id)
+            return None
+
+        self._submit("clear_override" if template_id == "preset" else "save_override", task)
+
+    def _load_context_preview(self, segment_id: int) -> None:
+        profile_id = self._active_profile_id
+        if profile_id is None:
+            return
+
+        def task() -> object:
+            with TranslationFacade(self._db_path, app_version=self._app_version) as facade:
+                return segment_id, facade.context_preview(segment_id, profile_id)
+
+        self._submit("context_preview", task)
+
+    def import_file(self, path: Path) -> None:
+        self._job_controls.import_file(path)
+
+    def _on_retranslate(self) -> None:
+        selected = self._selected_segment_item()
+        if (
+            self._running
+            or selected is None
+            or selected.revision_locked
+            or self._active_profile_id is None
+            or self._project_id is None
+            or self._document_id is None
+        ):
+            return
+        self._terminal_error = False
+        self._stop_clicked = False
+        self._set_running(True)
+        self._translation_worker.start_translate_single.emit(
+            self._project_id,
+            self._document_id,
+            self._active_profile_id,
+            selected.segment_id,
+            self._param_editor.values() if self._param_editor is not None else None,
+        )
+
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:  # noqa: N802
+        mime = event.mimeData()
+        if not self._running and mime is not None and mime.hasUrls():
+            if all(url.isLocalFile() for url in mime.urls()):
+                event.acceptProposedAction()
+
+    def dropEvent(self, event: QDropEvent) -> None:  # noqa: N802
+        mime = event.mimeData()
+        if not self._running and mime is not None and mime.hasUrls():
+            paths = [Path(url.toLocalFile()) for url in mime.urls() if url.isLocalFile()]
+            if paths:
+                self._job_controls.import_files(paths)
+                event.acceptProposedAction()

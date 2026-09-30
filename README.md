@@ -1,65 +1,38 @@
 # 译境 / TransRealm
 
-本地优先、AI 辅助的翻译工作台。V1.0 目标：单用户、SQLite、OpenAI-compatible HTTP、Windows 11 绿色版优先。
+TransRealm 是本地优先的个人 AI 长文本翻译工作台，面向小说、游戏文本、字幕及一般长文本。项目复用 SQLite、格式保真、Attempt/Revision 与恢复底座，并把后续开发集中到格式感知分段、单 Segment 请求、Context Memory 和翻译可靠性。
 
-## 用户文档（V1.0 候选 0.1.0）
+## 权威文档
 
-- [安装与使用指南](docs/user-guide.md) — 绿色版安装、三标签页操作、Auto/Workbench 模式、Profile/Glossary、导出与清理
-- [数据安全](docs/data-safety.md) — 迁移、备份、恢复/回滚、卸载清理
-- [已知问题与未覆盖项](docs/known-issues.md) — 候选行为限制与尚未闭环的验证项
-- [第三方依赖与许可](docs/third-party-licenses.md) — 运行时与工具链许可清单
+- [产品范围](docs/PRODUCT.md) — 定位、V1 MUST/SHOULD/WON'T 与用户路径
+- [架构](docs/ARCHITECTURE.md) — Single-Segment Pipeline、可靠内核与兼容边界
+- [数据库](docs/DATABASE.md) — schema、append-only migration、备份、恢复与格式保真
+- [开发规则](docs/DEVELOPMENT.md) — 运行、测试、Task、权限与提交边界
+- [本机验收与候选构建](docs/RELEASE.md) — EXE/ZIP 绿色版、本机验收与回滚
+- [当前执行入口](tasks/README.md) — 当前 phase 与下一动作
+
+历史 RFC、Review、PRD、Roadmap、Task ledger 和旧状态记录位于 `docs/archive/`，不是当前开发指令。
 
 ## 开发基线
 
 - Python 3.12+
-- PySide6（Qt 6）
+- PySide6 / Qt 6
 - SQLite
-- pytest
+- pytest、Ruff、mypy
 
-## 目录结构
-
-```text
-src/transrealm/
-  ui/               # PySide6 页面与信号
-  application/      # 应用服务与编排
-  domain/           # 领域模型与业务规则（不依赖 Qt/SQLite/HTTP）
-  infrastructure/   # SQLite、Repository、持久化
-  adapters/         # 外部模型端点适配
-
-tests/              # pytest 测试
-```
-
-## 安装开发依赖
-
-```bash
+```powershell
 py -3.12 -m pip install -e ".[dev]"
-```
-
-## 运行桌面版
-
-```bash
 transrealm
-# 或 python -m transrealm.ui
+# 或
+py -3.12 -m transrealm.ui
 ```
 
-数据默认存于 `~/.transrealm/project.sqlite`（Phase 0 桌面壳：Settings 管理 Connection/Profile，Project 建项目并导入 TXT，Translation 选择 Profile、翻译/取消/进度与 TXT 导出）。
+## 质量检查
 
-## 打包候选（P1-T05，PyInstaller）
-
-从锁定环境构建 Windows 绿色版候选（onedir + zip + `build_manifest.json`，记录工具/版本/hash/size）：
-
-```bash
-py -3.12 scripts/build_release.py
-```
-
-产物在 `dist/`（gitignored）：`transrealm/`（onedir）、`transrealm-0.1.0-win-x64.zip`（绿色 artifact）、`build_manifest.json`（候选身份与 hash）。迁移 SQL 数据文件由脚本以 `--add-data "src/transrealm/migrations;transrealm/migrations"` 收集，否则冻结应用无法应用迁移。构建候选不等于提交、推送或发布；外部动作始终需用户单独授权。Phase 0 的 P0-T08-M06 已验证该工具链能 build/start；依赖锁、体积、Qt 插件与杀毒扫描属 V1.0 Release Gate（`03` §12）。
-
-## 开发质量检查
-
-```bash
+```powershell
 py -3.12 -m pytest -q
 py -3.12 -m ruff check src tests
 py -3.12 -m mypy src tests
 ```
 
-无人开发的裁决与质量门禁见 `09_Unattended_Development_Governance.md`；候选发布执行清单见 `RELEASE_CHECKLIST.md`。交给开发 Agent 时只需提供 `DEVELOPMENT_STATE.md`；二者不代表已发布版本。
+普通 Coding Agent 默认只读自己的 `tasks/Txx-*.md` 和其中指定源码；只有在 Task 风险需要时才增读对应权威文档。任务与当前执行状态统一见 `tasks/README.md`。

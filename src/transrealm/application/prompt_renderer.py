@@ -1,4 +1,4 @@
-﻿"""Prompt renderer: combine a Profile template with a ContextManifest.
+"""Prompt renderer: combine a Profile template with a ContextManifest.
 
 The renderer produces a prompt text and the expected ``OutputContract`` for
 the current segment(s).  It guarantees that the output schema/wrapper is always
@@ -62,6 +62,7 @@ class RenderedPrompt:
     prompt_text: str
     output_contract: OutputContract
     prompt_hash: str
+    output_protocol: str = "json"
 
 
 class PromptRenderer:
@@ -100,6 +101,7 @@ class PromptRenderer:
         source_language: str | None = None,
         target_language: str | None = None,
         output_schema: dict[str, Any] | None = None,
+        output_protocol: str = "json",
     ) -> RenderedPrompt:
         """Render a prompt and expected output contract."""
         if not manifest.selected:
@@ -114,6 +116,15 @@ class PromptRenderer:
             raise PromptRenderError(
                 "No current segment in selected candidates; cannot build output contract.",
             )
+        protocol = output_protocol.strip().lower().replace("-", "_")
+        if protocol in {"plain", "plain_text"}:
+            protocol = "text"
+        if protocol == "json_object":
+            protocol = "json"
+        if protocol not in {"text", "json"}:
+            raise PromptRenderError("Output protocol must be text or json.")
+        if protocol == "text" and len(current_candidates) != 1:
+            raise PromptRenderError("Plain text output requires exactly one target segment.")
 
         schema = output_schema if output_schema is not None else self._default_schema
         schema_json = json.dumps(schema, ensure_ascii=False, indent=2)
@@ -131,7 +142,24 @@ class PromptRenderer:
         except (KeyError, ValueError) as exc:
             raise PromptRenderError(f"Template substitution failed: {exc}") from exc
 
-        suffix = self._OUTPUT_SUFFIX.substitute({"output_schema": schema_json})
+        # Older presets and valid user overrides may omit $notes. Keep them
+        # compatible while ensuring saved Notes reach every applicable call.
+        if placeholders["notes"] and "notes" not in template_to_use.get_identifiers():
+            body += f"\n\nJob Notes:\n{placeholders['notes']}"
+
+        if protocol == "text":
+            suffix = (
+                "\n---OUTPUT CONTRACT---\n"
+                "Return only the translation of the current segment as plain text. "
+                "Do not translate context separately. Do not include reasoning, "
+                "explanations, JSON wrappers or Markdown fences.\n"
+            )
+        else:
+            target_ids = json.dumps(
+                [candidate.segment_id for candidate in current_candidates], ensure_ascii=False
+            )
+            suffix = self._OUTPUT_SUFFIX.substitute({"output_schema": schema_json})
+            suffix += f"\nTarget segment IDs (in order): {target_ids}\n"
         prompt_text = f"{body}{suffix}"
 
         output_contract = OutputContract(
@@ -148,6 +176,7 @@ class PromptRenderer:
             prompt_text=prompt_text,
             output_contract=output_contract,
             prompt_hash=prompt_hash,
+            output_protocol=protocol,
         )
 
     @staticmethod
@@ -158,18 +187,22 @@ class PromptRenderer:
         source_language: str | None,
         target_language: str | None,
     ) -> dict[str, str]:
-        current_text = "\n\n".join(
-            candidate.content for candidate in current_candidates
-        )
+        current_text = "\n\n".join(candidate.content for candidate in current_candidates)
         context_lines = [
             f"[{candidate.reason}] {candidate.content}"
             for candidate in manifest.selected
-            if candidate.source != ContextSource.CURRENT_SEGMENT
+            if candidate.source not in (ContextSource.CURRENT_SEGMENT, ContextSource.JOB_NOTES)
         ]
         context = "\n".join(context_lines) if context_lines else "None"
+        notes = "\n\n".join(
+            candidate.content
+            for candidate in manifest.selected
+            if candidate.source == ContextSource.JOB_NOTES
+        )
         return {
             "current": current_text,
             "context": context,
+            "notes": notes,
             "output_schema": schema_json,
             "source_language": source_language or "source",
             "target_language": target_language or "target",

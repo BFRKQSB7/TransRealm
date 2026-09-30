@@ -26,9 +26,9 @@ def test_main_window_exposes_hierarchical_shell_and_navigation(
         assert title.text() == "TransRealm"
         assert tabs.count() == 3
         assert [tabs.tabText(i) for i in range(tabs.count())] == [
-            "Settings",
-            "Project",
             "Translation",
+            "Providers",
+            "Prompts",
         ]
         assert tabs.documentMode()
         assert all(isinstance(tabs.widget(i), QScrollArea) for i in range(tabs.count()))
@@ -79,15 +79,15 @@ def test_project_setup_signal_navigates_to_project_tab(
 
         window._translation.request_project_setup.emit()
 
-        assert tabs.currentIndex() == 1
+        assert tabs.currentIndex() == 0
         shell = window.centralWidget()
         assert isinstance(shell, MainShell)
         assert shell.count() == 3
         assert [shell.tabText(i) for i in range(shell.count())] == [
-            "Settings",
-            "Project",
             "Translation",
+            "Providers",
+            "Prompts",
         ]
-        assert shell.currentWidget() is tabs.widget(1)
+        assert shell.currentWidget() is tabs.widget(0)
     finally:
         window.shutdown()

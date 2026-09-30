@@ -129,6 +129,7 @@ def _setup_project(window: MainWindow, qtbot: Any) -> None:
 
     project = window._project
     project._project_name.setText("Six formats")
+    project._create_box.setChecked(True)
     project._create_project.click()
     qtbot.waitUntil(lambda: project._project_id is not None, timeout=5000)
     qtbot.waitUntil(lambda: project._active_profile_combo.count() == 1, timeout=5000)

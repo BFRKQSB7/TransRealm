@@ -18,6 +18,7 @@ class ContextSource(Enum):
     CURRENT_SEGMENT = auto()
     NEIGHBOR_SEGMENT = auto()
     LOCKED_GLOSSARY = auto()
+    JOB_NOTES = auto()
     # Phase 2 sources; kept here so manifests remain forward-compatible.
     CHARACTER_DATA = auto()
     TRANSLATION_MEMORY = auto()

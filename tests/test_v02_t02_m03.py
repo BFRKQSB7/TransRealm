@@ -38,6 +38,7 @@ def window_factory(qtbot: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
 def _create_project(qtbot: Any, window: MainWindow, name: str = "Demo") -> None:
     project = window._project
     project._project_name.setText(name)
+    project._create_box.setChecked(True)
     project._create_project.click()
     qtbot.waitUntil(lambda: project._project_id is not None, timeout=5000)
     qtbot.waitUntil(
@@ -81,7 +82,7 @@ def test_delete_requires_exact_name_and_clears_translation_context(
     assert "0 source document(s)" in project._delete_summary_label.text()
     project.delete_project("wrong")
     qtbot.waitUntil(
-        lambda: "exact Project name" in project._status.text(),
+        lambda: "exact Job name" in project._status.text(),
         timeout=5000,
     )
     with ProjectService(tmp_path / "project.sqlite", app_version=APP_VERSION) as service:
@@ -89,7 +90,7 @@ def test_delete_requires_exact_name_and_clears_translation_context(
 
     project.delete_project("Demo")
     qtbot.waitUntil(
-        lambda: "Project deleted" in project._status.text(),
+        lambda: "Job deleted" in project._status.text(),
         timeout=5000,
     )
     qtbot.waitUntil(lambda: project._project_id is None, timeout=5000)
@@ -110,7 +111,7 @@ def test_delete_running_project_shows_actionable_worker_error(
     _add_running_run(tmp_path / "project.sqlite", project._project_id)
     project.refresh()
     qtbot.waitUntil(
-        lambda: "1 running Run(s)" in project._delete_summary_label.text(),
+        lambda: "1 running session(s)" in project._delete_summary_label.text(),
         timeout=5000,
     )
 
@@ -129,17 +130,17 @@ def test_delete_controls_retranslate_between_english_and_chinese(
 ) -> None:
     window = window_factory()
     project = window._project
-    assert project._delete_project.text() == "Delete Project"
+    assert project._delete_project.text() == "Delete Job"
     window._i18n.set_language("zh_CN")
-    qtbot.waitUntil(lambda: project._delete_project.text() == "删除项目", timeout=5000)
+    qtbot.waitUntil(lambda: project._delete_project.text() == "删除任务", timeout=5000)
     qtbot.waitUntil(
-        lambda: project._delete_confirmation.placeholderText() == "输入项目名称以确认",
+        lambda: project._delete_confirmation.placeholderText() == "输入任务名称以确认",
         timeout=5000,
     )
     assert project._delete_summary_label is not None
     window._i18n.set_language("en")
-    qtbot.waitUntil(lambda: project._delete_project.text() == "Delete Project", timeout=5000)
+    qtbot.waitUntil(lambda: project._delete_project.text() == "Delete Job", timeout=5000)
     qtbot.waitUntil(
-        lambda: project._delete_confirmation.placeholderText() == "Type Project name to confirm",
+        lambda: project._delete_confirmation.placeholderText() == "Type Job name to confirm",
         timeout=5000,
     )

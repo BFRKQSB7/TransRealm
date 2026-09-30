@@ -7,7 +7,6 @@ the Qt main thread. Pages expose programmatic entry points (``import_file``,
 file dialogs.
 """
 
-# ruff: noqa: F401
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -19,43 +18,30 @@ from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
     QFormLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QListWidget,
     QListWidgetItem,
-    QProgressBar,
+    QPlainTextEdit,
     QPushButton,
+    QScrollArea,
     QSpinBox,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
 
-from transrealm.application.credential_status import (
-    CredentialStatus,
-    report_credential_availability,
-)
-from transrealm.application.glossary_service import GlossaryService
-from transrealm.application.import_service import ImportService
-from transrealm.application.model_profile_service import ModelProfileService
-from transrealm.application.preset_templates import current_preset
-from transrealm.application.project_service import ProjectDeletionSummary, ProjectService
-from transrealm.application.provider_connection_service import ProviderConnectionService
-from transrealm.application.translation_run_service import TranslationRunService
-from transrealm.application.workbench import SegmentProgress, presented_parameters
+from transrealm.application.project_service import ProjectDeletionSummary
+from transrealm.application.translation_facade import TranslationFacade
 from transrealm.domain.glossary_entry import GlossaryEntry
-from transrealm.domain.model_profile import ModelCapability, ModelCapabilityError, ModelProfile
-from transrealm.domain.project import MODE_AUTO, MODE_WORKBENCH, Project
-from transrealm.domain.prompt_override import PromptOverride
-from transrealm.domain.provider_connection import ProviderConnection
+from transrealm.domain.model_profile import ModelProfile
+from transrealm.domain.project import Project
 from transrealm.domain.segment import SourceDocument
-from transrealm.ui.page_base import WorkerPage
-from transrealm.ui.workbench import (
-    WorkbenchParamEditor,
-    WorkbenchPromptEditor,
-    WorkbenchRevisionEditor,
-)
-from transrealm.ui.worker import ServiceWorker, TranslationWorker
+from transrealm.ui.i18n import LanguageManager
+from transrealm.ui.page_base import WorkerPage, safe_error_message
+from transrealm.ui.worker import ServiceWorker
 
 
 class ProjectPage(WorkerPage):
@@ -71,23 +57,52 @@ class ProjectPage(WorkerPage):
     project_deleted = Signal(int)
     document_ready = Signal(int, str, int)
     project_settings_changed = Signal(int)
+    request_settings_setup = Signal()
 
-    def __init__(self, worker: ServiceWorker, *, db_path: Path, app_version: str) -> None:
+    def __init__(
+        self,
+        worker: ServiceWorker,
+        *,
+        db_path: Path,
+        app_version: str,
+        i18n: LanguageManager | None = None,
+    ) -> None:
         super().__init__(worker)
         self._db_path = db_path
         self._app_version = app_version
+        self._i18n = i18n or LanguageManager(parent=self)
         self._project_id: int | None = None
         self._deletion_summary_data: ProjectDeletionSummary | None = None
+        self._has_profiles = False
+        self._has_project = False
+        self._has_active_profile = False
+        self._allow_initial_project_restore = True
 
-        layout = QVBoxLayout(self)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        self._details = QTabWidget(self)
+        self._details.setMaximumHeight(240)
+        outer.addWidget(self._details)
+        job_panel = QWidget(self)
+        self._add_panel(job_panel, "Job and files")
+        layout = QVBoxLayout(job_panel)
         self._status = QLabel("", self)
         layout.addWidget(self._status)
 
-        form = QFormLayout()
+        create_box = QGroupBox("New Job", self)
+        self._create_box = create_box
+        create_box.setCheckable(True)
+        create_box.setChecked(False)
+        create_content = QWidget(create_box)
+        create_layout = QVBoxLayout(create_box)
+        create_layout.addWidget(create_content)
+        create_box.toggled.connect(create_content.setVisible)
+        create_content.hide()
+        form = QFormLayout(create_content)
         self._project_name = QLineEdit(self)
         self._source_language = QLineEdit(self)
         self._target_language = QLineEdit(self)
-        self._create_project = QPushButton("Create Project", self)
+        self._create_project = QPushButton("Create Job", self)
         self._import_file = QPushButton("Import file…", self)
         # Keep the old private hook usable for existing UI tests/integrations.
         self._import_txt = self._import_file
@@ -95,40 +110,67 @@ class ProjectPage(WorkerPage):
         form.addRow("Source lang", self._source_language)
         form.addRow("Target lang", self._target_language)
         form.addRow(self._create_project)
-        form.addRow(self._import_file)
-        layout.addLayout(form)
+        layout.addWidget(create_box)
+        layout.addWidget(self._import_file)
 
-        layout.addWidget(QLabel("Open project", self))
+        layout.addWidget(QLabel("Open Job", self))
         self._project_combo = QComboBox(self)
         layout.addWidget(self._project_combo)
 
-        delete_form = QFormLayout()
+        delete_box = QGroupBox("Delete Job", self)
+        delete_box.setCheckable(True)
+        delete_box.setChecked(False)
+        delete_content = QWidget(delete_box)
+        delete_layout = QVBoxLayout(delete_box)
+        delete_layout.addWidget(delete_content)
+        delete_box.toggled.connect(delete_content.setVisible)
+        delete_content.hide()
+        delete_form = QFormLayout(delete_content)
         self._delete_summary_label = QLabel("", self)
         self._delete_summary_label.setWordWrap(True)
         self._delete_confirmation = QLineEdit(self)
-        self._delete_confirmation.setPlaceholderText("Type Project name to confirm")
-        self._delete_project = QPushButton("Delete Project", self)
+        self._delete_confirmation.setPlaceholderText("Type Job name to confirm")
+        self._delete_project = QPushButton("Delete Job", self)
         delete_form.addRow("Delete summary", self._delete_summary_label)
         delete_form.addRow("Confirm name", self._delete_confirmation)
         delete_form.addRow(self._delete_project)
-        layout.addLayout(delete_form)
+        layout.addWidget(delete_box)
 
-        active_form = QFormLayout()
+        active_host = QWidget(self)
+        active_host.hide()
+        active_form = QFormLayout(active_host)
         self._active_profile_combo = QComboBox(self)
-        self._set_active = QPushButton("Set Active Profile", self)
-        self._clear_active = QPushButton("Clear Active Profile", self)
-        active_form.addRow("Active profile", self._active_profile_combo)
+        self._set_active = QPushButton("Set Model", self)
+        self._clear_active = QPushButton("Clear Model", self)
+        active_form.addRow("Selected model", self._active_profile_combo)
         active_form.addRow(self._set_active)
         active_form.addRow(self._clear_active)
-        layout.addLayout(active_form)
         self._active_profile_label = QLabel("", self)
-        layout.addWidget(self._active_profile_label)
+        self._active_profile_label.hide()
+        active_help = QLabel(
+            "Choose a model here or in the translation controls below.",
+            self,
+        )
+        active_help.setWordWrap(True)
+        active_help.hide()
+        self._profile_setup_hint = QLabel("", self)
+        self._profile_setup_hint.setWordWrap(True)
+        self._profile_setup_hint.setProperty("transrealm_i18n_dynamic", True)
+        self._profile_setup_hint.hide()
+        layout.addWidget(self._profile_setup_hint)
+        self._open_settings = QPushButton("Open Providers", self)
+        self._open_settings.hide()
+        layout.addWidget(self._open_settings)
 
+        glossary_panel = QWidget(self)
+        self._add_panel(glossary_panel, "Glossary")
+        layout = QVBoxLayout(glossary_panel)
         layout.addWidget(QLabel("Glossary", self))
         glossary_form = QFormLayout()
         self._gloss_source = QLineEdit(self)
         self._gloss_target = QLineEdit(self)
         self._gloss_scope = QLineEdit(self)
+        self._gloss_scope.setText("project")
         self._gloss_priority = QSpinBox(self)
         self._gloss_priority.setRange(0, 100)
         self._gloss_priority.setValue(50)
@@ -152,16 +194,43 @@ class ProjectPage(WorkerPage):
         self._glossary_list = QListWidget(self)
         layout.addWidget(self._glossary_list)
 
+        notes_panel = QWidget(self)
+        self._add_panel(notes_panel, "Notes")
+        notes_layout = QVBoxLayout(notes_panel)
+        notes_layout.addWidget(QLabel("Notes used as context for later translations.", self))
+        self._notes = QPlainTextEdit(self)
+        self._notes.setObjectName("job-notes")
+        self._notes.setMaximumHeight(150)
+        self._notes_dirty = False
+        self._notes.textChanged.connect(lambda: setattr(self, "_notes_dirty", True))
+        notes_layout.addWidget(self._notes)
+        self._save_notes = QPushButton("Save Notes", self)
+        self._save_notes.clicked.connect(self._on_save_notes)
+        notes_layout.addWidget(self._save_notes)
+        self._notes_status = QLabel("", self)
+        self._notes_status.setWordWrap(True)
+        notes_layout.addWidget(self._notes_status)
+
         self._create_project.clicked.connect(self._on_create_project)
         self._import_file.clicked.connect(self._on_import_file)
         self._project_combo.activated.connect(self._on_project_selected)
         self._delete_project.clicked.connect(self._on_delete_project)
         self._set_active.clicked.connect(self._on_set_active)
         self._clear_active.clicked.connect(self._on_clear_active)
+        self._open_settings.clicked.connect(self.request_settings_setup.emit)
         self._add_glossary.clicked.connect(self._on_add_glossary)
         self._update_glossary.clicked.connect(self._on_update_glossary)
         self._delete_glossary.clicked.connect(self._on_delete_glossary)
         self._glossary_list.itemSelectionChanged.connect(self._on_glossary_selected)
+        self._i18n.language_changed.connect(lambda _language: self._refresh_profile_guidance())
+        self._i18n.bind_tree(self)
+
+    def _add_panel(self, panel: QWidget, title: str) -> None:
+        scroll = QScrollArea(self)
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setWidget(panel)
+        self._details.addTab(scroll, title)
 
     def refresh(self) -> None:
         """Reload projects, profiles, the active selection and glossary."""
@@ -171,45 +240,25 @@ class ProjectPage(WorkerPage):
         project_id = self._project_id
 
         def task() -> object:
-            with ProjectService(
-                self._db_path,
-                app_version=self._app_version,
-            ) as projects:
-                project_list = projects.list_projects()
-                project = next(
-                    (p for p in project_list if p.id == project_id),
-                    None,
+            with TranslationFacade(self._db_path, app_version=self._app_version) as facade:
+                projects = facade.list_jobs()
+                project = next((p for p in projects if p.id == project_id), None)
+                models = facade.available_models()
+                exists = project is not None and project_id is not None
+                active = (
+                    facade.active_profile(project_id) if project_id is not None and exists else None
                 )
-                deletion_summary = (
-                    projects.get_project_deletion_summary(project_id)
-                    if project is not None and project_id is not None
-                    else None
+                return (
+                    projects,
+                    models,
+                    project,
+                    active,
+                    facade.glossary(project_id) if project_id is not None and exists else [],
+                    facade.deletion_summary(project_id)
+                    if project_id is not None and exists
+                    else None,
+                    facade.notes(project_id) if project_id is not None and exists else "",
                 )
-            with ModelProfileService(
-                self._db_path,
-                app_version=self._app_version,
-            ) as profiles:
-                profile_list = profiles.list_profiles()
-                active_profile = (
-                    profiles.get_profile(project.active_profile_id)
-                    if project is not None and project.active_profile_id is not None
-                    else None
-                )
-            glossary_entries: list[GlossaryEntry] = []
-            if project_id is not None:
-                with GlossaryService(
-                    self._db_path,
-                    app_version=self._app_version,
-                ) as glossary:
-                    glossary_entries = glossary.list_entries(project_id)
-            return (
-                project_list,
-                profile_list,
-                project,
-                active_profile,
-                glossary_entries,
-                deletion_summary,
-            )
 
         return task
 
@@ -218,7 +267,7 @@ class ProjectPage(WorkerPage):
         source = self._source_language.text().strip() or "ja"
         target = self._target_language.text().strip() or "zh"
         if not name:
-            self._handle_error("Project name is required.")
+            self._handle_error("Job name is required.")
             return
         self._submit("create_project", self._create_project_task(name, source, target))
 
@@ -229,27 +278,20 @@ class ProjectPage(WorkerPage):
         target: str,
     ) -> Callable[[], object]:
         def task() -> object:
-            with ProjectService(self._db_path, app_version=self._app_version) as service:
-                return service.create_project(
-                    name=name,
-                    source_language=source,
-                    target_language=target,
-                )
+            with TranslationFacade(self._db_path, app_version=self._app_version) as facade:
+                return facade.create_job(name=name, source_language=source, target_language=target)
 
         return task
 
     def _on_import_file(self) -> None:
-        if self._project_id is None:
-            self._handle_error("Create or select a project first.")
-            return
-        path, _ = QFileDialog.getOpenFileName(
+        paths, _ = QFileDialog.getOpenFileNames(
             self,
-            "Import source file",
+            self._i18n.tr("Import source files"),
             "",
             "Source files (*.txt *.json *.srt *.ass *.ssa *.vtt);;All files (*)",
         )
-        if path:
-            self.import_file(Path(path))
+        if paths:
+            self.import_files([Path(path) for path in paths])
 
     def _on_import_txt(self) -> None:
         """Preserve the legacy programmatic slot name."""
@@ -265,8 +307,8 @@ class ProjectPage(WorkerPage):
 
     def _import_task(self, project_id: int, path: Path) -> Callable[[], object]:
         def task() -> object:
-            with ImportService(self._db_path, app_version=self._app_version) as service:
-                return service.import_file(project_id, path, name=path.name)
+            with TranslationFacade(self._db_path, app_version=self._app_version) as facade:
+                return facade.import_document(project_id, path)
 
         return task
 
@@ -279,6 +321,8 @@ class ProjectPage(WorkerPage):
 
     def select_project(self, project_id: int) -> None:
         """Select the active project (programmatic entry point, no dialog)."""
+        if self._project_id != project_id:
+            self._notes_dirty = False
         self._project_id = project_id
         self.project_ready.emit(project_id)
         self.refresh()
@@ -295,15 +339,15 @@ class ProjectPage(WorkerPage):
             return
         expected_name = self._deletion_summary_data.project_name
         if self._delete_confirmation.text().strip() != expected_name:
-            self._handle_error("Type the exact Project name to confirm deletion.")
+            self._handle_error("Type the exact Job name to confirm deletion.")
             return
         project_id = self._project_id
         self._submit("delete_project", self._delete_project_task(project_id))
 
     def _delete_project_task(self, project_id: int) -> Callable[[], object]:
         def task() -> object:
-            with ProjectService(self._db_path, app_version=self._app_version) as service:
-                return service.delete_project(project_id)
+            with TranslationFacade(self._db_path, app_version=self._app_version) as facade:
+                return facade.delete_job(project_id)
 
         return task
 
@@ -327,8 +371,8 @@ class ProjectPage(WorkerPage):
         profile_id: int,
     ) -> Callable[[], object]:
         def task() -> object:
-            with ProjectService(self._db_path, app_version=self._app_version) as service:
-                return service.select_active_profile(project_id, profile_id)
+            with TranslationFacade(self._db_path, app_version=self._app_version) as facade:
+                return facade.select_active_profile(project_id, profile_id)
 
         return task
 
@@ -344,8 +388,8 @@ class ProjectPage(WorkerPage):
 
     def _clear_active_profile_task(self, project_id: int) -> Callable[[], object]:
         def task() -> object:
-            with ProjectService(self._db_path, app_version=self._app_version) as service:
-                return service.clear_active_profile(project_id)
+            with TranslationFacade(self._db_path, app_version=self._app_version) as facade:
+                return facade.clear_active_profile(project_id)
 
         return task
 
@@ -374,15 +418,14 @@ class ProjectPage(WorkerPage):
         locked: bool,
     ) -> Callable[[], object]:
         def task() -> object:
-            with GlossaryService(self._db_path, app_version=self._app_version) as service:
-                return service.create_entry(
-                    project_id=project_id,
-                    source_term=source,
-                    target_term=target,
+            with TranslationFacade(self._db_path, app_version=self._app_version) as facade:
+                return facade.add_glossary_entry(
+                    project_id,
+                    source,
+                    target,
                     scope=scope,
                     priority=priority,
                     is_locked=locked,
-                    origin="user",
                 )
 
         return task
@@ -419,11 +462,11 @@ class ProjectPage(WorkerPage):
         locked: bool,
     ) -> Callable[[], object]:
         def task() -> object:
-            with GlossaryService(self._db_path, app_version=self._app_version) as service:
-                return service.update_entry(
+            with TranslationFacade(self._db_path, app_version=self._app_version) as facade:
+                return facade.update_glossary_entry(
                     entry_id,
-                    source_term=source,
-                    target_term=target,
+                    source,
+                    target,
                     scope=scope,
                     priority=priority,
                     is_locked=locked,
@@ -444,8 +487,8 @@ class ProjectPage(WorkerPage):
 
     def _delete_glossary_task(self, entry_id: int) -> Callable[[], object]:
         def task() -> object:
-            with GlossaryService(self._db_path, app_version=self._app_version) as service:
-                return service.delete_entry(entry_id)
+            with TranslationFacade(self._db_path, app_version=self._app_version) as facade:
+                return facade.delete_glossary_entry(entry_id)
 
         return task
 
@@ -472,10 +515,23 @@ class ProjectPage(WorkerPage):
                 active_profile,
                 glossary_entries,
                 deletion_summary,
+                notes,
             ) = result
             assert isinstance(projects, list)
             assert isinstance(profiles, list)
             assert isinstance(glossary_entries, list)
+            if self._allow_initial_project_restore and self._project_id is None and projects:
+                self._allow_initial_project_restore = False
+                first_project = projects[0]
+                if isinstance(first_project, Project) and first_project.id is not None:
+                    self._project_id = first_project.id
+                    self.project_ready.emit(first_project.id)
+                    self.refresh()
+                    return
+            self._allow_initial_project_restore = False
+            if not self._notes_dirty:
+                self._notes.setPlainText(str(notes))
+                self._notes_dirty = False
             self._populate(
                 projects,
                 profiles,
@@ -484,21 +540,40 @@ class ProjectPage(WorkerPage):
                 glossary_entries,
                 deletion_summary,
             )
+        elif action == "save_notes":
+            self._notes_dirty = False
+            self._notes_status.setText(self._i18n.tr("Notes saved."))
+            self._notify_settings_changed()
+        elif action == "import_files":
+            assert isinstance(result, tuple)
+            job_id, imported, errors = result
+            if self._project_id is None:
+                self._project_id = job_id
+                self.project_ready.emit(self._project_id)
+                self.refresh()
+            for document, segments in imported:
+                self.document_ready.emit(document.id, document.name, len(segments))
+            self._status.setText(
+                self._i18n.tr("Files imported.")
+                if not errors
+                else safe_error_message("; ".join(errors))
+            )
+            self._notify_settings_changed()
         elif action == "create_project":
             assert isinstance(result, Project)
             assert result.id is not None
             self._project_id = result.id
-            self._status.setText(f"Project {result.name!r} created.")
+            self._status.setText(f"Job {result.name!r} created.")
             self.project_ready.emit(result.id)
             self.refresh()
         elif action == "select_active_profile":
             assert isinstance(result, Project)
-            self._status.setText(f"Active profile set for project {result.name!r}.")
+            self._status.setText(f"Selected model set for project {result.name!r}.")
             self._notify_settings_changed()
             self.refresh()
         elif action == "clear_active_profile":
             assert isinstance(result, Project)
-            self._status.setText(f"Active profile cleared for project {result.name!r}.")
+            self._status.setText(f"Selected model cleared for project {result.name!r}.")
             self._notify_settings_changed()
             self.refresh()
         elif action == "add_glossary":
@@ -514,14 +589,14 @@ class ProjectPage(WorkerPage):
             self.refresh()
         elif action == "delete_project":
             if result is None:
-                self._handle_error("Project was not found.")
+                self._handle_error("Job was not found.")
                 return
             assert isinstance(result, Path)
             deleted_id = self._project_id
             self._project_id = None
             self._deletion_summary_data = None
             self._delete_confirmation.clear()
-            self._status.setText("Project deleted. Recovery backup retained.")
+            self._status.setText(self._i18n.tr("Job deleted. Recovery backup retained."))
             if deleted_id is not None:
                 self.project_deleted.emit(deleted_id)
             self.refresh()
@@ -566,10 +641,10 @@ class ProjectPage(WorkerPage):
                 f"{deletion_summary.project_name}: "
                 f"{deletion_summary.source_documents} source document(s), "
                 f"{deletion_summary.segments} segment(s), "
-                f"{deletion_summary.translation_runs} Run(s), "
+                f"{deletion_summary.translation_runs} translation session(s), "
                 f"{deletion_summary.glossary_entries} glossary entr(y/ies). "
-                f"Blockers: {deletion_summary.running_runs} running Run(s), "
-                f"{deletion_summary.active_processing_leases} active lease(s).",
+                f"Busy: {deletion_summary.running_runs} running session(s), "
+                f"{deletion_summary.active_processing_leases} translating segment(s).",
             )
         else:
             self._delete_summary_label.setText("")
@@ -593,9 +668,13 @@ class ProjectPage(WorkerPage):
                 f"Active: {active_profile.name} — {active_profile.model_id}",
             )
         elif project is not None:
-            self._active_profile_label.setText("Active profile: none")
+            self._active_profile_label.setText("Selected model: none")
         else:
             self._active_profile_label.setText("")
+        self._has_project = project is not None
+        self._has_profiles = bool(profiles)
+        self._has_active_profile = active_profile is not None
+        self._refresh_profile_guidance()
 
         self._glossary_list.clear()
         for entry in glossary_entries:
@@ -615,4 +694,63 @@ class ProjectPage(WorkerPage):
             self.project_settings_changed.emit(self._project_id)
 
     def _handle_error(self, error: str) -> None:
-        self._status.setText(f"Error: {error}")
+        self._status.setText(f"Error: {safe_error_message(error)}")
+
+    def _refresh_profile_guidance(self) -> None:
+        """Keep the active-profile setup action aligned with current state."""
+        if not self._has_project or self._has_active_profile:
+            self._profile_setup_hint.hide()
+            self._open_settings.hide()
+            return
+        if self._has_profiles:
+            source = "Choose a Model above, then select Set Model."
+            self._open_settings.hide()
+        else:
+            source = (
+                "Create a Provider and Model in Providers, then select the model in Translation."
+            )
+            self._open_settings.show()
+        self._profile_setup_hint.setText(self._i18n.tr(source))
+        self._profile_setup_hint.show()
+
+    def import_files(self, paths: list[Path]) -> None:
+        if self._project_id is None:
+            self._project_name.setText(paths[0].stem if paths else "Translation")
+            name = self._project_name.text().strip() or "Translation"
+        else:
+            name = ""
+        project_id = self._project_id
+        source = self._source_language.text().strip() or "ja"
+        target = self._target_language.text().strip() or "zh"
+
+        def task() -> object:
+            with TranslationFacade(self._db_path, app_version=self._app_version) as facade:
+                job_id = project_id
+                if job_id is None:
+                    job = facade.create_job(
+                        name=name, source_language=source, target_language=target
+                    )
+                    job_id = job.id
+                if job_id is None:
+                    raise ValueError("Job could not be created.")
+                imported, errors = [], []
+                for path in paths:
+                    try:
+                        imported.append(facade.import_document(job_id, path))
+                    except Exception as exc:
+                        errors.append(safe_error_message(exc))
+                return job_id, imported, errors
+
+        self._submit("import_files", task)
+
+    def _on_save_notes(self) -> None:
+        if self._project_id is None:
+            self._handle_error("Create or select a Job first.")
+            return
+        project_id, content = self._project_id, self._notes.toPlainText()
+
+        def task() -> object:
+            with TranslationFacade(self._db_path, app_version=self._app_version) as facade:
+                return facade.set_notes(project_id, content)
+
+        self._submit("save_notes", task)

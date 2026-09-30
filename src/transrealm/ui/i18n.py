@@ -75,6 +75,12 @@ class LanguageManager(QObject):
         """Translate a source string in the stable application context."""
         return QCoreApplication.translate("TransRealm", source, disambiguation, n)
 
+    def uninstall(self) -> None:
+        """Remove this window's translator without changing the saved language."""
+        app = QCoreApplication.instance()
+        if app is not None:
+            app.removeTranslator(self._translator)
+
     def bind_tree(self, root: QWidget) -> None:
         """Bind static text in a widget tree and immediately translate it."""
         self._bind_widget(root)

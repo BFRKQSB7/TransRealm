@@ -3,7 +3,7 @@
 Produces a PyInstaller ``--onedir --windowed`` bundle named ``transrealm`` plus a
 zipped green artifact and a ``build_manifest.json`` recording tool versions,
 source identity, artifact hashes and sizes. The manifest fills the candidate
-identity items of ``RELEASE_CHECKLIST.md`` (section 1/4) with recorded facts.
+identity items of ``docs/RELEASE.md`` (candidate identity / Windows artifact) with recorded facts.
 
 Usage::
 

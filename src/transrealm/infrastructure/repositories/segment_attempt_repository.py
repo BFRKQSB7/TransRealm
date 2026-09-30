@@ -517,10 +517,9 @@ class SegmentAttemptRepository:
     ) -> SegmentAttempt:
         """Atomically cancel an attempt that still holds a valid lease.
 
-        Marks the attempt ``cancelled`` with the given reason and returns the
-        segment to ``pending`` with its lease released so it can be claimed
-        again. Existing revisions and the segment's current revision are
-        preserved. A claim whose lease has already expired cannot be cancelled;
+        Marks the attempt ``cancelled`` with the given reason and releases its
+        lease. A locked current revision is preserved as ``completed``; other
+        segments return to ``pending``. A claim whose lease has expired cannot be cancelled;
         it must instead be recovered at startup.
         """
         now_iso = now.isoformat()
@@ -537,7 +536,7 @@ class SegmentAttemptRepository:
                 )
 
             segment_row = self._db.execute(
-                "SELECT status, version, lease_owner, lease_expires_at "
+                "SELECT status, version, lease_owner, lease_expires_at, current_revision_id "
                 "FROM segments WHERE id = ?",
                 (attempt.segment_id,),
             ).fetchone()
@@ -552,13 +551,21 @@ class SegmentAttemptRepository:
                 operation="cancel",
             )
 
+            locked_current = False
+            if segment_row[4] is not None:
+                locked = self._db.execute(
+                    "SELECT is_locked FROM translation_revisions WHERE id = ?",
+                    (segment_row[4],),
+                ).fetchone()
+                locked_current = locked is not None and bool(locked[0])
+
             cursor = self._db.execute(
                 "UPDATE segments SET status = ?, version = version + 1, "
                 "lease_owner = NULL, lease_expires_at = NULL, updated_at = ? "
                 "WHERE id = ? AND status = 'processing' AND lease_owner = ? "
                 "AND version = ? AND lease_expires_at > ?",
                 (
-                    "pending",
+                    "completed" if locked_current else "pending",
                     now_iso,
                     attempt.segment_id,
                     attempt.lease_owner,

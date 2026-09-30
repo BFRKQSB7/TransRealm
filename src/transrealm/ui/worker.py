@@ -15,13 +15,7 @@ from pathlib import Path
 from PySide6.QtCore import QObject, Signal, Slot
 
 from transrealm.adapters.protocol import ModelAdapter
-from transrealm.application.adapter_factory import compose_adapter
-from transrealm.application.model_profile_service import ModelProfileService
-from transrealm.application.project_service import ProjectService
-from transrealm.application.provider_connection_service import ProviderConnectionService
-from transrealm.application.translation_service import TranslationService
-from transrealm.domain.segment import Segment
-from transrealm.infrastructure.repositories.segment_repository import SegmentRepository
+from transrealm.application.translation_facade import TranslationFacade
 
 
 def compose_adapter_factory(db_path: Path, app_version: str) -> Callable[[int], ModelAdapter]:
@@ -32,17 +26,7 @@ def compose_adapter_factory(db_path: Path, app_version: str) -> Callable[[int], 
     """
 
     def build(profile_id: int) -> ModelAdapter:
-        with ProviderConnectionService(db_path, app_version=app_version) as connections:
-            with ModelProfileService(db_path, app_version=app_version) as profiles:
-                profile = profiles.get_profile(profile_id)
-                if profile is None:
-                    raise LookupError(f"ModelProfile with id {profile_id} does not exist.")
-                connection = connections.get_connection(profile.provider_connection_id)
-                if connection is None:
-                    raise LookupError(
-                        f"ProviderConnection for profile {profile_id} does not exist.",
-                    )
-        return compose_adapter(connection, profile)
+        return TranslationFacade.adapter_for_profile(db_path, app_version, profile_id)
 
     return build
 
@@ -80,7 +64,7 @@ class ServiceWorker(QObject):
 class TranslationWorker(QObject):
     """Translates a document's pending segments on a dedicated thread.
 
-    Owns a :class:`TranslationService` (created in this thread) for the
+    Owns a :class:`TranslationFacade` (created in this thread) for the
     duration of a translate call. Cancellation is observed at segment
     boundaries via the plain ``request_stop`` flag; the in-flight model call is
     bounded by the adapter timeout, so shutdown converges without killing a
@@ -97,6 +81,7 @@ class TranslationWorker(QObject):
     start_translate_auto = Signal(int, int)  # project_id, document_id
     # project_id, document_id, profile_id, params
     start_translate_workbench = Signal(int, int, int, object)
+    start_translate_single = Signal(int, int, int, int, object)
 
     def __init__(
         self,
@@ -116,6 +101,7 @@ class TranslationWorker(QObject):
         self.start_translate.connect(self.translate)
         self.start_translate_auto.connect(self.translate_auto)
         self.start_translate_workbench.connect(self.translate_workbench)
+        self.start_translate_single.connect(self.translate_single)
 
     def request_stop(self) -> None:
         """Request cancellation at the next segment boundary.
@@ -141,8 +127,8 @@ class TranslationWorker(QObject):
             return
 
         try:
-            with ProjectService(self._db_path, app_version=self._app_version) as projects:
-                project = projects.get_project(project_id)
+            with TranslationFacade(self._db_path, app_version=self._app_version) as facade:
+                project = facade.open_job(project_id)
         except Exception as exc:
             self.failed.emit(str(exc))
             self.finished.emit()
@@ -156,7 +142,7 @@ class TranslationWorker(QObject):
         profile_id = project.active_profile_id
         if profile_id is None:
             self.config_missing.emit(
-                "This project has no active profile. Set one in the Project tab.",
+                "Choose a Provider and model in Translation before translating.",
             )
             self.finished.emit()
             return
@@ -181,6 +167,7 @@ class TranslationWorker(QObject):
         source_document_id: int,
         profile_id: int,
         extra_params: dict[str, object] | None = None,
+        segment_id: int | None = None,
     ) -> None:
         """Translate every pending segment of a document on this thread."""
         if self._is_running:
@@ -189,26 +176,43 @@ class TranslationWorker(QObject):
             return
 
         self._is_running = True
-        self._stop_requested = False
-        service: TranslationService | None = None
+        service: TranslationFacade | None = None
         run_id: int | None = None
         terminal_status = "failed"
         segment_failed = False
         try:
             adapter = self._adapter_factory(profile_id)
-            service = TranslationService(
+            service = TranslationFacade(
                 self._db_path,
                 app_version=self._app_version,
                 adapter=adapter,
             )
-            recovered = service.recover_expired_leases()
-            if recovered:
-                self.segment_failed.emit("recovery", f"Recovered {recovered} expired lease(s).")
-            run = service.create_run(project_id=project_id)
+            if source_document_id not in {
+                document.id for document in service.list_documents(project_id)
+            }:
+                raise ValueError("Selected document does not belong to this Job.")
+            if segment_id is not None:
+                if segment_id not in {
+                    item.id for item in service.list_segments(source_document_id)
+                }:
+                    raise ValueError("Selected segment does not belong to this file.")
+                service.requeue_segment(segment_id)
+            run = service.start_run(project_id)
             assert run.id is not None
             run_id = run.id
-            segments = self._load_segments(self._db_path, source_document_id)
-            pending = [segment for segment in segments if segment.status == "pending"]
+            segments = service.list_segments(source_document_id)
+            locked = {
+                item.segment_id
+                for item in service.progress(source_document_id)
+                if item.revision_locked
+            }
+            pending = [
+                segment
+                for segment in segments
+                if segment.status == "pending"
+                and segment.id not in locked
+                and (segment_id is None or segment.id == segment_id)
+            ]
             total = len(pending)
             self.progress.emit(0, total, "")
             for index, segment in enumerate(pending):
@@ -239,17 +243,30 @@ class TranslationWorker(QObject):
             if service is not None:
                 if run_id is not None:
                     try:
-                        service.finish_run(run_id=run_id, status=terminal_status)
+                        if terminal_status == "cancelled":
+                            service.stop(run_id)
+                        else:
+                            service.finish_run(run_id, status=terminal_status)
                     except Exception as exc:
                         self.failed.emit(str(exc))
                 service.close()
             self._is_running = False
+            self._stop_requested = False
             self.finished.emit()
 
-    @staticmethod
-    def _load_segments(db_path: Path, source_document_id: int) -> list[Segment]:
-        repo = SegmentRepository.open(db_path)
-        try:
-            return repo.list_segments_by_document(source_document_id)
-        finally:
-            repo.close()
+    @Slot(int, int, int, int, object)
+    def translate_single(
+        self,
+        project_id: int,
+        source_document_id: int,
+        profile_id: int,
+        segment_id: int,
+        params: object,
+    ) -> None:
+        self.translate(
+            project_id,
+            source_document_id,
+            profile_id,
+            extra_params=params if isinstance(params, dict) else None,
+            segment_id=segment_id,
+        )

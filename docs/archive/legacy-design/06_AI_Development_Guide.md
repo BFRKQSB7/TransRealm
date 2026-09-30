@@ -4,6 +4,8 @@
 
 > 唯一交接入口：`DEVELOPMENT_STATE.md`。先读该文件的当前任务、必读文档、约束和恢复动作；不要从本文件或历史聊天猜测当前进度。
 
+固定绝对入口为 `D:/TransRealm/DEVELOPMENT_STATE.md`，路径字面量约定见 `AGENTS.md`。运行会写文件的工具前，必须按 `09_Unattended_Development_Governance.md` §6.1 核对环境、缓存、临时数据、证据和候选输出均在项目内；历史外部目录记录不是继续外部写入的许可。
+
 ## 1. 职责边界
 
 - **技术负责人：** 激活任务，裁决优先级、风险、架构偏差、验收和回滚准入。
@@ -67,14 +69,14 @@
 仅当 `09_Unattended_Development_Governance.md` 的决策节点阈值成立时，开发 Agent 才暂停冲突范围。此时必须把以下提示词完整写入 `DEVELOPMENT_STATE.md`，并提醒用户切换：
 
 ```text
-请切换至决策 Agent。读取 D:\TransRealm\DEVELOPMENT_STATE.md 中的 pending_decision。
-只评估，不写业务代码。基于其中的不可变约束、现场证据和候选方案，输出唯一推荐或明确保留项；说明否决理由、要更新的权威文档、验收、迁移/回滚条件和恢复 Milestone。完成后把 decision_result 与开发恢复提示词写回 DEVELOPMENT_STATE.md，并提醒用户切回开发 Agent。
+请切换至决策 Agent。读取 D:/TransRealm/DEVELOPMENT_STATE.md 中的 pending_decision。
+只评估，不写业务代码。基于其中的不可变约束、现场证据和候选方案，输出唯一推荐或明确保留项；说明否决理由、要更新的权威文档、验收、迁移/回滚条件和恢复 Milestone。仅在用户本条消息明确授权 Markdown 修改时，才把 decision_result 与开发恢复提示词写回 DEVELOPMENT_STATE.md；裁决不自动恢复开发。
 ```
 
 决策 Agent 完成后，状态文件必须提供以下恢复提示词：
 
 ```text
-请切回开发 Agent。读取 D:\TransRealm\DEVELOPMENT_STATE.md 的 decision_result、resume_milestone 及更新后的权威文档。只实施已裁决范围；先重新完成 FIT/ADAPT/REPLAN，再继续目标 Milestone。不得重新讨论已裁决的产品/契约选择。
+请切回开发 Agent。读取 D:/TransRealm/DEVELOPMENT_STATE.md 的 decision_result、resume_milestone 及更新后的权威文档。先核对当前执行授权和恢复前置条件；未获授权不得因裁决完成而实施。获准后只实施已裁决范围，重新完成 FIT/ADAPT/REPLAN，再继续目标 Milestone。不得重新讨论已裁决的产品/契约选择。
 ```
 
 ## 7. 完成报告

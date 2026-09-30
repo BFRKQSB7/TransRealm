@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from PySide6.QtCore import QCoreApplication
 
 from transrealm.adapters.dto import AdapterRequest, AdapterResponse, AdapterUsage
 from transrealm.application.archive_service import (
@@ -323,6 +324,9 @@ def _wait_finished(qtbot: Any, worker: Any) -> None:
 
     worker.finished.connect(mark)
     qtbot.waitUntil(lambda: done[0], timeout=20000)
+    # The callback can run on the worker before queued GUI slots are delivered.
+    QCoreApplication.processEvents()
+    worker.finished.disconnect(mark)
 
 
 def _setup_profile(qtbot: Any, window: MainWindow) -> None:
@@ -358,6 +362,7 @@ def _setup_project_and_document(
     translation = window._translation
 
     project._project_name.setText("Demo")
+    project._create_box.setChecked(True)
     project._create_project.click()
     qtbot.waitUntil(lambda: project._project_id is not None, timeout=5000)
     assert project._project_id is not None
@@ -409,9 +414,9 @@ class TestAutoJourney:
 
         translation = window._translation
         # The page reports the persisted mode and the resolved active profile.
-        qtbot.waitUntil(lambda: "Mode: auto" in translation._mode_label.text(), timeout=5000)
+        qtbot.waitUntil(lambda: translation._active_profile_id is not None, timeout=5000)
         qtbot.waitUntil(
-            lambda: "Active profile:" in translation._active_profile_label.text(),
+            lambda: "Model:" in translation._active_profile_label.text(),
             timeout=5000,
         )
 
@@ -491,7 +496,7 @@ class TestMissingConfigGuidance:
         translation.translate()
         _wait_finished(qtbot, window._translation_worker)
 
-        assert messages and "active profile" in messages[0].lower()
+        assert messages and "model" in messages[0].lower()
         assert holder["adapter"].calls == 0
         # No run was created: the adapter was never reached.
         with TranslationRunService(tmp_path / "project.sqlite", app_version=APP_VERSION) as svc:
@@ -501,7 +506,7 @@ class TestMissingConfigGuidance:
         assert not translation._config_missing_label.isHidden()
         assert not translation._set_active_profile.isHidden()
         translation._set_active_profile.click()
-        assert window.centralWidget().currentIndex() == 1
+        assert window.centralWidget().currentIndex() == 0
 
     def test_guidance_clears_after_setting_active_profile(
         self,
@@ -539,7 +544,7 @@ class TestMissingConfigGuidance:
         project._set_active.click()
         qtbot.waitUntil(lambda: translation._config_missing_label.isHidden(), timeout=5000)
         qtbot.waitUntil(
-            lambda: "Active profile:" in translation._active_profile_label.text(),
+            lambda: "Model:" in translation._active_profile_label.text(),
             timeout=5000,
         )
 
@@ -592,7 +597,7 @@ class TestMissingConfigGuidance:
             def __init__(self, *args: object, **kwargs: object) -> None:
                 raise RuntimeError("boom")
 
-        monkeypatch.setattr("transrealm.ui.worker.ProjectService", BoomService)
+        monkeypatch.setattr("transrealm.ui.worker.TranslationFacade", BoomService)
 
         window._translation_worker.start_translate_auto.emit(1, 2)
         qtbot.waitUntil(lambda: done[0], timeout=20000)
@@ -624,18 +629,20 @@ class TestRestartPersistence:
         window2, holder = window_factory(db_path)
         window2._project.select_project(project_id)
         qtbot.waitUntil(
-            lambda: "Mode: auto" in window2._translation._mode_label.text(),
+            lambda: window2._translation._active_profile_id is not None,
             timeout=5000,
         )
         qtbot.waitUntil(
-            lambda: "Active profile:" in window2._translation._active_profile_label.text(),
+            lambda: "Model:" in window2._translation._active_profile_label.text(),
             timeout=5000,
         )
 
         # Re-importing the same file returns the existing document (hash idempotent).
         source = tmp_path / "source.txt"
         source.write_text("Alpha.\nBeta.\n", encoding="utf-8")
-        window2._project.import_file(source)
+        # The document may already be restored; wait for this import's result.
+        with qtbot.waitSignal(window2._project.document_ready, timeout=5000):
+            window2._project.import_file(source)
         qtbot.waitUntil(lambda: window2._translation._document_id is not None, timeout=5000)
         assert window2._translation._document_id is not None
         document_id = window2._translation._document_id
@@ -647,6 +654,12 @@ class TestRestartPersistence:
         ])
         window2._translation.translate()
         _wait_finished(qtbot, window2._translation_worker)
+        # The worker's callback can precede delivery of queued GUI progress.
+        qtbot.waitUntil(
+            lambda: not window2._translation._running
+            and window2._translation._progress.value() == len(segments),
+            timeout=5000,
+        )
 
         assert holder["adapter"].calls == len(segments)
         assert window2._translation._progress.value() == len(segments)

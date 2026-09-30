@@ -169,6 +169,14 @@ manifest 至少记录 format_version、schema_version、源文件 hash、软件�
 
 跨机器与双形态 Gate（P1-T02-M05 落地）：全链路 round-trip（开放目录 -> `.aiproject` -> 隔离"另一台 Windows" -> 开放目录）验证核心状态与附件跨机保留、WAL 未提交不跨机、旧 schema 归档在目标机迁移、tamper/资源限额/目标冲突均目标落地前失败且原数据保持。凭据可用性：`credential_reference_is_available`（`adapters/credential_resolvers.py`，只读判 `env:` 变量存在且非空 / `wincred:` 凭据存在且非空，从不返回 secret）+ `report_credential_availability`（`application/credential_status.py`）组成应用层只读报告——目标机缺被引用凭据（含空值/空 blob）时按连接给出可操作 hint（设环境变量/建 Windows 凭据项）；secret 永不进入归档、数据库或目标容器，数据库只存 credential reference。
 
+### 7.1 v0.3 一 Project 一工作区与旧库拆分
+
+`DEC-V03-PROJECT-STORAGE`（2026-09-07）批准一次一个活动 `ProjectSession`、一 Project 一 `project.sqlite`。Project 工作区继续使用本节既有 `manifest.json` + `project.sqlite` + 声明附件契约；`projects` 表在一个活动工作区中必须恰有一行。应用级界面语言、最近/上次 Project、数据根和日志级别不进入 Project SQLite；不得为最近列表增加全局业务 SQLite 或跨库外键。
+
+为了保持 Project 的完整审计和可转移性，`provider_connections`、`model_profiles`、`prompt_overrides` 与 `workflow_definitions` 继续位于 Project SQLite。它们只含非敏感配置或凭据引用，实际 secret 仍禁止进入数据库、manifest 和 `.aiproject`。这允许 `projects.active_profile_id`、`segment_attempts.model_profile_id`、`model_profiles.provider_connection_id` 和历史 Attempt 在单库内继续由外键/快照解释。
+
+旧全局多 Project 库拆分必须保持源库只读不变：先用 SQLite Backup API 建一致性快照；每个 Project 在独立 staging 中复制该 Project 从属闭包，并复制全部非敏感 Connection/Profile/Prompt Override/Workflow 以保持旧版可选配置；目标库可保留旧整数 ID，因为 ID 的唯一域变为该 Project 数据库。每个目标写入 manifest `source_id=<旧 project id>`，随后校验 `PRAGMA integrity_check`/foreign-key、表级行数、引用闭包、Revision/current/lock、Attempt、六格式 fidelity carrier 和 credential reference。全部目标验证成功前不得更新应用入口、删除旧库或覆盖任何既有工作区；失败目标不得成为最近 Project。若旧库零 Project 但存在配置、外键损坏、未知 schema 或孤立业务记录，迁移必须停在预检并要求 REPLAN，不得静默丢弃或猜测归属。
+
 - 一个逻辑 Project 只能包含一个 Project 身份；从含零个或多个 Project 的源数据库导出时不得静默选择或夹带其他 Project，实施必须明确拒绝或生成隔离 snapshot；
 - 使用相对路径；拒绝绝对路径、盘符/UNC、`..`、归一化后逃逸、大小写或 Unicode 等价重复路径、重复关键 entry 以及 link/junction 类 entry；
 - 导入前限制 entry 数、单项大小、总解压大小和压缩比，防止资源耗尽；P1-T02-M03 固定 fixture 默认值：entry 数 ≤1000、单项未压缩 ≤256 MiB、总未压缩 ≤512 MiB、压缩比 ≤5000:1（Release Gate 定稿，调用方可传更窄限额）；

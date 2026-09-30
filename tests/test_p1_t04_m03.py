@@ -407,9 +407,9 @@ class TestDeterministicInjection:
 
 
 class TestBudgetBehavior:
-    """Glossary pruning keeps the current segment intact."""
+    """Protected glossary fails before claim when it cannot fit."""
 
-    def test_budget_prunes_low_priority_glossary_without_truncating_current(
+    def test_budget_rejects_oversized_locked_glossary_before_attempt(
         self,
         tmp_path: Path,
     ) -> None:
@@ -417,8 +417,7 @@ class TestBudgetBehavior:
         project_id = _create_project(path, name="A")
         segments = _import_txt(path, project_id, "Alpha.\n")
         ids = _ids(segments)
-        # available = 10 - 2 - 2 = 6. Current "Alpha." estimates 1 token; the
-        # high-priority entry fits, the long low-priority entry is pruned.
+        # Available space is insufficient for all locked entries and target.
         profile = _create_profile(
             path,
             context_budget={"total": 10, "reserved_output": 2, "reserved_prompt": 2},
@@ -437,25 +436,17 @@ class TestBudgetBehavior:
         with TranslationService(path, app_version=APP_VERSION, adapter=fake) as service:
             run = service.create_run(project_id=project_id)
             assert run.id is not None
-            revision = _run(
-                service.translate_segment(
-                    run_id=run.id,
-                    segment_id=ids[0],
-                    profile_id=profile.id,
-                ),
-            )
-            assert revision.text == "こんにちは"
-
-        prompt = fake.last_prompt
-        assert "[locked glossary] X -> 甲" in prompt
-        assert "VeryLongTermThatConsumesManyTokens" not in prompt
-        assert "Alpha." in prompt
-
-        summary = _attempt_summary(path, run.id)
-        selected = summary.get("selected_sources")
-        assert isinstance(selected, list)
-        assert selected == ["CURRENT_SEGMENT", "LOCKED_GLOSSARY"]
-        assert summary.get("pruned_count") == 1
+            with pytest.raises(ContextBudgetError):
+                _run(
+                    service.translate_segment(
+                        run_id=run.id,
+                        segment_id=ids[0],
+                        profile_id=profile.id,
+                    ),
+                )
+        assert fake.calls == 0
+        with TranslationRunService(path, app_version=APP_VERSION) as audit:
+            assert audit.list_attempts_for_run(run.id) == []
 
     def test_oversized_current_raises_with_glossary_present(
         self,

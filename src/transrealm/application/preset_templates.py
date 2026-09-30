@@ -25,6 +25,7 @@ PRESET_TEMPLATE_VERSION = "1.0.0"
 ALLOWED_PLACEHOLDERS: tuple[str, ...] = (
     "current",
     "context",
+    "notes",
     "output_schema",
     "source_language",
     "target_language",

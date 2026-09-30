@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QSettings
+from PySide6.QtCore import QCoreApplication, QSettings
 from PySide6.QtWidgets import QComboBox, QLabel, QTabWidget
 
 from transrealm.ui.i18n import LanguageManager
@@ -55,18 +55,18 @@ def test_main_window_retranslates_shell_and_persists_language(
         assert language is not None
         assert title.text() == "TransRealm"
         assert [tabs.tabText(index) for index in range(tabs.count())] == [
-            "Settings",
-            "Project",
             "Translation",
+            "Providers",
+            "Prompts",
         ]
 
         language.setCurrentIndex(language.findData("zh_CN"))
         assert window._i18n.current_language == "zh_CN"
         assert title.text() == "译境"
         assert [tabs.tabText(index) for index in range(tabs.count())] == [
-            "设置",
-            "项目",
             "翻译",
+            "模型提供商",
+            "提示词",
         ]
         assert settings.value("language") == "zh_CN"
 
@@ -75,6 +75,9 @@ def test_main_window_retranslates_shell_and_persists_language(
         assert settings.value("language") == "en"
     finally:
         window.shutdown()
+
+    assert settings.value("language") == "en"
+    assert QCoreApplication.translate("TransRealm", "Settings") == "Settings"
 
 
 def test_translation_resources_are_packaged_by_release_script() -> None:
@@ -90,3 +93,21 @@ def test_translation_resources_are_packaged_by_release_script() -> None:
     assert "transrealm/ui/i18n" in build_script
     assert "translation_files" in build_script
     assert "frozen_translation_names" in build_script
+
+
+def test_shutdown_removes_translator_without_changing_preference(
+    qtbot: object,
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path)
+    window = MainWindow(
+        tmp_path / "project.sqlite", app_version="0.0.0-test", settings=settings,
+    )
+    qtbot.addWidget(window)  # type: ignore[attr-defined]
+    try:
+        window._i18n.set_language("zh_CN")
+        assert QCoreApplication.translate("TransRealm", "Settings") == "设置"
+    finally:
+        window.shutdown()
+    assert settings.value("language") == "zh_CN"
+    assert QCoreApplication.translate("TransRealm", "Settings") == "Settings"

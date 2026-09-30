@@ -22,21 +22,10 @@ _LINE_BREAK_CHARS = frozenset(
 
 
 class TxtParser:
-    """Line-based TXT parser.
-
-    Segments are one per non-empty line; ``source_text`` and ``stable_key`` are
-    the stripped line text and a sequence-based hash, unchanged from earlier
-    versions. Line boundaries match ``str.splitlines()`` so the segment mapping
-    stays identical across the fidelity rework. In addition the parser computes
-    the byte span of each segment's target text inside the original raw bytes
-    and persists them in a versioned format metadata envelope (the fidelity
-    carrier), so an exporter can replace only the translated spans without
-    touching whitespace, empty lines, line endings, BOM, or the original
-    encoding.
-    """
+    """Version 2 TXT paragraph/dialogue/sentence segmenter with exact spans."""
 
     format = "txt"
-    version = "1.0.0"
+    version = "2.0.0"
 
     def parse(
         self,
@@ -72,7 +61,7 @@ class TxtParser:
         text = raw_bytes.decode(decode_encoding)
         newline = detect_newline(text)
 
-        segments, spans = _extract_segments(text, content_encoding, bom_length(bom))
+        segments, spans = self._extract(text, content_encoding, bom_length(bom))
 
         envelope = build_txt_envelope(
             encoding=content_encoding,
@@ -82,6 +71,8 @@ class TxtParser:
             source_hash=source_hash,
             spans=spans,
         )
+        if self.version == "2.0.0":
+            envelope["segmentation"] = TXT_SEGMENTATION_POLICY
 
         document = SourceDocument.create(
             project_id=project_id,
@@ -94,6 +85,128 @@ class TxtParser:
             format_metadata=json.dumps(envelope, ensure_ascii=False),
         )
         return document, segments
+
+    def _extract(
+        self, text: str, content_encoding: str, bom_len: int
+    ) -> tuple[list[Segment], list[dict[str, int]]]:
+        return extract_v2_segments(text, content_encoding, bom_len)
+
+
+class LegacyTxtParser(TxtParser):
+    """Original 1.0 mapping, retained for existing documents and backfill."""
+
+    version = "1.0.0"
+
+    def _extract(
+        self, text: str, content_encoding: str, bom_len: int
+    ) -> tuple[list[Segment], list[dict[str, int]]]:
+        return _extract_segments(text, content_encoding, bom_len)
+
+
+TXT_SEGMENTATION_POLICY = {
+    "name": "paragraph-dialogue-sentence",
+    "version": 1,
+    "max_chars": 180,
+    "soft_wrap_min_chars": 40,
+}
+
+
+def extract_v2_segments(
+    text: str, content_encoding: str, bom_len: int
+) -> tuple[list[Segment], list[dict[str, int]]]:
+    """Derive deterministic targets; each target is one raw continuous slice."""
+    lines: list[tuple[int, int, int]] = []
+    cursor = 0
+    for part in text.splitlines(keepends=True):
+        end = cursor + len(part.rstrip("\r\n\v\f\x1c\x1d\x1e\x85\u2028\u2029"))
+        lines.append((cursor, end, cursor + len(part)))
+        cursor += len(part)
+    if cursor < len(text):
+        lines.append((cursor, len(text), len(text)))
+
+    targets: list[tuple[int, int]] = []
+    group_start: int | None = None
+    group_end = 0
+
+    def emit_group() -> None:
+        nonlocal group_start
+        if group_start is None:
+            return
+        _split_target(text, group_start, group_end, targets)
+        group_start = None
+
+    for line_start, line_end, _ in lines:
+        content = text[line_start:line_end]
+        left = line_start + len(content) - len(content.lstrip())
+        right = line_end - (len(content) - len(content.rstrip()))
+        if left >= right:
+            emit_group()
+            continue
+        stripped = text[left:right]
+        dialogue = stripped.startswith(("—", "–", "- ", ">", "「", "『", '"', "“"))
+        if dialogue:
+            emit_group()
+            _split_target(text, left, right, targets)
+            continue
+        if group_start is not None:
+            # A soft-wrapped paragraph may include original interior line endings.
+            if right - group_start > 180 or len(stripped) < 40:
+                emit_group()
+        if group_start is None:
+            group_start = left
+        group_end = right
+        if stripped.endswith(("。", "！", "？", ".", "!", "?", "…")) or len(stripped) < 40:
+            emit_group()
+    emit_group()
+
+    segments: list[Segment] = []
+    spans: list[dict[str, int]] = []
+    byte_cursor = bom_len
+    char_cursor = 0
+    for sequence, (start, end) in enumerate(targets, 1):
+        byte_cursor += _byte_length(text[char_cursor:start], content_encoding)
+        byte_start = byte_cursor
+        byte_cursor += _byte_length(text[start:end], content_encoding)
+        source_text = text[start:end]
+        segments.append(
+            Segment.create(
+                source_document_id=0,
+                stable_key=_stable_key(f"v2:{source_text}", sequence),
+                source_text=source_text,
+                sequence=sequence,
+            )
+        )
+        spans.append({"sequence": sequence, "byte_start": byte_start, "byte_end": byte_cursor})
+        char_cursor = end
+    return segments, spans
+
+
+def _split_target(text: str, start: int, end: int, targets: list[tuple[int, int]]) -> None:
+    """Prefer sentence ends, then whitespace, then a bounded character cut."""
+    while start < end:
+        limit = min(start + 180, end)
+        cut = limit
+        for index in range(start, limit):
+            if text[index] in "。！？!?":
+                cut = index + 1
+                break
+            if text[index] == "." and (index + 1 == end or text[index + 1].isspace()):
+                cut = index + 1
+                break
+        if cut == limit and limit < end:
+            space = max(text.rfind(" ", start + 90, limit), text.rfind("　", start + 90, limit))
+            if space > start:
+                cut = space
+        while cut < end and text[cut] in "\u0300\u0301\u0302\u0303\u0304":
+            cut += 1
+        target_end = cut
+        while target_end > start and text[target_end - 1].isspace():
+            target_end -= 1
+        if target_end > start:
+            targets.append((start, target_end))
+        start = cut
+        while start < end and text[start].isspace():
+            start += 1
 
 
 def _extract_segments(

@@ -60,6 +60,7 @@ class ContextComposer:
     """
 
     _GLOSSARY_PRIORITY = 1
+    _NOTES_PRIORITY = 2
 
     def __init__(self, estimator: EstimateFn | None = None) -> None:
         self._estimator = estimator or default_estimate
@@ -72,20 +73,23 @@ class ContextComposer:
         current: Segment,
         neighbors: Sequence[Segment] | None = None,
         glossary_candidates: Sequence[ContextCandidate] | None = None,
+        notes: str = "",
         budget: ContextBudget,
     ) -> ContextManifest:
         """Select context candidates for ``current`` within ``budget``.
 
         Selection order follows the authority rules from
-        ``05_Prompt_Architecture.md``:
+        ``docs/ARCHITECTURE.md``:
 
         1. Current segment (mandatory, never truncated).
         2. Locked glossary entries.
-        3. Neighbor segments by proximity, then sequence.
+        3. Non-empty Project/Job Notes.
+        4. Neighbor segments by proximity, then sequence.
 
         If the current segment does not fit, ``ContextBudgetError`` is raised.
-        Optional context is pruned in priority order when the budget is
-        exhausted; the current segment is never pruned or truncated.
+        Locked glossary and Notes are protected. If they cannot fit with the
+        current segment, fail before an Attempt or provider call. Only neighbor
+        context is pruned when the budget is exhausted.
         """
         if not current.source_text:
             raise ContextBudgetError("Current segment source text is empty.")
@@ -105,35 +109,54 @@ class ContextComposer:
                 f"{budget.available}.",
             )
 
-        selected: list[ContextCandidate] = [current_candidate]
-        pruned: list[ContextCandidate] = []
-        remaining = budget.available - current_size
-
         glossary = self._normalize_glossary_candidates(glossary_candidates or [])
+        notes_candidate = (
+            ContextCandidate(
+                source=ContextSource.JOB_NOTES,
+                segment_id=None,
+                content=notes,
+                priority=self._NOTES_PRIORITY,
+                reason="job notes",
+                estimate=self._estimator(notes, budget.estimate_method),
+            )
+            if notes.strip()
+            else None
+        )
+        protected = [*glossary, *([notes_candidate] if notes_candidate else [])]
+        protected_size = sum(
+            _candidate_size(candidate, budget.estimate_method) for candidate in protected
+        )
+        if current_size + protected_size > budget.available:
+            raise ContextBudgetError(
+                "Current segment, locked glossary and Notes exceed available context budget."
+            )
+
+        selected: list[ContextCandidate] = [current_candidate, *protected]
+        pruned: list[ContextCandidate] = []
+        remaining = budget.available - current_size - protected_size
         neighbor_candidates = self._build_neighbor_candidates(
             current,
             neighbors or [],
             budget.estimate_method,
         )
 
-        optional_candidates = sorted(
-            [*glossary, *neighbor_candidates],
-            key=lambda c: c.priority,
-        )
-
-        for candidate in optional_candidates:
+        # Keep a proximity prefix: a farther neighbor never displaces a nearer
+        # one, even when its individual text would happen to be shorter.
+        neighbor_budget_exhausted = False
+        for candidate in neighbor_candidates:
             size = _candidate_size(candidate, budget.estimate_method)
-            if size <= remaining:
+            if not neighbor_budget_exhausted and size <= remaining:
                 selected.append(candidate)
                 remaining -= size
             else:
                 pruned.append(candidate)
+                neighbor_budget_exhausted = True
 
         return ContextManifest(
             profile_id=profile_id,
             template_version=template_version,
             budget=budget,
-            candidates=(current_candidate, *optional_candidates),
+            candidates=(current_candidate, *protected, *neighbor_candidates),
             selected=tuple(selected),
             pruned=tuple(pruned),
             prompt_hash=None,
