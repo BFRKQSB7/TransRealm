@@ -533,11 +533,11 @@ class TranslationPage(WorkerPage):
     def _on_progress(self, done: int, total: int, stable_key: str) -> None:
         self._progress.setRange(0, max(total, 1))
         self._progress.setValue(done)
-        if total > 0 and self._running:
+        if total > 0 and self._running and not getattr(self, "_terminal_error", False):
             self._status.setText(f"Translated {done}/{total} ({stable_key}).")
 
     def _on_segment_completed(self, stable_key: str, revision_id: int) -> None:
-        if self._running:
+        if self._running and not getattr(self, "_terminal_error", False):
             self._status.setText(f"{stable_key}: {self._i18n.tr('Completed')}")
 
     def _on_segment_failed(self, stable_key: str, error: str) -> None:

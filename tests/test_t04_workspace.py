@@ -265,6 +265,7 @@ def test_failed_retry_and_single_segment_only(
         qtbot.waitUntil(lambda: not page._running)
         assert "finished" not in page._status.text()
         qtbot.waitUntil(lambda: page._workbench_progress[0].status == "failed")
+        assert "HTTP 503" in page._status.text()
         page._segment_progress.setCurrentRow(0)
         page._retry_failed.click()
         qtbot.waitUntil(lambda: page._workbench_progress[0].status == "pending")
