@@ -14,9 +14,9 @@ Model allocation last rechecked against Codex Radar on 2026-09-20. Radar's curre
 | [T04](T04-unified-translation-workspace.md) | Unified Translation workspace | DONE | XL | L3 / `gpt-6-astra` | MEDIUM | T01, T02, T03 |
 | [T05](T05-providers-prompts-navigation.md) | Providers, Prompts, and three-page navigation | DONE | L | L3 / `gpt-6-astra` | MEDIUM | T04 |
 | [T06](T06-v1-release-candidate.md) | V1 regression and local Windows EXE/ZIP candidate | DONE | L | L3 / `gpt-6-astra` | MEDIUM | T05 |
-| [T07](T07-ui-workflow-polish.md) | Desktop UI and workflow polish | IN_PROGRESS | L | Current session | Current session | T06 |
+| [T07](T07-ui-workflow-polish.md) | Desktop UI and workflow polish | DONE | L | Current session | Current session | T06 |
 
-Recommended next action: **Execute T07 UI and workflow polish**. T01–T06 are complete; the accepted T06 bundle in `dist/` remains the baseline until T07 is committed, rebuilt and accepted. Continue the authorized commit-before-package and current-machine-only scope, with simulated file selection. AV scanning, clean Windows 11 acceptance, and additional independent review are outside scope. T07 evidence belongs under `.local/verification/t07-ui/`.
+Recommended next action: **Use the updated local EXE/ZIP and collect real-use feedback**. T01–T07 are complete. UI and workflow source was reviewed and committed before packaging. Full regression passed (1436 passed, 4 skipped); three native-only skipped checks were covered separately, with 14 Windows checks passing at each of 100% and 150% scale. Candidate checks, the actual frozen EXE's controlled stop/restart/resume/edit/lock/error/recovery/export journey, hygiene and independent-copy rollback passed. Current artifacts are in `dist/`; candidate-bound reports and screenshots are under `.local/verification/t07-ui/`. File selection was simulated with project-local fixtures. Drafts remain in the current window until saved; close cancellation protects visible unsaved work. The file-symlink test remains a documented privilege-related coverage limitation. AV scanning, clean Windows 11 acceptance, and additional independent review are outside scope.
 
 ## Milestones
 
