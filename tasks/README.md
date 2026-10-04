@@ -1,6 +1,6 @@
 # Execution Index
 
-Current milestone: M3 — V1 Local Acceptance
+Current milestone: M4 — Local UI and workflow polish
 
 Planning basis: current `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/DEVELOPMENT.md`, `docs/RELEASE.md`, and the code/schema/tests present when these packets were written. Historical material under `docs/archive/` is not an execution source.
 
@@ -14,20 +14,22 @@ Model allocation last rechecked against Codex Radar on 2026-09-20. Radar's curre
 | [T04](T04-unified-translation-workspace.md) | Unified Translation workspace | DONE | XL | L3 / `gpt-6-astra` | MEDIUM | T01, T02, T03 |
 | [T05](T05-providers-prompts-navigation.md) | Providers, Prompts, and three-page navigation | DONE | L | L3 / `gpt-6-astra` | MEDIUM | T04 |
 | [T06](T06-v1-release-candidate.md) | V1 regression and local Windows EXE/ZIP candidate | DONE | L | L3 / `gpt-6-astra` | MEDIUM | T05 |
+| [T07](T07-ui-workflow-polish.md) | Desktop UI and workflow polish | IN_PROGRESS | L | Current session | Current session | T06 |
 
-Recommended next action: **Use the local EXE/ZIP and collect real-use feedback**. T01–T06 are complete. The reviewed source was committed before packaging; source quality, native Windows checks, the actual executable's controlled translation/recovery journey, package/data hygiene, and backup/rollback rehearsal passed on this computer. File selection was simulated with isolated project-local data as requested by the user. The current candidate is in `dist/`, and candidate-bound results are under `.local/verification/t06-local-candidate/`. The file-symlink test remains a documented privilege-related coverage limitation. AV scanning, clean Windows 11 acceptance, and additional independent review are outside the local delivery scope.
+Recommended next action: **Execute T07 UI and workflow polish**. T01–T06 are complete; the accepted T06 bundle in `dist/` remains the baseline until T07 is committed, rebuilt and accepted. Continue the authorized commit-before-package and current-machine-only scope, with simulated file selection. AV scanning, clean Windows 11 acceptance, and additional independent review are outside scope. T07 evidence belongs under `.local/verification/t07-ui/`.
 
 ## Milestones
 
 - **M1 — Reliable Product Core:** T01–T03. Add the missing Notes contract, version TXT mapping safely, and expose the existing reliable core through one product-facing facade/pipeline.
 - **M2 — Product Surface:** T04–T05. Replace Auto/Workbench and Settings/Project product concepts with Translation / Providers / Prompts while preserving legacy data compatibility.
 - **M3 — V1 Local Acceptance:** T06. Run the regression, build the authorized Windows EXE/ZIP candidate, and record evidence from actual acceptance on the user's current computer.
+- **M4 — Local UI and workflow polish:** T07. Refine the desktop layout and interaction using real-use feedback, then rebuild and accept the local candidate.
 
 ## Dependency Graph
 
 ```text
 T01 ──→ T03 ──┐
-  │            ├──→ T04 ──→ T05 ──→ T06
+  │            ├──→ T04 ──→ T05 ──→ T06 ──→ T07
   └────────────┘
 T02 ───────────┘
 ```
@@ -44,8 +46,8 @@ This graph contains only code or contract dependencies. Suggested ordering is co
 
 ## Planning Summary
 
-- **Total tasks:** 6
-- **Critical path:** T01 → T03 → T04 → T05 → T06; T02 must also finish before T04.
+- **Total tasks:** 7
+- **Critical path:** T01 → T03 → T04 → T05 → T06 → T07; T02 must also finish before T04.
 - **Level 4:** T02, T03.
 - **Level 3:** T01, T04, T05, T06.
 - **Estimated development range:** about 7–11 focused working days for a strong agent, excluding external endpoint availability, independent review scheduling, signing, and release authorization.

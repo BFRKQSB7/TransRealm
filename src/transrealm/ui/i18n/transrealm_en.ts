@@ -814,5 +814,109 @@
             <source>Using the read-only preset template.</source>
             <translation>Using the read-only preset template.</translation>
         </message>
+        <message>
+            <source>Local workspace</source>
+            <translation>Local workspace</translation>
+        </message>
+        <message>
+            <source>Import, translate, refine and export in one workspace.</source>
+            <translation>Import, translate, refine and export in one workspace.</translation>
+        </message>
+        <message>
+            <source>Connect a provider, then add a model for translation.</source>
+            <translation>Connect a provider, then add a model for translation.</translation>
+        </message>
+        <message>
+            <source>Create reusable instructions for your translations.</source>
+            <translation>Create reusable instructions for your translations.</translation>
+        </message>
+        <message>
+            <source>Back to Translation</source>
+            <translation>Back to Translation</translation>
+        </message>
+        <message>
+            <source>Job settings</source>
+            <translation>Job settings</translation>
+        </message>
+        <message>
+            <source>Drop files to start a Job. Default languages: ja → zh; change them in New Job.</source>
+            <translation>Drop files to start a Job. Default languages: ja → zh; change them in New Job.</translation>
+        </message>
+        <message>
+            <source>Start with a file</source>
+            <translation>Start with a file</translation>
+        </message>
+        <message>
+            <source>Drop TXT, JSON or subtitle files here, or use Import file above.</source>
+            <translation>Drop TXT, JSON or subtitle files here, or use Import file above.</translation>
+        </message>
+        <message>
+            <source>Default languages: Japanese → Chinese. Adjust in Job settings.</source>
+            <translation>Default languages: Japanese → Chinese. Adjust in Job settings.</translation>
+        </message>
+        <message>
+            <source>Resume translation</source>
+            <translation>Resume translation</translation>
+        </message>
+        <message>
+            <source>Translated</source>
+            <translation>Translated</translation>
+        </message>
+        <message>
+            <source>Unsaved edits</source>
+            <translation>Unsaved edits</translation>
+        </message>
+        <message>
+            <source>Save your edited segments before translating.</source>
+            <translation>Save your edited segments before translating.</translation>
+        </message>
+        <message>
+            <source>Save your edited segments before exporting.</source>
+            <translation>Save your edited segments before exporting.</translation>
+        </message>
+        <message>
+            <source>Retry segment</source>
+            <translation>Retry segment</translation>
+        </message>
+        <message>
+            <source>Retranslate segment</source>
+            <translation>Retranslate segment</translation>
+        </message>
+        <message>
+            <source>Ready for manual translation.</source>
+            <translation>Ready for manual translation.</translation>
+        </message>
+        <message>
+            <source>Locked · protected from automatic translation.</source>
+            <translation>Locked · protected from automatic translation.</translation>
+        </message>
+        <message>
+            <source>Unlocked · automatic translation can replace this version.</source>
+            <translation>Unlocked · automatic translation can replace this version.</translation>
+        </message>
+        <message>
+            <source>Locked translation</source>
+            <translation>Locked translation</translation>
+        </message>
+        <message>
+            <source>Editable translation</source>
+            <translation>Editable translation</translation>
+        </message>
+        <message>
+            <source>Manual translation</source>
+            <translation>Manual translation</translation>
+        </message>
+        <message>
+            <source>Document</source>
+            <translation>Document</translation>
+        </message>
+        <message>
+            <source>segments</source>
+            <translation>segments</translation>
+        </message>
+        <message>
+            <source>There are unsaved edits. Stay to save them, or discard and close.</source>
+            <translation>There are unsaved edits. Stay to save them, or discard and close.</translation>
+        </message>
     </context>
 </TS>

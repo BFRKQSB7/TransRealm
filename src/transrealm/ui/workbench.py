@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import QCoreApplication, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QDoubleSpinBox,
@@ -235,12 +235,21 @@ class WorkbenchRevisionEditor(QWidget):
         self._source_label = QLabel(self)
         self._source_label.setProperty("transrealm_i18n_dynamic", True)
         self._source_label.setWordWrap(True)
-        layout.addWidget(self._source_label)
+        self._source_label.hide()
+        source_heading = QHBoxLayout()
+        source_heading.addWidget(QLabel("Source", self))
+        source_heading.addStretch()
+        layout.addLayout(source_heading)
+        self._source = QPlainTextEdit(self)
+        self._source.setReadOnly(True)
+        self._source.setObjectName("source-preview")
+        self._source.setFixedHeight(50)
+        layout.addWidget(self._source)
 
         self._status = QLabel(self)
         self._status.setProperty("transrealm_i18n_dynamic", True)
-        self._status.setWordWrap(True)
-        layout.addWidget(self._status)
+        self._status.setProperty("role", "muted")
+        source_heading.addWidget(self._status)
 
         layout.addWidget(QLabel("Translation:", self))
         self._editor = QPlainTextEdit(self)
@@ -248,6 +257,7 @@ class WorkbenchRevisionEditor(QWidget):
 
         buttons = QHBoxLayout()
         self._save = QPushButton("Save translation", self)
+        self._save.setProperty("role", "primary")
         self._lock = QPushButton("Lock", self)
         self._unlock = QPushButton("Unlock", self)
         buttons.addWidget(self._save)
@@ -265,6 +275,10 @@ class WorkbenchRevisionEditor(QWidget):
             locked=locked,
             initial=initial,
         )
+
+    def is_dirty(self) -> bool:
+        """Only an actual edit should replace a refreshed persisted translation."""
+        return self.translation() != self._saved_text
 
     def translation(self) -> str:
         """Return the current editor text (the unsaved manual translation)."""
@@ -284,6 +298,8 @@ class WorkbenchRevisionEditor(QWidget):
         refresh); it wins over the persisted revision text.
         """
         self._source_label.setText(f"Source: {source_text}")
+        self._source.setPlainText(source_text)
+        self._saved_text = revision_text if revision_text is not None else ""
         if initial is not None:
             self._editor.setPlainText(initial)
         else:
@@ -291,13 +307,12 @@ class WorkbenchRevisionEditor(QWidget):
         has_current = revision_text is not None
         self._lock.setEnabled(has_current and not locked)
         self._unlock.setEnabled(has_current and locked)
+        self._lock.setVisible(not locked)
+        self._unlock.setVisible(locked)
         if locked:
-            self._status.setText(
-                "Current translation is locked; automatic results cannot replace it.",
-            )
+            message = "Locked translation"
         elif has_current:
-            self._status.setText(
-                "Current translation is unlocked; automatic results may replace it.",
-            )
+            message = "Editable translation"
         else:
-            self._status.setText("No current translation yet. Save one to lock it.")
+            message = "Manual translation"
+        self._status.setText(QCoreApplication.translate("TransRealm", message))

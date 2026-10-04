@@ -9,8 +9,11 @@ from PySide6.QtCore import QSettings, Qt, QThread
 from PySide6.QtGui import QCloseEvent, QColor, QPalette
 from PySide6.QtWidgets import (
     QFrame,
+    QHBoxLayout,
     QLabel,
     QMainWindow,
+    QMessageBox,
+    QPushButton,
     QScrollArea,
     QTabWidget,
     QVBoxLayout,
@@ -107,6 +110,7 @@ class MainWindow(QMainWindow):
         settings: QSettings | None = None,
     ) -> None:
         super().__init__()
+        self._tabs: QTabWidget
         self._i18n = LanguageManager(settings=settings, parent=self)
         self.setObjectName("main-window")
         self.setWindowTitle(self._i18n.tr("TransRealm"))
@@ -154,22 +158,61 @@ class MainWindow(QMainWindow):
 
         shell = MainShell(self)
         shell.setObjectName("main-shell")
-        shell_layout = QVBoxLayout(shell)
-        shell_layout.setContentsMargins(24, 20, 24, 24)
-        shell_layout.setSpacing(16)
+        shell_layout = QHBoxLayout(shell)
+        shell_layout.setContentsMargins(0, 0, 0, 0)
+        shell_layout.setSpacing(0)
+        sidebar = QFrame(shell)
+        sidebar.setObjectName("sidebar")
+        sidebar.setFixedWidth(176)
+        navigation = QVBoxLayout(sidebar)
+        navigation.setContentsMargins(14, 24, 14, 18)
+        navigation.setSpacing(8)
+        brand = QLabel("TransRealm", sidebar)
+        brand.setObjectName("brand")
+        navigation.addWidget(brand)
+        navigation.addSpacing(28)
+        self._nav_buttons: list[QPushButton] = []
+        for index, label in enumerate(("Translation", "Providers", "Prompts")):
+            button = QPushButton(label, sidebar)
+            button.setObjectName(f"nav-{index}")
+            button.setProperty("role", "navigation")
+            button.setCheckable(True)
+            button.clicked.connect(lambda _checked=False, i=index: self._tabs.setCurrentIndex(i))
+            navigation.addWidget(button)
+            self._nav_buttons.append(button)
+        navigation.addStretch()
+        local_label = QLabel("Local workspace", sidebar)
+        local_label.setProperty("role", "muted")
+        navigation.addWidget(local_label)
+        navigation.addWidget(self._providers._language_combo)
+        version = QLabel(f"v{app_version}", sidebar)
+        version.setProperty("transrealm_i18n_dynamic", True)
+        version.setProperty("role", "muted")
+        navigation.addWidget(version)
+        shell_layout.addWidget(sidebar)
+
+        content = QWidget(shell)
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(24, 18, 24, 18)
+        content_layout.setSpacing(16)
 
         header = QFrame(shell)
         header.setObjectName("app-header")
         header_layout = QVBoxLayout(header)
-        header_layout.setContentsMargins(18, 14, 18, 14)
+        header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(2)
-        title = QLabel("TransRealm", header)
+        title = QLabel("Translation", header)
         title.setObjectName("app-title")
-        subtitle = QLabel("A calm workspace for local-first translation", header)
+        title.setProperty("transrealm_i18n_dynamic", True)
+        self._page_title = title
+        subtitle = QLabel("Import, translate, refine and export in one workspace.", header)
         subtitle.setObjectName("app-subtitle")
+        subtitle.setProperty("transrealm_i18n_dynamic", True)
+        subtitle.setWordWrap(True)
+        self._page_subtitle = subtitle
         header_layout.addWidget(title)
         header_layout.addWidget(subtitle)
-        shell_layout.addWidget(header)
+        content_layout.addWidget(header)
 
         tabs = QTabWidget(shell)
         tabs.setObjectName("main-tabs")
@@ -177,13 +220,13 @@ class MainWindow(QMainWindow):
         tabs.setMovable(False)
         tabs.setUsesScrollButtons(False)
         tabs.tabBar().setElideMode(Qt.TextElideMode.ElideRight)
-        tabs.addTab(
-            _scroll_page(self._translation, "translation-scroll", shell),
-            "Translation",
-        )
+        tabs.tabBar().hide()
+        self._translation.setObjectName("translation-page")
+        tabs.addTab(self._translation, "Translation")
         tabs.addTab(_scroll_page(self._providers, "providers-scroll", shell), "Providers")
         tabs.addTab(_scroll_page(self._prompts, "prompts-scroll", shell), "Prompts")
-        shell_layout.addWidget(tabs, 1)
+        content_layout.addWidget(tabs, 1)
+        shell_layout.addWidget(content, 1)
         shell.bind_tabs(tabs)
         self._tabs = tabs
         self.setCentralWidget(shell)
@@ -191,7 +234,7 @@ class MainWindow(QMainWindow):
         self._i18n.bind_tree(self)
 
         self._translation.request_project_setup.connect(
-            lambda: self._tabs.setCurrentIndex(0),
+            self._focus_model,
         )
         self._project.request_settings_setup.connect(
             lambda: self._tabs.setCurrentIndex(1),
@@ -201,12 +244,32 @@ class MainWindow(QMainWindow):
         )
         self._translation.request_prompts_setup.connect(self._open_prompts)
         self._tabs.currentChanged.connect(self._refresh_current_page)
+        self._providers.request_translation.connect(lambda: self._tabs.setCurrentIndex(0))
+        self._prompts.request_translation.connect(lambda: self._tabs.setCurrentIndex(0))
         self._settings.configuration_changed.connect(self._refresh_workspace)
         self._prompts.configuration_changed.connect(self._refresh_workspace)
 
         self._settings.refresh()
         self._prompts.refresh()
         self._project.refresh()
+        self._sync_navigation(0)
+
+    def _focus_model(self) -> None:
+        self._tabs.setCurrentIndex(0)
+        self._translation._model_combo.setFocus()
+        self._translation._model_combo.showPopup()
+
+    def _sync_navigation(self, index: int) -> None:
+        titles = ("Translation", "Providers", "Prompts")
+        descriptions = (
+            "Import, translate, refine and export in one workspace.",
+            "Connect a provider, then add a model for translation.",
+            "Create reusable instructions for your translations.",
+        )
+        for i, button in enumerate(self._nav_buttons):
+            button.setChecked(i == index)
+        self._page_title.setText(self._i18n.tr(titles[index]))
+        self._page_subtitle.setText(self._i18n.tr(descriptions[index]))
 
     def _refresh_workspace(self) -> None:
         self._project.refresh()
@@ -217,6 +280,7 @@ class MainWindow(QMainWindow):
         self._tabs.setCurrentIndex(2)
 
     def _refresh_current_page(self, index: int) -> None:
+        self._sync_navigation(index)
         if index == 0:
             self._refresh_workspace()
         elif index == 1:
@@ -229,8 +293,25 @@ class MainWindow(QMainWindow):
         del language
         self.setWindowTitle(self._i18n.tr("TransRealm"))
         self._i18n.bind_tree(self)
+        self._sync_navigation(self._tabs.currentIndex())
 
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
+        self._translation._capture_revision_draft()
+        unsaved = (
+            bool(self._translation._revision_drafts)
+            or self._project._notes_dirty
+            or self._prompts._dirty
+        )
+        if self.isVisible() and self._service_thread.isRunning() and unsaved:
+            choice = QMessageBox.question(
+                self, self._i18n.tr("Unsaved edits"),
+                self._i18n.tr("There are unsaved edits. Stay to save them, or discard and close."),
+                QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Cancel,
+            )
+            if choice != QMessageBox.StandardButton.Discard:
+                event.ignore()
+                return
         if self._shutdown_workers():
             super().closeEvent(event)
         else:

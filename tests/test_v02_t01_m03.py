@@ -53,7 +53,7 @@ def test_main_window_retranslates_shell_and_persists_language(
         assert tabs is not None
         assert title is not None
         assert language is not None
-        assert title.text() == "TransRealm"
+        assert title.text() == "Translation"
         assert [tabs.tabText(index) for index in range(tabs.count())] == [
             "Translation",
             "Providers",
@@ -62,7 +62,7 @@ def test_main_window_retranslates_shell_and_persists_language(
 
         language.setCurrentIndex(language.findData("zh_CN"))
         assert window._i18n.current_language == "zh_CN"
-        assert title.text() == "译境"
+        assert title.text() == "翻译"
         assert [tabs.tabText(index) for index in range(tabs.count())] == [
             "翻译",
             "模型提供商",
@@ -71,7 +71,7 @@ def test_main_window_retranslates_shell_and_persists_language(
         assert settings.value("language") == "zh_CN"
 
         window._i18n.set_language("en")
-        assert title.text() == "TransRealm"
+        assert title.text() == "Translation"
         assert settings.value("language") == "en"
     finally:
         window.shutdown()

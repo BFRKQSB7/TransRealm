@@ -1,144 +1,94 @@
-"""Small native QSS theme for the v0.2 desktop shell."""
+"""Native light theme with quiet surfaces and a clear action hierarchy."""
 
 from __future__ import annotations
 
 LIGHT_TOKENS: dict[str, str] = {
-    "window": "#f6f8fb",
+    "window": "#ffffff",
     "surface": "#ffffff",
-    "surface_muted": "#eef2f7",
-    "border": "#d5dce5",
-    "text": "#182230",
-    "text_muted": "#5d6b7b",
-    "accent": "#2563eb",
-    "accent_hover": "#1d4ed8",
-    "accent_soft": "#dbeafe",
+    "surface_muted": "#f5f5f4",
+    "border": "#e4e4e2",
+    "text": "#242424",
+    "text_muted": "#676767",
+    "accent": "#292929",
+    "accent_hover": "#454545",
+    "accent_soft": "#eaeae8",
     "on_accent": "#ffffff",
     "danger": "#b42318",
-    "focus": "#7aa7ff",
+    "focus": "#858585",
 }
 
 
 def build_stylesheet() -> str:
-    """Return the shared light QSS using the shell's visual tokens."""
+    """Return shared QSS; primary actions opt in via the role property."""
     t = LIGHT_TOKENS
     return f"""
     QWidget {{
-        background: {t["surface"]};
-        color: {t["text"]};
-        font-family: "Segoe UI";
-        font-size: 13px;
+        background: {t['surface']}; color: {t['text']};
+        font-family: "Microsoft YaHei UI"; font-size: 13px;
     }}
-    QMainWindow#main-window, QWidget#main-shell {{
-        background: {t["window"]};
+    QMainWindow#main-window, QWidget#main-shell {{ background: {t['window']}; }}
+    QFrame#sidebar {{
+        background: {t['surface_muted']}; border-right: 1px solid {t['border']};
     }}
-    QFrame#app-header {{
-        background: {t["surface"]};
-        border: 1px solid {t["border"]};
-        border-radius: 12px;
-    }}
-    QLabel#app-title {{
-        color: {t["text"]};
-        font-size: 24px;
-        font-weight: 700;
-    }}
-    QLabel#app-subtitle {{
-        color: {t["text_muted"]};
-        font-size: 13px;
-    }}
-    QTabWidget#main-tabs::pane {{
-        background: {t["surface"]};
-        border: 1px solid {t["border"]};
-        border-radius: 10px;
-        top: -1px;
-    }}
-    QTabWidget::pane {{
-        background: {t["surface"]};
-        border: 1px solid {t["border"]};
-    }}
-    QGroupBox {{
-        border: 1px solid {t["border"]};
-        border-radius: 6px;
-        margin-top: 8px;
-        padding-top: 12px;
-    }}
+    QFrame#sidebar QLabel {{ background: transparent; }}
+    QLabel#brand {{ font-size: 18px; font-weight: 600; }}
+    QLabel#app-title, QLabel#empty-title {{ font-size: 22px; font-weight: 600; }}
+    QLabel#app-subtitle, QLabel[role="muted"] {{ color: {t['text_muted']}; }}
+    QFrame#app-header {{ border: none; }}
+    QTabWidget::pane {{ border: none; background: {t['surface']}; }}
     QTabBar::tab {{
-        background: {t["surface"]};
-        color: {t["text_muted"]};
-        padding: 10px 18px;
-        margin-right: 4px;
-        border: 1px solid transparent;
-        border-bottom: 2px solid transparent;
+        background: transparent; color: {t['text_muted']};
+        padding: 7px 10px; border-bottom: 2px solid transparent;
     }}
-    QTabBar::tab:hover {{
-        color: {t["text"]};
-        background: {t["surface_muted"]};
+    QTabBar::tab:hover {{ background: {t['surface_muted']}; color: {t['text']}; }}
+    QTabBar::tab:selected {{ color: {t['text']}; border-bottom-color: {t['accent']}; }}
+    QGroupBox {{
+        border: 1px solid {t['border']}; border-radius: 8px;
+        margin-top: 10px; padding-top: 14px;
     }}
-    QTabBar::tab:selected {{
-        color: {t["accent"]};
-        background: {t["accent_soft"]};
-        border-color: {t["border"]};
-        border-bottom-color: {t["accent"]};
+    QGroupBox::title {{ subcontrol-origin: margin; left: 10px; padding: 0 4px; }}
+    QPushButton, QToolButton {{
+        background: {t['surface']}; color: {t['text']};
+        border: 1px solid {t['border']}; border-radius: 7px;
+        padding: 6px 12px; min-height: 20px;
     }}
-    QPushButton {{
-        background: {t["accent"]};
-        color: {t["on_accent"]};
-        border: 1px solid {t["accent"]};
-        border-radius: 6px;
-        padding: 7px 14px;
-        min-height: 18px;
+    QPushButton:hover, QToolButton:hover {{ background: {t['surface_muted']}; }}
+    QPushButton:pressed {{ background: {t['accent_soft']}; }}
+    QPushButton[role="primary"] {{
+        background: {t['accent']}; color: {t['on_accent']}; border-color: {t['accent']};
     }}
-    QPushButton:hover {{
-        background: {t["accent_hover"]};
-        border-color: {t["accent_hover"]};
+    QPushButton[role="primary"]:hover {{ background: {t['accent_hover']}; }}
+    QPushButton[role="navigation"] {{
+        text-align: left; background: transparent;
+        border: 1px solid transparent; padding: 9px 12px;
     }}
-    QPushButton:focus, QLineEdit:focus, QComboBox:focus, QListWidget:focus {{
-        border: 1px solid {t["focus"]};
+    QPushButton[role="navigation"]:hover {{ background: {t['accent_soft']}; }}
+    QPushButton[role="navigation"]:checked {{
+        background: {t['accent_soft']}; font-weight: 600;
     }}
-    QPushButton:disabled {{
-        background: {t["surface_muted"]};
-        color: {t["text_muted"]};
-        border-color: {t["border"]};
+    QPushButton[role="link"] {{ border-color: transparent; color: {t['text_muted']}; }}
+    QPushButton[role="danger"] {{ color: {t['danger']}; }}
+    QPushButton:disabled, QToolButton:disabled {{
+        color: #999999; background: {t['surface_muted']}; border-color: {t['border']};
     }}
+    QPushButton:focus, QLineEdit:focus, QComboBox:focus, QPlainTextEdit:focus,
+    QListWidget:focus {{ border: 1px solid {t['focus']}; }}
     QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QPlainTextEdit, QListWidget {{
-        background: {t["surface"]};
-        color: {t["text"]};
-        border: 1px solid {t["border"]};
-        border-radius: 6px;
-        padding: 6px 8px;
-        selection-background-color: {t["accent_soft"]};
-        selection-color: {t["text"]};
+        background: {t['surface']}; color: {t['text']};
+        border: 1px solid {t['border']}; border-radius: 7px; padding: 5px 8px;
+        selection-background-color: {t['accent_soft']}; selection-color: {t['text']};
     }}
-    QProgressBar {{
-        background: {t["surface_muted"]};
-        border: 1px solid {t["border"]};
-        border-radius: 5px;
-        text-align: center;
-    }}
-    QProgressBar::chunk {{
-        background: {t["accent"]};
-        border-radius: 4px;
-    }}
-    QScrollBar:vertical {{
-        background: {t["surface_muted"]};
-        width: 10px;
-        margin: 2px;
-    }}
-    QScrollBar::handle:vertical {{
-        background: {t["border"]};
-        min-height: 24px;
-        border-radius: 4px;
-    }}
-    QTabWidget#main-tabs, QTabBar, QAbstractScrollArea, QScrollArea#settings-scroll,
-    QScrollArea#project-scroll, QScrollArea#translation-scroll {{
-        background: {t["surface"]};
-    }}
-    QScrollArea#settings-scroll::viewport, QScrollArea#project-scroll::viewport,
-    QScrollArea#translation-scroll::viewport, QWidget#settings-page,
-    QWidget#project-page, QWidget#translation-page {{
-        background: {t["surface"]};
-    }}
-    QScrollArea#settings-scroll, QScrollArea#project-scroll,
-    QScrollArea#translation-scroll {{
-        border: none;
-    }}
+    QLineEdit, QComboBox {{ min-height: 22px; }}
+    QPlainTextEdit#source-preview {{ background: {t['surface_muted']}; }}
+    QListWidget::item {{ padding: 8px 4px; border-radius: 5px; }}
+    QListWidget::item:hover {{ background: {t['surface_muted']}; }}
+    QListWidget::item:selected {{ background: {t['accent_soft']}; color: {t['text']}; }}
+    QProgressBar {{ background: {t['surface_muted']}; border: none; border-radius: 2px; }}
+    QProgressBar::chunk {{ background: {t['accent']}; border-radius: 2px; }}
+    QScrollBar:vertical {{ background: transparent; width: 8px; margin: 2px 0; }}
+    QScrollBar::handle:vertical {{ background: #cececc; min-height: 24px; border-radius: 4px; }}
+    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
+    QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background: transparent; }}
+    QScrollArea {{ border: none; }}
+    QSplitter::handle {{ background: transparent; width: 12px; }}
     """

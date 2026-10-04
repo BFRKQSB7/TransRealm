@@ -25,6 +25,8 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QProgressBar,
     QPushButton,
+    QSizePolicy,
+    QSplitter,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -81,6 +83,8 @@ class TranslationPage(WorkerPage):
         self._param_editor: WorkbenchParamEditor | None = None
         self._prompt_editor: WorkbenchPromptEditor | None = None
         self._revision_editor: WorkbenchRevisionEditor | None = None
+        self._editor_segment_id: int | None = None
+        self._revision_drafts: dict[int, str] = {}
         self._workbench_progress: list[SegmentProgress] = []
         self._selected_workbench_id: int | None = None
         self._revision_history_segment_id: int | None = None
@@ -101,17 +105,17 @@ class TranslationPage(WorkerPage):
         self._models: list[ModelProfile] = []
         self._prompt_texts: dict[int, str] = {}
         self._templates: list[NamedPrompt] = []
-        overview_section = QGroupBox("Translation", self)
+        overview_section = QWidget(self)
         overview_section.setObjectName("translation-controls")
         overview_layout = QVBoxLayout(overview_section)
         self._status = QLabel("No document imported.", self)
         self._status.setObjectName("status-banner")
         self._status.setWordWrap(True)
-        overview_layout.addWidget(self._status)
+        self._status.setProperty("transrealm_i18n_dynamic", True)
 
         self._active_profile_label = QLabel("", self)
         self._active_profile_label.setWordWrap(True)
-        overview_layout.addWidget(self._active_profile_label)
+        self._active_profile_label.hide()
         selectors = QHBoxLayout()
         self._provider_combo = QComboBox(self)
         self._provider_combo.setObjectName("provider-selector")
@@ -131,25 +135,27 @@ class TranslationPage(WorkerPage):
         overview_layout.addLayout(selectors)
         self._manage_prompts = QPushButton("Manage prompts…", self)
         self._manage_prompts.clicked.connect(self.request_prompts_setup.emit)
-        overview_layout.addWidget(self._manage_prompts)
+        self._manage_prompts.setProperty("role", "link")
+        selectors.addWidget(self._manage_prompts, 0, Qt.AlignmentFlag.AlignBottom)
         self._provider_combo.activated.connect(self._on_provider_selected)
         self._model_combo.activated.connect(self._on_model_selected)
         self._prompt_combo.activated.connect(self._on_prompt_selected)
         doc_row = QHBoxLayout()
         doc_row.addWidget(QLabel("Document:", self))
         self._document_combo = QComboBox(self)
-        doc_row.addWidget(self._document_combo)
+        doc_row.addWidget(self._document_combo, 1)
         overview_layout.addLayout(doc_row)
 
-        form = QHBoxLayout()
+        form = doc_row
         self._translate = QPushButton("Translate", self)
+        self._translate.setProperty("role", "primary")
+        self._translate.setProperty("transrealm_i18n_dynamic", True)
         self._cancel = QPushButton("Stop", self)
         self._cancel.setEnabled(False)
         self._export = QPushButton("Export file…", self)
         form.addWidget(self._translate)
         form.addWidget(self._cancel)
         form.addWidget(self._export)
-        overview_layout.addLayout(form)
 
         self._config_missing_label = QLabel("", self)
         self._config_missing_label.setWordWrap(True)
@@ -158,10 +164,13 @@ class TranslationPage(WorkerPage):
 
         self._set_active_profile = QPushButton("Choose model…", self)
         self._set_active_profile.hide()
-        overview_layout.addWidget(self._set_active_profile)
+        guidance_actions = QHBoxLayout()
+        guidance_actions.addWidget(self._set_active_profile)
         self._configure_settings = QPushButton("Configure Providers…", self)
         self._configure_settings.hide()
-        overview_layout.addWidget(self._configure_settings)
+        guidance_actions.addWidget(self._configure_settings)
+        guidance_actions.addStretch()
+        overview_layout.addLayout(guidance_actions)
 
         # Workbench surface (P1-T03-M02): real Segment/Attempt progress, the
         # active Profile's capability, and a parameter editor presenting only
@@ -171,7 +180,7 @@ class TranslationPage(WorkerPage):
         workbench_layout.setContentsMargins(0, 0, 0, 0)
         self._workbench_info = QLabel("", self._workbench_container)
         self._workbench_info.setWordWrap(True)
-        workbench_layout.addWidget(self._workbench_info)
+        self._workbench_info.setProperty("role", "muted")
         filter_row = QHBoxLayout()
         filter_row.addWidget(QLabel("Filter status:", self._workbench_container))
         self._workbench_filter = QComboBox(self._workbench_container)
@@ -183,29 +192,26 @@ class TranslationPage(WorkerPage):
         self._workbench_filter.addItem("Failed", "failed")
         self._workbench_filter.setProperty("transrealm_i18n_static_items", True)
         filter_row.addWidget(self._workbench_filter)
-        workbench_layout.addLayout(filter_row)
         self._segment_detail = QLabel("No segment selected.", self._workbench_container)
         self._segment_detail.setObjectName("segment-detail")
         self._segment_detail.setProperty("transrealm_i18n_dynamic", True)
         self._segment_detail.setWordWrap(True)
-        workbench_layout.addWidget(self._segment_detail)
-        workbench_layout.addWidget(QLabel("Translation history:", self._workbench_container))
+        # Retain the detail inspection hook without displaying the source twice.
+        self._segment_detail.hide()
         self._revision_history_list = QListWidget(self._workbench_container)
         self._revision_history_list.setObjectName("revision-history")
-        workbench_layout.addWidget(self._revision_history_list)
         revision_actions = QHBoxLayout()
         self._use_revision = QPushButton("Use selected translation", self._workbench_container)
         self._use_revision.setObjectName("use-selected-revision")
         self._use_revision.setEnabled(False)
         revision_actions.addWidget(self._use_revision)
-        self._retry_failed = QPushButton("Retry failed segment", self._workbench_container)
+        self._retry_failed = QPushButton("Retry segment", self._workbench_container)
         self._retry_failed.setObjectName("retry-failed-segment")
         self._retry_failed.setEnabled(False)
         revision_actions.addWidget(self._retry_failed)
-        self._retranslate = QPushButton("Retranslate selected segment", self)
+        self._retranslate = QPushButton("Retranslate segment", self)
         self._retranslate.clicked.connect(self._on_retranslate)
         revision_actions.addWidget(self._retranslate)
-        workbench_layout.addLayout(revision_actions)
         self._param_host = QWidget(self._workbench_container)
         self._param_layout = QVBoxLayout(self._param_host)
         self._param_layout.setContentsMargins(0, 0, 0, 0)
@@ -216,7 +222,6 @@ class TranslationPage(WorkerPage):
         advanced_layout.addWidget(self._param_host)
         advanced.toggled.connect(self._param_host.setVisible)
         self._param_host.hide()
-        workbench_layout.addWidget(advanced)
         self._prompt_host = QWidget(self._workbench_container)
         self._prompt_layout = QVBoxLayout(self._prompt_host)
         self._prompt_layout.setContentsMargins(0, 0, 0, 0)
@@ -227,64 +232,103 @@ class TranslationPage(WorkerPage):
         prompt_layout.addWidget(self._prompt_host)
         prompt_settings.toggled.connect(self._prompt_host.setVisible)
         self._prompt_host.hide()
-        workbench_layout.addWidget(prompt_settings)
         self._segment_progress = QListWidget(self._workbench_container)
-        workbench_layout.addWidget(self._segment_progress)
         self._revision_host = QWidget(self._workbench_container)
         self._revision_layout = QVBoxLayout(self._revision_host)
         self._revision_layout.setContentsMargins(0, 0, 0, 0)
-        workbench_layout.addWidget(self._revision_host)
         self._workbench_container.hide()
         layout.addWidget(overview_section)
         self._context_preview = QPlainTextEdit(self)
         self._context_preview.setReadOnly(True)
         self._context_preview.setObjectName("context-preview")
-        self._context_preview.setMaximumHeight(120)
-        workbench_layout.addWidget(QLabel("Context", self))
-        workbench_layout.addWidget(self._context_preview)
-        layout.addWidget(self._workbench_container)
+        layout.addWidget(self._workbench_container, 1)
+        self._empty_state = QWidget(self)
+        self._empty_state.setObjectName("empty-state")
+        empty_layout = QVBoxLayout(self._empty_state)
+        empty_layout.addStretch()
+        empty_title = QLabel("Start with a file", self)
+        empty_title.setObjectName("empty-title")
+        empty_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        empty_layout.addWidget(empty_title)
+        empty_copy = QLabel(
+            "Drop TXT, JSON or subtitle files here, or use Import file above.", self
+        )
+        empty_copy.setWordWrap(True)
+        empty_copy.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        empty_copy.setProperty("role", "muted")
+        empty_layout.addWidget(empty_copy)
+        language_hint = QLabel(
+            "Default languages: Japanese → Chinese. Adjust in Job settings.", self
+        )
+        language_hint.setWordWrap(True)
+        language_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        language_hint.setProperty("role", "muted")
+        empty_layout.addWidget(language_hint)
+        empty_layout.addStretch()
+        layout.addWidget(self._empty_state, 1)
 
         # Keep the source/editor next to the segment list; lower-frequency
         # history/context/settings live in internal tabs of the same workspace.
         detail_tabs = QTabWidget(self._workbench_container)
-        detail_tabs.setMinimumHeight(280)
+        self._detail_tabs = detail_tabs
+        detail_tabs.setMinimumHeight(260)
+        detail_tabs.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored)
         editor_panel = QWidget(detail_tabs)
         editor_layout = QVBoxLayout(editor_panel)
-        for widget in (self._segment_detail, self._revision_host):
-            workbench_layout.removeWidget(widget)
-            editor_layout.addWidget(widget)
+        editor_layout.addWidget(self._revision_host, 1)
+        revision_actions.removeWidget(self._retry_failed)
+        revision_actions.removeWidget(self._retranslate)
+        segment_actions = QHBoxLayout()
+        segment_actions.addWidget(self._retry_failed)
+        segment_actions.addWidget(self._retranslate)
+        segment_actions.addStretch()
+        editor_layout.addLayout(segment_actions)
         detail_tabs.addTab(editor_panel, "Current translation")
         history_panel = QWidget(detail_tabs)
         history_layout = QVBoxLayout(history_panel)
-        workbench_layout.removeWidget(self._revision_history_list)
         history_layout.addWidget(self._revision_history_list)
-        workbench_layout.removeItem(revision_actions)
         history_layout.addLayout(revision_actions)
         detail_tabs.addTab(history_panel, "Translation history:")
         context_panel = QWidget(detail_tabs)
         context_layout = QVBoxLayout(context_panel)
-        workbench_layout.removeWidget(self._context_preview)
         context_layout.addWidget(self._context_preview)
         detail_tabs.addTab(context_panel, "Context")
         settings_panel = QWidget(detail_tabs)
         settings_layout = QVBoxLayout(settings_panel)
+        settings_layout.addWidget(self._workbench_info)
         for widget in (advanced, prompt_settings):
-            workbench_layout.removeWidget(widget)
             settings_layout.addWidget(widget)
         # Keep the supported editor hook internal; prompt management has one page.
         prompt_settings.hide()
+        settings_layout.addStretch()
         detail_tabs.addTab(settings_panel, "Advanced settings")
-        workbench_layout.removeWidget(self._segment_progress)
-        self._segment_progress.setMaximumWidth(340)
-        content_row = QHBoxLayout()
-        content_row.addWidget(self._segment_progress, 1)
-        content_row.addWidget(detail_tabs, 2)
-        workbench_layout.addLayout(content_row)
+        self._segment_progress.setObjectName("segment-list")
+        self._segment_progress.setMinimumWidth(180)
+        self._segment_progress.setWordWrap(True)
+        segments_panel = QWidget(self)
+        segments_layout = QVBoxLayout(segments_panel)
+        segments_layout.setContentsMargins(0, 0, 0, 0)
+        segments_layout.addLayout(filter_row)
+        segments_layout.addWidget(self._segment_progress, 1)
+        content = QSplitter(Qt.Orientation.Horizontal, self)
+        content.setChildrenCollapsible(False)
+        content.addWidget(segments_panel)
+        content.addWidget(detail_tabs)
+        content.setStretchFactor(0, 1)
+        content.setStretchFactor(1, 3)
+        content.setSizes([250, 650])
+        workbench_layout.addWidget(content, 1)
 
         self._progress = QProgressBar(self)
-        self._progress.setRange(0, 0)
+        self._progress.setRange(0, 1)
         self._progress.setValue(0)
-        overview_layout.addWidget(self._progress)
+        self._progress.setTextVisible(False)
+        self._progress.setFixedHeight(4)
+        layout.addWidget(self._progress)
+        layout.addWidget(self._status)
+        overview_layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
 
         self._translate.clicked.connect(self._on_translate)
         self._cancel.clicked.connect(self._on_cancel)
@@ -312,6 +356,7 @@ class TranslationPage(WorkerPage):
     def set_project(self, project_id: int) -> None:
         """Record the active project id and refresh its mode/profile status."""
         if self._project_id != project_id:
+            self._capture_revision_draft()
             self._document_id = None
             self._allow_initial_document_restore = self._project_id is None
             self._selected_workbench_id = None
@@ -371,11 +416,18 @@ class TranslationPage(WorkerPage):
             if source_document_id != self._document_id:
                 self._deferred_document = (source_document_id, name, count)
             return
+        if self._document_id != source_document_id:
+            self._capture_revision_draft()
+            self._selected_workbench_id = None
+            self._clear_revision_editor()
+            self._segment_progress.clear()
+            self._workbench_progress = []
         self._document_id = source_document_id
         self._document_name = name
         self._document_format = Path(name).suffix.lstrip(".").lower() or "txt"
-        self._status.setText(f"Document {name}: {count} segments.")
-        self._progress.setRange(0, 0)
+        self._workbench_container.setVisible(count > 0)
+        self._status.setText(self._document_status(name, count))
+        self._progress.setRange(0, max(count, 1))
         self._progress.setValue(0)
         # The workbench segment progress (and mode/active labels) depend on the
         # selected document, so a refresh reflects the newly imported state.
@@ -394,10 +446,15 @@ class TranslationPage(WorkerPage):
         document_id = self._document_combo.itemData(index)
         if not isinstance(document_id, int) or document_id == self._document_id:
             return
+        self._capture_revision_draft()
+        self._selected_workbench_id = None
+        self._clear_revision_editor()
+        self._segment_progress.clear()
+        self._workbench_progress = []
         self._document_id = document_id
         self._document_name = self._document_combo.itemText(index)
         self._status.setText(f"Document {self._document_name}.")
-        self._progress.setRange(0, 0)
+        self._progress.setRange(0, 1)
         self._progress.setValue(0)
         self.refresh()
 
@@ -442,12 +499,10 @@ class TranslationPage(WorkerPage):
                     self._document_format = doc.format
                     break
             if effective_id != previous:
-                self._status.setText(
-                    f"Document {self._document_name}: {segment_count} segments.",
-                )
+                self._status.setText(self._document_status(self._document_name, segment_count))
         else:
             self._status.setText("Select a project document.")
-            self._progress.setRange(0, 0)
+            self._progress.setRange(0, 1)
             self._progress.setValue(0)
         index = self._document_combo.findData(effective_id) if effective_id is not None else -1
         # With no effective document do not leave the first item highlighted:
@@ -456,6 +511,9 @@ class TranslationPage(WorkerPage):
 
     def _on_translate(self) -> None:
         if self._running:
+            return
+        if self._has_unsaved_edits():
+            self._status.setText(self._i18n.tr("Save your edited segments before translating."))
             return
         if self._project_id is None or self._document_id is None:
             self._handle_error("Import a document first.")
@@ -496,6 +554,21 @@ class TranslationPage(WorkerPage):
         ):
             widget.setEnabled(not running)
         self._sync_revision_actions()
+        self._sync_main_actions()
+
+    def _sync_main_actions(self) -> None:
+        has_document = self._document_id is not None
+        unfinished = any(item.status == "pending" for item in self._workbench_progress)
+        started = any(item.current_revision_id is not None for item in self._workbench_progress)
+        label = "Resume translation" if unfinished and started else "Translate"
+        self._translate.setText(self._i18n.tr("Translating…" if self._running else label))
+        self._translate.setEnabled(
+            not self._running and has_document and self._active_profile_id is not None
+            and (unfinished or not self._workbench_progress)
+        )
+        self._export.setEnabled(not self._running and has_document)
+        self._empty_state.setVisible(not has_document)
+        self._cancel.setVisible(self._running)
 
     def _on_cancel(self) -> None:
         self._stop_clicked = True
@@ -508,7 +581,7 @@ class TranslationPage(WorkerPage):
 
     def _on_config_missing(self, reason: str) -> None:
         self._set_running(False)
-        self._status.setText("Translation needs configuration.")
+        self._status.setText(self._i18n.tr("Translation needs configuration."))
         self._config_missing_label.setText(reason)
         self._config_missing_label.setProperty("transrealm_i18n_source", reason)
         self._config_missing_label.setText(self._i18n.tr(reason))
@@ -534,15 +607,15 @@ class TranslationPage(WorkerPage):
         self._progress.setRange(0, max(total, 1))
         self._progress.setValue(done)
         if total > 0 and self._running and not getattr(self, "_terminal_error", False):
-            self._status.setText(f"Translated {done}/{total} ({stable_key}).")
+            self._status.setText(f"{self._i18n.tr('Translated')} {done}/{total}")
 
     def _on_segment_completed(self, stable_key: str, revision_id: int) -> None:
         if self._running and not getattr(self, "_terminal_error", False):
-            self._status.setText(f"{stable_key}: {self._i18n.tr('Completed')}")
+            self._status.setText(self._i18n.tr('Completed'))
 
     def _on_segment_failed(self, stable_key: str, error: str) -> None:
         self._terminal_error = True
-        self._status.setText(f"{stable_key}: {safe_error_message(error)}")
+        self._status.setText(f"{self._i18n.tr('Failed')}: {safe_error_message(error)}")
 
     def _on_finished(self) -> None:
         self._set_running(False)
@@ -568,6 +641,9 @@ class TranslationPage(WorkerPage):
         self._status.setText(f"{self._i18n.tr('Translation failed')}: {safe_error_message(error)}")
 
     def _on_export(self) -> None:
+        if self._has_unsaved_edits():
+            self._status.setText(self._i18n.tr("Save your edited segments before exporting."))
+            return
         if self._document_id is None:
             self._handle_error("Import a document first.")
             return
@@ -584,6 +660,9 @@ class TranslationPage(WorkerPage):
 
     def export_to(self, target_path: Path) -> None:
         """Export the document through the worker (no file dialog)."""
+        if self._has_unsaved_edits():
+            self._status.setText(self._i18n.tr("Save your edited segments before exporting."))
+            return
         if self._document_id is None:
             self._handle_error("Import a document first.")
             return
@@ -604,6 +683,7 @@ class TranslationPage(WorkerPage):
                 self._document_id = None
                 self._document_combo.clear()
                 self._hide_workbench()
+                self._set_running(self._running)
                 return
             assert isinstance(result, tuple)
             (
@@ -639,6 +719,10 @@ class TranslationPage(WorkerPage):
             self._populate_prompt_selector(override)
             self._populate_documents(documents, effective, len(progress))
             self._populate_workbench(profile, progress, override)
+            if not self._running:
+                done = sum(item.status == "completed" for item in self._workbench_progress)
+                self._progress.setRange(0, max(len(self._workbench_progress), 1))
+                self._progress.setValue(done)
             self._set_running(self._running)
         elif action == "select_model":
             self._job_controls.refresh()
@@ -664,6 +748,12 @@ class TranslationPage(WorkerPage):
                 "retry_failed": "Failed segment requeued.",
             }
             self._status.setText(self._i18n.tr(messages[action]))
+            if action == "save_revision" and isinstance(result, TranslationRevision):
+                self._capture_revision_draft()
+                if self._revision_drafts.get(result.segment_id) == result.text:
+                    self._revision_drafts.pop(result.segment_id, None)
+                if self._editor_segment_id == result.segment_id and self._revision_editor:
+                    self._revision_editor._saved_text = result.text
             if action == "set_current_revision":
                 self._clear_revision_editor()
             self.refresh()
@@ -705,11 +795,13 @@ class TranslationPage(WorkerPage):
         previous_id = self._selected_segment_id()
         if previous_id is None and items and isinstance(active_profile, ModelProfile):
             previous_id = items[0].segment_id
-        revision_draft = (
-            self._revision_editor.translation() if self._revision_editor is not None else None
-        )
+        self._capture_revision_draft()
+        if previous_id not in {item.segment_id for item in items}:
+            previous_id = (
+                items[0].segment_id if items and isinstance(active_profile, ModelProfile) else None
+            )
 
-        self._workbench_container.show()
+        self._workbench_container.setVisible(bool(items))
         self._workbench_progress = items
         self._selected_workbench_id = previous_id
         self._render_workbench_list()
@@ -720,10 +812,9 @@ class TranslationPage(WorkerPage):
         )
         visible_ids = {item.segment_id for item in self._visible_workbench_progress()}
         if selected is not None and selected.segment_id in visible_ids:
-            keep_draft = selected.segment_id == previous_id
             self._rebuild_revision_editor(
                 selected,
-                initial=revision_draft if keep_draft else None,
+                initial=self._revision_drafts.get(selected.segment_id),
             )
         elif previous_id is None:
             self._clear_revision_editor()
@@ -779,14 +870,21 @@ class TranslationPage(WorkerPage):
         blocker = QSignalBlocker(self._segment_progress)
         try:
             self._segment_progress.clear()
+            numbers = {item.segment_id: i for i, item in enumerate(self._workbench_progress, 1)}
             for item in visible:
                 status = item.status
                 if self._i18n.current_language != "en":
                     status = self._i18n.tr(item.status.capitalize())
-                label = f"{item.stable_key}: {status}"
+                preview = " ".join(item.source_text.split())
+                if len(preview) > 65:
+                    preview = preview[:65] + "…"
+                label = f"{numbers[item.segment_id]:02d}  ·  {status}\n{preview}"
                 if item.attempt_error:
                     label += f": {safe_error_message(item.attempt_error)}"
-                self._segment_progress.addItem(label)
+                row = QListWidgetItem(label)
+                row.setData(Qt.ItemDataRole.UserRole, label)
+                row.setToolTip(item.source_text)
+                self._segment_progress.addItem(row)
             if self._selected_workbench_id is not None:
                 for index, item in enumerate(visible):
                     if item.segment_id == self._selected_workbench_id:
@@ -794,12 +892,24 @@ class TranslationPage(WorkerPage):
                         break
         finally:
             del blocker
+        self._refresh_draft_labels()
+
+    def _refresh_draft_labels(self) -> None:
+        for index, segment in enumerate(self._visible_workbench_progress()):
+            row = self._segment_progress.item(index)
+            if row is not None:
+                text = row.data(Qt.ItemDataRole.UserRole)
+                if isinstance(text, str):
+                    if segment.segment_id in self._revision_drafts:
+                        text += f"\n{self._i18n.tr('Unsaved edits')}"
+                    row.setText(text)
 
     def _on_workbench_filter_changed(self, _index: int) -> None:
         selected_id = self._selected_workbench_id
         if selected_id is None:
             selected_id = self._selected_segment_id()
-        draft = self._revision_editor.translation() if self._revision_editor is not None else None
+        self._capture_revision_draft()
+        draft = self._revision_drafts.get(selected_id) if selected_id is not None else None
         self._selected_workbench_id = selected_id
         self._render_workbench_list()
         self._selected_workbench_id = selected_id
@@ -843,11 +953,31 @@ class TranslationPage(WorkerPage):
                 return
 
     def _on_language_changed(self, _language: str) -> None:
+        self._capture_revision_draft()
         self._render_workbench_list()
         self._restore_workbench_selection()
         selected = self._selected_segment_item() if self._selected_workbench_id else None
         self._update_segment_detail(selected)
         self._render_revision_history()
+        if selected is not None:
+            self._rebuild_revision_editor(
+                selected, initial=self._revision_drafts.get(selected.segment_id)
+            )
+        for index in range(self._prompt_combo.count()):
+            if self._prompt_combo.itemData(index) in {"preset", "current"}:
+                source = (
+                    "Preset prompt" if self._prompt_combo.itemData(index) == "preset"
+                    else "Model prompt"
+                )
+                self._prompt_combo.setItemText(index, self._i18n.tr(source))
+        self._sync_main_actions()
+        if self._status.text().startswith(("Document ", "文档 ")):
+            self._status.setText(
+                self._document_status(self._document_name, len(self._workbench_progress))
+            )
+
+    def _document_status(self, name: str, count: int) -> str:
+        return f"{self._i18n.tr('Document')} {name} · {count} {self._i18n.tr('segments')}"
 
     def _revision_history_task(
         self,
@@ -907,6 +1037,7 @@ class TranslationPage(WorkerPage):
         )
         retry_enabled = selected is not None and selected.status == "failed" and not self._running
         self._retry_failed.setEnabled(retry_enabled)
+        self._retry_failed.setVisible(selected is not None and selected.status == "failed")
         history_item = self._revision_history_list.currentItem()
         revision_id = history_item.data(Qt.ItemDataRole.UserRole) if history_item else None
         self._use_revision.setEnabled(
@@ -1057,14 +1188,32 @@ class TranslationPage(WorkerPage):
 
     def _on_segment_selected(self) -> None:
         """Show the manual translation editor for the newly selected segment."""
+        self._capture_revision_draft()
         selected = self._selected_segment_item()
         if selected is None:
             self._update_segment_detail(None)
             return
         self._selected_workbench_id = selected.segment_id
         self._update_segment_detail(selected)
-        self._rebuild_revision_editor(selected)
+        self._rebuild_revision_editor(
+            selected, initial=self._revision_drafts.get(selected.segment_id)
+        )
         self._load_revision_history(selected.segment_id)
+        self._load_context_preview(selected.segment_id)
+        self._refresh_draft_labels()
+
+    def _has_unsaved_edits(self) -> bool:
+        self._capture_revision_draft()
+        self._refresh_draft_labels()
+        return any(item.segment_id in self._revision_drafts for item in self._workbench_progress)
+
+    def _capture_revision_draft(self) -> None:
+        if self._revision_editor is None or self._editor_segment_id is None:
+            return
+        if self._revision_editor.is_dirty():
+            self._revision_drafts[self._editor_segment_id] = self._revision_editor.translation()
+        else:
+            self._revision_drafts.pop(self._editor_segment_id, None)
 
     def _rebuild_revision_editor(
         self,
@@ -1089,6 +1238,7 @@ class TranslationPage(WorkerPage):
         editor.lock_requested.connect(self._on_lock_revision)
         editor.unlock_requested.connect(self._on_unlock_revision)
         self._revision_editor = editor
+        self._editor_segment_id = item.segment_id
         self._revision_layout.addWidget(editor)
         self._i18n.bind_tree(editor)
 
@@ -1101,6 +1251,7 @@ class TranslationPage(WorkerPage):
             if widget is not None:
                 widget.deleteLater()
         self._revision_editor = None
+        self._editor_segment_id = None
 
     def _on_save_revision(self, text: str) -> None:
         selected = self._selected_segment_item()
@@ -1272,6 +1423,9 @@ class TranslationPage(WorkerPage):
         self._job_controls.import_file(path)
 
     def _on_retranslate(self) -> None:
+        if self._has_unsaved_edits():
+            self._status.setText(self._i18n.tr("Save your edited segments before translating."))
+            return
         selected = self._selected_segment_item()
         if (
             self._running

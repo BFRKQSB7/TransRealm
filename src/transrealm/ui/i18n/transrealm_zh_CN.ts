@@ -814,5 +814,109 @@
             <source>Using the read-only preset template.</source>
             <translation>正在使用只读预设模板。</translation>
         </message>
+        <message>
+            <source>Local workspace</source>
+            <translation>本地工作区</translation>
+        </message>
+        <message>
+            <source>Import, translate, refine and export in one workspace.</source>
+            <translation>从导入到导出，在一个工作区完成翻译。</translation>
+        </message>
+        <message>
+            <source>Connect a provider, then add a model for translation.</source>
+            <translation>连接提供商，添加模型，即可开始翻译。</translation>
+        </message>
+        <message>
+            <source>Create reusable instructions for your translations.</source>
+            <translation>为翻译创建可重复使用的指令。</translation>
+        </message>
+        <message>
+            <source>Back to Translation</source>
+            <translation>返回翻译</translation>
+        </message>
+        <message>
+            <source>Job settings</source>
+            <translation>任务设置</translation>
+        </message>
+        <message>
+            <source>Drop files to start a Job. Default languages: ja → zh; change them in New Job.</source>
+            <translation>拖入文件即可创建任务。默认日语 → 中文，可在新建任务中调整。</translation>
+        </message>
+        <message>
+            <source>Start with a file</source>
+            <translation>从一份文件开始</translation>
+        </message>
+        <message>
+            <source>Drop TXT, JSON or subtitle files here, or use Import file above.</source>
+            <translation>将 TXT、JSON 或字幕文件拖到这里，或点击上方「导入文件」。</translation>
+        </message>
+        <message>
+            <source>Default languages: Japanese → Chinese. Adjust in Job settings.</source>
+            <translation>默认日语 → 中文，可在任务设置中调整。</translation>
+        </message>
+        <message>
+            <source>Resume translation</source>
+            <translation>继续翻译</translation>
+        </message>
+        <message>
+            <source>Translated</source>
+            <translation>已翻译</translation>
+        </message>
+        <message>
+            <source>Unsaved edits</source>
+            <translation>未保存的修改</translation>
+        </message>
+        <message>
+            <source>Save your edited segments before translating.</source>
+            <translation>请先保存修改过的段落，再开始翻译。</translation>
+        </message>
+        <message>
+            <source>Save your edited segments before exporting.</source>
+            <translation>请先保存修改过的段落，再导出文件。</translation>
+        </message>
+        <message>
+            <source>Retry segment</source>
+            <translation>重试此段</translation>
+        </message>
+        <message>
+            <source>Retranslate segment</source>
+            <translation>重译此段</translation>
+        </message>
+        <message>
+            <source>Ready for manual translation.</source>
+            <translation>可直接编辑译文，保存后生效。</translation>
+        </message>
+        <message>
+            <source>Locked · protected from automatic translation.</source>
+            <translation>已锁定 · 自动翻译会保留此译文。</translation>
+        </message>
+        <message>
+            <source>Unlocked · automatic translation can replace this version.</source>
+            <translation>未锁定 · 自动翻译可更新此译文。</translation>
+        </message>
+        <message>
+            <source>Locked translation</source>
+            <translation>译文已锁定</translation>
+        </message>
+        <message>
+            <source>Editable translation</source>
+            <translation>译文可编辑</translation>
+        </message>
+        <message>
+            <source>Manual translation</source>
+            <translation>手动翻译</translation>
+        </message>
+        <message>
+            <source>Document</source>
+            <translation>文档</translation>
+        </message>
+        <message>
+            <source>segments</source>
+            <translation>段</translation>
+        </message>
+        <message>
+            <source>There are unsaved edits. Stay to save them, or discard and close.</source>
+            <translation>还有未保存的修改。可取消关闭并保存，或放弃修改后退出。</translation>
+        </message>
     </context>
 </TS>

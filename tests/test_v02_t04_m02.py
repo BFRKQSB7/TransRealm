@@ -96,7 +96,8 @@ class TestWorkbenchListFilter:
 
         status_filter.setCurrentIndex(status_filter.findData("completed"))
         qtbot.waitUntil(lambda: translation._segment_progress.count() == 1, timeout=2000)
-        assert translation._segment_progress.currentItem().text().startswith("seg-2")
+        assert translation._segment_progress.currentItem().text().startswith("02")
+        assert "Beta" in translation._segment_progress.currentItem().text()
         assert "Beta" in translation._segment_detail.text()
         assert translation._revision_editor is not None
 

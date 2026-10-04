@@ -49,6 +49,7 @@ class ProvidersPage(WorkerPage):
     """Manage endpoint references, models, capabilities and supported parameters."""
 
     configuration_changed = Signal()
+    request_translation = Signal()
 
     def __init__(
         self,
@@ -85,7 +86,6 @@ class ProvidersPage(WorkerPage):
         self._setup_hint.setProperty("transrealm_i18n_dynamic", True)
         layout.addWidget(self._setup_hint)
 
-        language_form = QFormLayout()
         self._language_combo = QComboBox(self)
         self._language_combo.setObjectName("language-selector")
         self._language_combo.addItem("English", "en")
@@ -94,8 +94,9 @@ class ProvidersPage(WorkerPage):
         language_index = self._language_combo.findData(self._i18n.current_language)
         if language_index >= 0:
             self._language_combo.setCurrentIndex(language_index)
-        language_form.addRow("Language", self._language_combo)
-        layout.addLayout(language_form)
+        back = QPushButton("Back to Translation", self)
+        back.clicked.connect(self.request_translation.emit)
+        layout.addWidget(back, 0, Qt.AlignmentFlag.AlignRight)
         self._sections = QTabWidget(self)
         layout.addWidget(self._sections, 1)
 
@@ -248,6 +249,48 @@ class ProvidersPage(WorkerPage):
         self._delete_profile = QPushButton("Delete Selected Model", self)
         profile_layout.addWidget(self._delete_profile)
         self._sections.addTab(profile_section, "Models")
+
+        # Existing lists and forms become a master/detail view without changing
+        # the service calls or credential fields.
+        for container, form_layout, listing, delete, extra in (
+            (connection_layout, connection_form, self._connections_list,
+             self._delete_connection, self._credential_status),
+            (profile_layout, profile_form, self._profiles_list,
+             self._delete_profile, self._profile_advanced),
+        ):
+            container.removeItem(form_layout)
+            container.removeWidget(listing)
+            container.removeWidget(delete)
+            container.removeWidget(extra)
+            left = QWidget(self)
+            left.setMinimumWidth(190)
+            left.setMaximumWidth(260)
+            left_layout = QVBoxLayout(left)
+            left_layout.setContentsMargins(0, 0, 0, 0)
+            left_layout.addWidget(listing, 1)
+            left_layout.addWidget(delete)
+            right = QWidget(self)
+            right_layout = QVBoxLayout(right)
+            right_layout.setContentsMargins(0, 0, 0, 0)
+            right_layout.addLayout(form_layout)
+            if extra is self._profile_advanced:
+                container.removeWidget(self._profile_advanced_toggle)
+                right_layout.addWidget(self._profile_advanced_toggle)
+            right_layout.addWidget(extra)
+            right_layout.addStretch()
+            row = QHBoxLayout()
+            row.setSpacing(20)
+            row.addWidget(left, 1)
+            row.addWidget(right, 2)
+            container.addLayout(row, 1)
+            delete.setProperty("role", "danger")
+        for button in (
+            self._add_connection, self._save_connection, self._add_profile, self._save_profile
+        ):
+            button.setProperty("role", "primary")
+        # Selecting a list row already enters edit mode.
+        self._edit_connection.hide()
+        self._edit_profile.hide()
 
         self._add_connection.clicked.connect(self._on_add_connection)
         self._edit_connection.clicked.connect(self._on_edit_connection)
@@ -652,6 +695,7 @@ class ProvidersPage(WorkerPage):
             self._show_credential_status(statuses)
         elif action == "add_connection":
             self._set_status("Provider added.")
+            self._sections.setCurrentIndex(1)
             self.refresh()
         elif action == "update_connection":
             self._set_status("Provider updated.")

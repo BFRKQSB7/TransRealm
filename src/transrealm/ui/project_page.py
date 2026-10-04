@@ -80,14 +80,30 @@ class ProjectPage(WorkerPage):
 
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
+        toolbar = QHBoxLayout()
+        toolbar.addWidget(QLabel("Open Job", self))
+        self._project_combo = QComboBox(self)
+        self._project_combo.setMinimumWidth(140)
+        toolbar.addWidget(self._project_combo, 1)
+        self._import_file = QPushButton("Import file…", self)
+        self._import_txt = self._import_file
+        toolbar.addWidget(self._import_file)
+        self._details_toggle = QPushButton("Job settings", self)
+        self._details_toggle.setCheckable(True)
+        toolbar.addWidget(self._details_toggle)
+        outer.addLayout(toolbar)
         self._details = QTabWidget(self)
         self._details.setMaximumHeight(240)
+        self._details.hide()
+        self._details_toggle.toggled.connect(self._details.setVisible)
         outer.addWidget(self._details)
         job_panel = QWidget(self)
         self._add_panel(job_panel, "Job and files")
         layout = QVBoxLayout(job_panel)
         self._status = QLabel("", self)
-        layout.addWidget(self._status)
+        self._status.setWordWrap(True)
+        self._status.setProperty("role", "muted")
+        outer.addWidget(self._status)
 
         create_box = QGroupBox("New Job", self)
         self._create_box = create_box
@@ -101,21 +117,20 @@ class ProjectPage(WorkerPage):
         form = QFormLayout(create_content)
         self._project_name = QLineEdit(self)
         self._source_language = QLineEdit(self)
+        self._source_language.setPlaceholderText("ja")
         self._target_language = QLineEdit(self)
+        self._target_language.setPlaceholderText("zh")
         self._create_project = QPushButton("Create Job", self)
-        self._import_file = QPushButton("Import file…", self)
-        # Keep the old private hook usable for existing UI tests/integrations.
-        self._import_txt = self._import_file
         form.addRow("Name", self._project_name)
         form.addRow("Source lang", self._source_language)
         form.addRow("Target lang", self._target_language)
         form.addRow(self._create_project)
         layout.addWidget(create_box)
-        layout.addWidget(self._import_file)
-
-        layout.addWidget(QLabel("Open Job", self))
-        self._project_combo = QComboBox(self)
-        layout.addWidget(self._project_combo)
+        import_help = QLabel(
+            "Drop files to start a Job. Default languages: ja → zh; change them in New Job.", self
+        )
+        import_help.setWordWrap(True)
+        layout.addWidget(import_help)
 
         delete_box = QGroupBox("Delete Job", self)
         delete_box.setCheckable(True)

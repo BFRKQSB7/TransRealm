@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 from PySide6.QtCore import QSettings
-from PySide6.QtWidgets import QGroupBox
+from PySide6.QtWidgets import QWidget
 
 from transrealm.ui.main_window import MainWindow
 
@@ -46,9 +46,8 @@ class TestAutoOverview:
         translation = window._translation
         assert not hasattr(translation, "_mode_switch")
 
-        overview = translation.findChild(QGroupBox, "translation-controls")
+        overview = translation.findChild(QWidget, "translation-controls")
         assert overview is not None
-        assert overview.title() == "Translation"
         assert translation._status.objectName() == "status-banner"
         assert translation._workbench_container.isHidden()
         assert not translation._translate.isHidden()
@@ -72,6 +71,6 @@ class TestAutoOverview:
         assert not translation._workbench_container.isVisible()
 
         window._i18n.set_language("zh_CN")
-        overview = translation.findChild(QGroupBox, "translation-controls")
+        overview = translation.findChild(QWidget, "translation-controls")
         assert overview is not None
-        assert overview.title() == "翻译"
+        assert window._page_title.text() == "翻译"

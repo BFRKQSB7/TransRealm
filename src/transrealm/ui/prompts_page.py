@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QVBoxLayout,
+    QWidget,
 )
 
 from transrealm.application.preset_templates import ALLOWED_PLACEHOLDERS, current_preset
@@ -29,6 +30,7 @@ from transrealm.ui.worker import ServiceWorker
 
 class PromptsPage(WorkerPage):
     configuration_changed = Signal()
+    request_translation = Signal()
 
     def __init__(
         self,
@@ -47,6 +49,9 @@ class PromptsPage(WorkerPage):
         self._model_editor: WorkbenchPromptEditor | None = None
         self._preferred_model: int | None = None
         layout = QVBoxLayout(self)
+        back = QPushButton("Back to Translation", self)
+        back.clicked.connect(self.request_translation.emit)
+        layout.addWidget(back, 0, Qt.AlignmentFlag.AlignRight)
         help_text = QLabel(
             "Copy a preset, edit the copy, then select it in Translation. "
             "Changes to a saved template take effect when you select it again.",
@@ -100,6 +105,36 @@ class PromptsPage(WorkerPage):
         model_section.toggled.connect(self._model_host.setVisible)
         self._models.activated.connect(self._load_model_prompt)
         layout.addWidget(model_section)
+        layout.removeWidget(self._list)
+        self._list.setMaximumHeight(16777215)
+        layout.removeWidget(self._name)
+        layout.removeWidget(self._editor)
+        layout.removeWidget(self._variables)
+        layout.removeItem(actions)
+        layout.removeWidget(model_section)
+        left = QWidget(self)
+        left.setMinimumWidth(180)
+        left.setMaximumWidth(230)
+        left_layout = QVBoxLayout(left)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.addWidget(self._list, 1)
+        actions.removeWidget(self._copy)
+        left_layout.addWidget(self._copy)
+        right = QWidget(self)
+        right_layout = QVBoxLayout(right)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.addWidget(self._name)
+        right_layout.addWidget(self._editor, 1)
+        right_layout.addWidget(self._variables)
+        right_layout.addLayout(actions)
+        right_layout.addWidget(model_section)
+        self._save.setProperty("role", "primary")
+        self._delete.setProperty("role", "danger")
+        columns = QHBoxLayout()
+        columns.setSpacing(20)
+        columns.addWidget(left, 1)
+        columns.addWidget(right, 3)
+        layout.addLayout(columns, 1)
         self._i18n.language_changed.connect(lambda _: self._retranslate_list())
         self._i18n.bind_tree(self)
 

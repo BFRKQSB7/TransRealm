@@ -23,7 +23,7 @@ def test_main_window_exposes_hierarchical_shell_and_navigation(
 
         assert tabs is not None
         assert title is not None
-        assert title.text() == "TransRealm"
+        assert title.text() == "Translation"
         assert tabs.count() == 3
         assert [tabs.tabText(i) for i in range(tabs.count())] == [
             "Translation",
@@ -31,8 +31,8 @@ def test_main_window_exposes_hierarchical_shell_and_navigation(
             "Prompts",
         ]
         assert tabs.documentMode()
-        assert all(isinstance(tabs.widget(i), QScrollArea) for i in range(tabs.count()))
-        for index in range(tabs.count()):
+        assert tabs.widget(0) is window._translation
+        for index in (1, 2):
             scroll = tabs.widget(index)
             assert isinstance(scroll, QScrollArea)
             expected_surface = QColor(LIGHT_TOKENS["surface"])
