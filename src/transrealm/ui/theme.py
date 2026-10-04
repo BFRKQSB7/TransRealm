@@ -38,18 +38,21 @@ def build_stylesheet() -> str:
     QTabWidget::pane {{ border: none; background: {t['surface']}; }}
     QTabBar::tab {{
         background: transparent; color: {t['text_muted']};
-        padding: 7px 10px; border-bottom: 2px solid transparent;
+        padding: 7px 12px; margin-right: 4px;
+        border: 1px solid transparent; border-radius: 12px;
     }}
     QTabBar::tab:hover {{ background: {t['surface_muted']}; color: {t['text']}; }}
-    QTabBar::tab:selected {{ color: {t['text']}; border-bottom-color: {t['accent']}; }}
+    QTabBar::tab:selected {{
+        background: {t['accent_soft']}; color: {t['text']}; font-weight: 600;
+    }}
     QGroupBox {{
-        border: 1px solid {t['border']}; border-radius: 8px;
+        border: 1px solid {t['border']}; border-radius: 16px;
         margin-top: 10px; padding-top: 14px;
     }}
     QGroupBox::title {{ subcontrol-origin: margin; left: 10px; padding: 0 4px; }}
     QPushButton, QToolButton {{
         background: {t['surface']}; color: {t['text']};
-        border: 1px solid {t['border']}; border-radius: 7px;
+        border: 1px solid {t['border']}; border-radius: 12px;
         padding: 6px 12px; min-height: 20px;
     }}
     QPushButton:hover, QToolButton:hover {{ background: {t['surface_muted']}; }}
@@ -60,7 +63,7 @@ def build_stylesheet() -> str:
     QPushButton[role="primary"]:hover {{ background: {t['accent_hover']}; }}
     QPushButton[role="navigation"] {{
         text-align: left; background: transparent;
-        border: 1px solid transparent; padding: 9px 12px;
+        border: 1px solid transparent; border-radius: 16px; padding: 9px 12px;
     }}
     QPushButton[role="navigation"]:hover {{ background: {t['accent_soft']}; }}
     QPushButton[role="navigation"]:checked {{
@@ -75,12 +78,42 @@ def build_stylesheet() -> str:
     QListWidget:focus {{ border: 1px solid {t['focus']}; }}
     QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QPlainTextEdit, QListWidget {{
         background: {t['surface']}; color: {t['text']};
-        border: 1px solid {t['border']}; border-radius: 7px; padding: 5px 8px;
+        border: 1px solid {t['border']}; border-radius: 12px; padding: 5px 8px;
         selection-background-color: {t['accent_soft']}; selection-color: {t['text']};
     }}
-    QLineEdit, QComboBox {{ min-height: 22px; }}
+    QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {{ min-height: 22px; }}
+    QComboBox {{ padding-right: 28px; }}
+    QComboBox::drop-down {{
+        subcontrol-origin: padding; subcontrol-position: top right; width: 26px;
+        background: transparent; border: none;
+        border-top-right-radius: 12px; border-bottom-right-radius: 12px;
+    }}
+    QComboBox::down-arrow {{
+        image: url(:/qt-project.org/styles/commonstyle/images/arrow-down-16.png);
+        width: 12px; height: 12px;
+    }}
+    QSpinBox, QDoubleSpinBox {{ padding-right: 28px; }}
+    QSpinBox::up-button, QDoubleSpinBox::up-button {{
+        subcontrol-origin: border; subcontrol-position: top right;
+        width: 20px; height: 12px; margin-top: 4px; margin-right: 5px;
+        background: transparent; border: none;
+    }}
+    QSpinBox::down-button, QDoubleSpinBox::down-button {{
+        subcontrol-origin: border; subcontrol-position: bottom right;
+        width: 20px; height: 12px; margin-bottom: 4px; margin-right: 5px;
+        background: transparent; border: none;
+    }}
+    QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {{
+        image: url(:/qt-project.org/styles/commonstyle/images/arrow-up-16.png);
+        width: 9px; height: 9px;
+    }}
+    QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {{
+        image: url(:/qt-project.org/styles/commonstyle/images/arrow-down-16.png);
+        width: 9px; height: 9px;
+    }}
+    QPlainTextEdit, QListWidget {{ border-radius: 16px; }}
     QPlainTextEdit#source-preview {{ background: {t['surface_muted']}; }}
-    QListWidget::item {{ padding: 8px 4px; border-radius: 5px; }}
+    QListWidget::item {{ padding: 8px 4px; border-radius: 12px; }}
     QListWidget::item:hover {{ background: {t['surface_muted']}; }}
     QListWidget::item:selected {{ background: {t['accent_soft']}; color: {t['text']}; }}
     QProgressBar {{ background: {t['surface_muted']}; border: none; border-radius: 2px; }}
@@ -89,6 +122,14 @@ def build_stylesheet() -> str:
     QScrollBar::handle:vertical {{ background: #cececc; min-height: 24px; border-radius: 4px; }}
     QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
     QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background: transparent; }}
+    QScrollBar:horizontal {{ background: transparent; height: 8px; margin: 0 2px; }}
+    QScrollBar::handle:horizontal {{
+        background: #cececc; min-width: 24px; border-radius: 4px;
+    }}
+    QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{ width: 0; }}
+    QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {{
+        background: transparent;
+    }}
     QScrollArea {{ border: none; }}
     QSplitter::handle {{ background: transparent; width: 12px; }}
     """
