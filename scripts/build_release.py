@@ -30,6 +30,7 @@ REPO = Path(__file__).resolve().parents[1]
 SRC = REPO / "src"
 MIGRATIONS = SRC / "transrealm" / "migrations"
 I18N = SRC / "transrealm" / "ui" / "i18n"
+ICON = SRC / "transrealm" / "ui" / "assets" / "transrealm.ico"
 PYPROJECT = REPO / "pyproject.toml"
 LOCK = REPO / "requirements.lock"
 RUN_PY = REPO / "run.py"
@@ -127,6 +128,9 @@ def _validate_bundle(bundle: Path) -> dict[str, object]:
             f"Frozen translations {frozen_translation_names} != source "
             f"{source_translation_names}; --add-data likely missing.",
         )
+    frozen_icon = bundle / "_internal" / "transrealm" / "ui" / "assets" / ICON.name
+    if not frozen_icon.is_file() or _sha256(frozen_icon) != _sha256(ICON):
+        raise SystemExit("Application icon missing or different from the source icon.")
     platform_plugins = sorted(bundle.rglob("qwindows.dll"))
     if not platform_plugins:
         raise SystemExit("Qt platform plugin platforms/qwindows.dll missing from bundle.")
@@ -135,6 +139,8 @@ def _validate_bundle(bundle: Path) -> dict[str, object]:
         "migration_files": len(frozen_migrations),
         "migration_ids": [p.name for p in frozen_migrations],
         "translation_files": frozen_translation_names,
+        "application_icon": str(frozen_icon.relative_to(bundle)),
+        "application_icon_sha256": _sha256(frozen_icon),
         "qt_plugins": {
             "platforms_qwindows": str(platform_plugins[0].relative_to(bundle)),
             "plugin_root": str(platform_plugins[0].parent.parent.relative_to(bundle)),
@@ -161,12 +167,14 @@ def _build(output: Path, work: Path) -> Path:
         "--onedir",
         "--windowed",
         "--name", BUNDLE_NAME,
+        "--icon", str(ICON.resolve()),
         "--paths", str(SRC.resolve()),
         "--distpath", str(bundle_output),
         "--workpath", str(work),
         "--specpath", str(work),
         "--add-data", f"{MIGRATIONS.resolve()}{os.pathsep}transrealm/migrations",
         "--add-data", f"{I18N.resolve()}{os.pathsep}transrealm/ui/i18n",
+        "--add-data", f"{ICON.resolve()}{os.pathsep}transrealm/ui/assets",
         str(RUN_PY.resolve()),
     ]
     original_path = os.environ.get("PATH")

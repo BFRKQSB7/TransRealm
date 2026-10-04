@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
-from PySide6.QtCore import QSettings, Qt, QThread
-from PySide6.QtGui import QCloseEvent, QColor, QPalette
+from PySide6.QtCore import QSettings, QSize, Qt, QThread
+from PySide6.QtGui import QCloseEvent, QColor, QIcon, QPalette
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -34,6 +34,7 @@ from transrealm.ui.worker import (
 )
 
 APP_VERSION = __version__
+APP_ICON = Path(__file__).parent / "assets" / "transrealm.ico"
 
 
 class MainShell(QWidget):
@@ -114,6 +115,7 @@ class MainWindow(QMainWindow):
         self._i18n = LanguageManager(settings=settings, parent=self)
         self.setObjectName("main-window")
         self.setWindowTitle(self._i18n.tr("TransRealm"))
+        self.setWindowIcon(QIcon(str(APP_ICON)))
         self.setMinimumSize(960, 600)
         self.resize(1180, 720)
         self.setStyleSheet(build_stylesheet())
@@ -169,7 +171,16 @@ class MainWindow(QMainWindow):
         navigation.setSpacing(8)
         brand = QLabel("TransRealm", sidebar)
         brand.setObjectName("brand")
-        navigation.addWidget(brand)
+        brand_icon = QLabel(sidebar)
+        brand_icon.setObjectName("brand-icon")
+        brand_icon.setFixedSize(28, 28)
+        brand_icon.setPixmap(self.windowIcon().pixmap(QSize(28, 28), self.devicePixelRatioF()))
+        brand_row = QHBoxLayout()
+        brand_row.setSpacing(8)
+        brand_row.addWidget(brand_icon)
+        brand_row.addWidget(brand)
+        brand_row.addStretch()
+        navigation.addLayout(brand_row)
         navigation.addSpacing(28)
         self._nav_buttons: list[QPushButton] = []
         for index, label in enumerate(("Translation", "Providers", "Prompts")):
@@ -346,6 +357,7 @@ def main() -> None:
     data_dir = Path.home() / ".transrealm"
     data_dir.mkdir(parents=True, exist_ok=True)
     app = QApplication(sys.argv)
+    app.setWindowIcon(QIcon(str(APP_ICON)))
     window = MainWindow(data_dir / "project.sqlite", app_version=APP_VERSION)
     window.show()
     sys.exit(app.exec())

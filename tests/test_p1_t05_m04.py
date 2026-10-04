@@ -236,6 +236,32 @@ def test_candidate_built_and_manifest_matches_artifact() -> None:
     assert isinstance(qt_plugins, dict)
     assert "platforms_qwindows" in qt_plugins
 
+    # Verify both runtime loading and the Explorer/EXE icon, rather than only
+    # checking that the build command mentions --icon.
+    import struct
+
+    import pefile  # type: ignore[import-untyped]
+
+    icon = BUNDLE / str(manifest["application_icon"])
+    assert _sha256(icon) == manifest["application_icon_sha256"]
+    assert icon.read_bytes() == build_release.ICON.read_bytes()
+    raw = icon.read_bytes()
+    count = struct.unpack_from("<H", raw, 4)[0]
+    assert count == 9
+    frames = []
+    for index in range(count):
+        size, offset = struct.unpack_from("<II", raw, 6 + index * 16 + 8)
+        frames.append(raw[offset:offset + size])
+    with pefile.PE(str(EXE)) as executable:
+        embedded = [
+            executable.get_data(language.data.struct.OffsetToData, language.data.struct.Size)
+            for resource in executable.DIRECTORY_ENTRY_RESOURCE.entries
+            if resource.id == 3  # RT_ICON
+            for entry in resource.directory.entries
+            for language in entry.directory.entries
+        ]
+    assert sorted(embedded) == sorted(frames), "EXE must embed the application icon frames"
+
 
 @pytest.mark.skipif(
     not (candidate_zip and _candidate_ready()),

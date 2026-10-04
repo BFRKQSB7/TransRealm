@@ -15,21 +15,22 @@ Model allocation last rechecked against Codex Radar on 2026-09-20. Radar's curre
 | [T05](T05-providers-prompts-navigation.md) | Providers, Prompts, and three-page navigation | DONE | L | L3 / `gpt-6-astra` | MEDIUM | T04 |
 | [T06](T06-v1-release-candidate.md) | V1 regression and local Windows EXE/ZIP candidate | DONE | L | L3 / `gpt-6-astra` | MEDIUM | T05 |
 | [T07](T07-ui-workflow-polish.md) | Desktop UI and workflow polish | DONE | L | Current session | Current session | T06 |
+| [T08](T08-application-icon.md) | Application icon and Windows integration | IN_PROGRESS | S | Current session | Current session | T07 |
 
-Recommended next action: **Use the rounded local EXE/ZIP and collect real-use feedback**. T01–T07 are complete, including the user-requested stronger corner radii, rounded tab selection and removal of square combo/spin overlays. The reviewed stylesheet was committed before packaging. Full regression passed (1436 passed, 4 skipped); the three native-only skipped checks were covered separately, with 14 Windows checks passing at each of 100% and 150% scale, in English/Chinese and small/default windows. Candidate checks, the actual frozen EXE's controlled stop/restart/resume/save/lock/error/recovery/export journey, hygiene and independent-copy rollback passed. Current artifacts are in `dist/`; reports and screenshots are under `.local/verification/t07-rounded/`. Earlier accepted candidates are preserved in `.local/archive/`, with their original evidence retained under `.local/verification/t07-ui/`. File selection was simulated with project-local fixtures. The file-symlink test remains a documented privilege-related coverage limitation. AV scanning, clean Windows 11 acceptance, and additional independent review are outside scope.
+Recommended next action: **Complete T08 icon integration and verify the local EXE/ZIP**. T01–T07 are complete. The new generated icon is being integrated into the sidebar, window and Windows executable, with native small-size checks and packaging identity verification. T08 evidence belongs under `.local/verification/t08-icon/`; prior rounded UI evidence remains under `.local/verification/t07-rounded/`. Preserve source-first packaging, simulated file selection and local-only acceptance. The file-symlink test remains a documented privilege-related coverage limitation. AV scanning, clean Windows 11 acceptance, and additional independent review are outside scope.
 
 ## Milestones
 
 - **M1 — Reliable Product Core:** T01–T03. Add the missing Notes contract, version TXT mapping safely, and expose the existing reliable core through one product-facing facade/pipeline.
 - **M2 — Product Surface:** T04–T05. Replace Auto/Workbench and Settings/Project product concepts with Translation / Providers / Prompts while preserving legacy data compatibility.
 - **M3 — V1 Local Acceptance:** T06. Run the regression, build the authorized Windows EXE/ZIP candidate, and record evidence from actual acceptance on the user's current computer.
-- **M4 — Local UI and workflow polish:** T07. Refine the desktop layout and interaction using real-use feedback, then rebuild and accept the local candidate.
+- **M4 — Local UI and workflow polish:** T07–T08. Refine the desktop layout and interaction using real-use feedback, add the application icon, then rebuild and accept the local candidate.
 
 ## Dependency Graph
 
 ```text
 T01 ──→ T03 ──┐
-  │            ├──→ T04 ──→ T05 ──→ T06 ──→ T07
+  │            ├──→ T04 ──→ T05 ──→ T06 ──→ T07 ──→ T08
   └────────────┘
 T02 ───────────┘
 ```
@@ -46,8 +47,8 @@ This graph contains only code or contract dependencies. Suggested ordering is co
 
 ## Planning Summary
 
-- **Total tasks:** 7
-- **Critical path:** T01 → T03 → T04 → T05 → T06 → T07; T02 must also finish before T04.
+- **Total tasks:** 8
+- **Critical path:** T01 → T03 → T04 → T05 → T06 → T07 → T08; T02 must also finish before T04.
 - **Level 4:** T02, T03.
 - **Level 3:** T01, T04, T05, T06.
 - **Estimated development range:** about 7–11 focused working days for a strong agent, excluding external endpoint availability, independent review scheduling, signing, and release authorization.
