@@ -15,9 +15,9 @@ Model allocation last rechecked against Codex Radar on 2026-09-20. Radar's curre
 | [T05](T05-providers-prompts-navigation.md) | Providers, Prompts, and three-page navigation | DONE | L | L3 / `gpt-6-astra` | MEDIUM | T04 |
 | [T06](T06-v1-release-candidate.md) | V1 regression and local Windows EXE/ZIP candidate | DONE | L | L3 / `gpt-6-astra` | MEDIUM | T05 |
 | [T07](T07-ui-workflow-polish.md) | Desktop UI and workflow polish | DONE | L | Current session | Current session | T06 |
-| [T08](T08-application-icon.md) | Application icon and Windows integration | IN_PROGRESS | S | Current session | Current session | T07 |
+| [T08](T08-application-icon.md) | Application icon and Windows integration | DONE | S | Current session | Current session | T07 |
 
-Recommended next action: **Finish T08's user-requested icon redesign and rebuild the local candidate**. The abstract speech-page mark was rejected; replace it with explicit A / 文 speech bubbles. Integration code is already accepted; this follow-up changes only icon assets and design/task records. Revised evidence belongs under `.local/verification/t08-icon-v2/`; preserve source-first packaging, previous candidates and project-local simulated acceptance. AV and clean-machine requirements remain outside scope; the symbol-link privilege limitation remains recorded.
+Recommended next action: **Use the local EXE/ZIP with the revised A / 文 speech-bubble icon**. T01–T08 are complete, including the user's request for a more explicit translation symbol. Only PNG/ICO assets and design/task records changed in this follow-up; icon integration code is unchanged. Source was committed before packaging. Full regression passed (1436 passed, 4 skipped); the three native-only skipped checks were covered separately, with 14 Windows checks at each of 100%/150% scale. Candidate icon-frame identity, native window icons, actual frozen core flows and independent-copy rollback passed. Current artifacts are in `dist/`; revised candidate-bound reports and screenshots are under `.local/verification/t08-icon-v2/`. The prior icon candidate is archived, and the generation/refinement prompts are recorded in `docs/design/app-icon.md`. Project-local simulated acceptance and local-only scope apply; the file-symlink privilege limitation remains recorded. AV and clean-machine requirements remain outside scope.
 
 ## Milestones
 
